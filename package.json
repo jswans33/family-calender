@@ -1,0 +1,55 @@
+{
+  "name": "simple-calendar-app",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "ical": "^0.8.0",
+    "ical.js": "^1.5.0",
+    "node-ical": "^0.20.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-scripts": "5.0.1",
+    "ts-caldav": "^0.2.3"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "start:server": "node server.js",
+    "start:server:ts": "tsx server.ts",
+    "start:server:dev": "tsx watch server.ts",
+    "build": "react-scripts build",
+    "build:server": "tsc --project tsconfig.server.json && node dist/server.js",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^4.17.23",
+    "@types/node": "^24.0.14",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  }
+}
