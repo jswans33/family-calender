@@ -57,10 +57,11 @@ server-src/
 - NO database operations
 
 **SQLiteRepository.ts** (Single responsibility)
-- SQLite database operations
-- Transaction management
-- Error handling and recovery
-- Data lifecycle management
+- SQLite database operations with metadata preservation
+- Transaction management and atomic operations
+- Error handling and recovery mechanisms
+- Data lifecycle management and cleanup
+- Granular metadata updates (ETags, sync timestamps)
 - NO business logic
 
 **CalDAVRepository.ts** (Single responsibility)
@@ -128,6 +129,29 @@ cp data/calendar.db data/calendar-backup-$(date +%Y%m%d).db
 
 # Restore from backup
 cp data/calendar-backup-20250815.db data/calendar.db
+```
+
+**Metadata Management Examples:**
+```bash
+# View sync timestamps
+sqlite3 data/calendar.db "SELECT id, title, synced_at FROM events ORDER BY synced_at DESC LIMIT 5;"
+
+# Check events with ETags (prepared for incremental sync)
+sqlite3 data/calendar.db "SELECT id, title, caldav_etag FROM events WHERE caldav_etag IS NOT NULL;"
+
+# View metadata for specific event
+sqlite3 data/calendar.db "SELECT * FROM events WHERE id = 'specific-event-id';"
+```
+
+**Custom Metadata Extensions:**
+```sql
+-- Add custom fields for future features
+ALTER TABLE events ADD COLUMN user_priority INTEGER DEFAULT 0;
+ALTER TABLE events ADD COLUMN local_notes TEXT;
+ALTER TABLE events ADD COLUMN custom_flags JSON;
+
+-- Update custom metadata
+UPDATE events SET user_priority = 5 WHERE id = 'important-meeting';
 ```
 
 ### Code Rules
@@ -216,6 +240,49 @@ export class DatabaseConfig {
 }
 ```
 
+### Metadata Preservation During Sync
+
+**Problem:** Traditional sync operations overwrite all data, losing valuable metadata.
+
+**Solution:** Smart metadata-preserving sync with dual SQL strategies.
+
+```typescript
+// Metadata-preserving sync (default for CalDAV sync)
+await sqliteRepository.saveEvents(events, true); // preserveMetadata = true
+
+// Full replace for new data (default for manual operations)
+await sqliteRepository.saveEvents(events, false); // preserveMetadata = false
+```
+
+**Preserved Fields During Sync:**
+- `synced_at` - Original sync timestamp maintained
+- `caldav_etag` - ETag for change detection preserved
+- `custom_data` - Future user metadata fields (extensible)
+
+**Implementation:**
+```sql
+-- Metadata-preserving sync uses ON CONFLICT DO UPDATE
+INSERT INTO events (..., synced_at) 
+VALUES (..., COALESCE((SELECT synced_at FROM events WHERE id = ?), CURRENT_TIMESTAMP))
+ON CONFLICT(id) DO UPDATE SET
+  title = excluded.title,
+  date = excluded.date,
+  -- ... update CalDAV fields only ...
+  -- Note: synced_at and caldav_etag preserved!
+
+-- vs Traditional sync (overwrites everything)
+INSERT OR REPLACE INTO events (...) VALUES (..., CURRENT_TIMESTAMP);
+```
+
+**Granular Metadata Updates:**
+```typescript
+// Update specific metadata without touching event data
+await sqliteRepository.updateEventMetadata(eventId, {
+  caldav_etag: 'abc123',
+  custom_data: { userFlag: 'important', priority: 'high' }
+});
+```
+
 ### Transaction Safety & Error Handling
 
 **Atomic Operations:** All bulk operations use proper transactions
@@ -259,11 +326,12 @@ if (hasError) {
 
 ### Background Sync Strategy
 
-**Intelligent Sync Logic:**
+**Current Implementation: Intelligent Full Sync**
 - **Initial sync** on server startup
 - **Periodic sync** every 15 minutes (configurable)
 - **Manual sync** via `/admin/sync` endpoint
 - **Conditional sync** only when data is stale
+- **Metadata preservation** maintains sync history
 
 ```typescript
 private async checkAndSync(): Promise<void> {
@@ -274,10 +342,46 @@ private async checkAndSync(): Promise<void> {
     (now.getTime() - lastSync.getTime()) > (this.syncIntervalMinutes * 60 * 1000);
     
   if (shouldSync) {
-    await this.forceSync();
+    await this.forceSync(); // Full sync with metadata preservation
   }
 }
 ```
+
+**Future Enhancement: Incremental Sync**
+
+The metadata preservation foundation enables efficient incremental sync:
+
+```typescript
+// Future implementation leveraging preserved ETags
+async incrementalSync(): Promise<void> {
+  // 1. Get stored ETags for change detection
+  const storedETags = await this.sqliteRepository.getEventETags();
+  
+  // 2. Fetch only changed events since last sync
+  const changes = await this.calDAVRepository.getChangedEventsSince(
+    await this.getLastSyncTime(),
+    storedETags
+  );
+  
+  // 3. Apply changes with metadata preservation
+  await this.sqliteRepository.saveEvents(changes.events, true);
+  
+  // 4. Update ETags for next incremental sync
+  for (const event of changes.events) {
+    await this.sqliteRepository.updateEventMetadata(event.id, {
+      caldav_etag: event.etag
+    });
+  }
+  
+  console.log(`Incremental sync: ${changes.events.length} changed events`);
+}
+```
+
+**Benefits of Current + Future Approach:**
+- **Current:** Reliable full sync with metadata preservation
+- **Future:** ETag-based incremental sync for efficiency
+- **Bandwidth:** Reduce from 274 events to ~5-10 changed events per sync
+- **Performance:** Sub-second sync times for incremental updates
 
 ### Data Lifecycle Management
 
