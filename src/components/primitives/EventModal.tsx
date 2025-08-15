@@ -8,7 +8,9 @@ export interface EventModalProps {
   initialData?: {
     date: string;
     time?: string;
+    event?: CalendarEvent;
   };
+  isEditing?: boolean;
 }
 
 /**
@@ -25,15 +27,19 @@ export const EventModal: React.FC<EventModalProps> = ({
   onClose,
   onSave,
   initialData,
+  isEditing = false,
 }) => {
+  const existingEvent = initialData?.event;
+  
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    location: '',
-    time: initialData?.time || '',
-    duration: '60', // minutes
-    url: '',
-    categories: '',
+    title: existingEvent?.title || '',
+    description: existingEvent?.description || '',
+    location: existingEvent?.location || '',
+    time: existingEvent?.time || initialData?.time || '',
+    duration: existingEvent?.duration ? 
+      existingEvent.duration.replace('PT', '').replace('M', '').replace('H', '') : '60',
+    url: existingEvent?.url || '',
+    categories: existingEvent?.categories?.join(', ') || '',
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -50,7 +56,7 @@ export const EventModal: React.FC<EventModalProps> = ({
     }
 
     const newEvent: Partial<CalendarEvent> = {
-      id: `temp-${Date.now()}`, // Temporary ID
+      ...(isEditing && existingEvent ? { id: existingEvent.id } : { id: `temp-${Date.now()}` }),
       title: formData.title.trim(),
       date: initialData?.date || '',
       time: formData.time || undefined,
@@ -61,8 +67,18 @@ export const EventModal: React.FC<EventModalProps> = ({
       duration: formData.duration ? `PT${formData.duration}M` : undefined,
       categories: formData.categories.trim() ? formData.categories.split(',').map(c => c.trim()) : undefined,
       status: 'CONFIRMED',
-      created: new Date().toISOString(),
-      lastModified: new Date().toISOString(),
+      ...(isEditing && existingEvent ? 
+        { 
+          created: existingEvent.created,
+          lastModified: new Date().toISOString(),
+          sequence: (existingEvent.sequence || 0) + 1
+        } : 
+        { 
+          created: new Date().toISOString(),
+          lastModified: new Date().toISOString(),
+          sequence: 0
+        }
+      ),
     };
 
     onSave(newEvent);
@@ -89,7 +105,9 @@ export const EventModal: React.FC<EventModalProps> = ({
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Create Event</h2>
+          <h2 className="text-xl font-semibold text-gray-900">
+            {isEditing ? 'Edit Event' : 'Create Event'}
+          </h2>
           <button
             onClick={handleClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -242,7 +260,7 @@ export const EventModal: React.FC<EventModalProps> = ({
               disabled={!formData.title.trim()}
               className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              Create Event
+              {isEditing ? 'Update Event' : 'Create Event'}
             </button>
           </div>
         </form>

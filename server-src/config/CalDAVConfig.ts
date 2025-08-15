@@ -8,14 +8,16 @@ export class CalDAVConfig {
     const path = process.env.CALDAV_PATH || '/1110188709/calendars/home/';
 
     if (!username || !password) {
-      throw new Error('CalDAV credentials not configured. Please set CALDAV_USERNAME and CALDAV_PASSWORD environment variables.');
+      throw new Error(
+        'CalDAV credentials not configured. Please set CALDAV_USERNAME and CALDAV_PASSWORD environment variables.'
+      );
     }
 
     return {
       username,
       password,
       hostname,
-      path
+      path,
     };
   }
 
@@ -24,7 +26,7 @@ export class CalDAVConfig {
       username: 'jswans33@gmail.com',
       password: 'qrdq-tahw-xski-ogbf',
       hostname: 'p36-caldav.icloud.com',
-      path: '/1110188709/calendars/home/'
+      path: '/1110188709/calendars/home/',
     };
   }
 }

@@ -18,7 +18,7 @@ const App: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   // Event creation modal state
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
-  const [eventModalData, setEventModalData] = useState<{date: string; time?: string} | null>(null);
+  const [eventModalData, setEventModalData] = useState<{date: string; time?: string; event?: CalendarEvent} | null>(null);
 
   useEffect(() => {
     const loadEvents = async (): Promise<void> => {
@@ -44,6 +44,48 @@ const App: React.FC = () => {
     
     // TODO: Send to backend/CalDAV service
     console.log('Creating event:', newEvent);
+  };
+
+  // Handle event editing
+  const handleEditEvent = (event: CalendarEvent | null) => {
+    if (!event) return;
+    
+    setEventModalData({ 
+      date: event.date, 
+      time: event.time,
+      event: event // Pass the full event for editing
+    });
+    setIsEventModalOpen(true);
+  };
+
+  // Handle event update
+  const handleUpdateEvent = async (updatedEvent: Partial<CalendarEvent>) => {
+    if (!updatedEvent.id) return;
+    
+    try {
+      const calendarService = new CalendarService();
+      const success = await calendarService.updateEvent(updatedEvent as CalendarEvent);
+      
+      if (success) {
+        // Update local state
+        setEvents(prevEvents => 
+          prevEvents.map(event => 
+            event.id === updatedEvent.id ? { ...event, ...updatedEvent } : event
+          )
+        );
+        
+        // Update selected event if it's the one being edited
+        if (selectedEvent && selectedEvent.id === updatedEvent.id) {
+          setSelectedEvent({ ...selectedEvent, ...updatedEvent } as CalendarEvent);
+        }
+        
+        console.log('Event updated successfully:', updatedEvent);
+      } else {
+        console.error('Failed to update event');
+      }
+    } catch (error) {
+      console.error('Error updating event:', error);
+    }
   };
 
   // Handle time slot click for event creation
@@ -203,6 +245,7 @@ const App: React.FC = () => {
             )}
           </div>
           
+          {selectedEvent ? (
           <div className="space-y-4 overflow-y-auto max-h-[calc(50vh-120px)]">
             <div>
               <h4 className="font-semibold text-gray-900 text-lg mb-3">{selectedEvent.title}</h4>
@@ -333,7 +376,10 @@ const App: React.FC = () => {
             
             <div className="pt-4 border-t border-gray-200">
               <div className="flex space-x-2">
-                <button className="flex-1 px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
+                <button 
+                  onClick={() => handleEditEvent(selectedEvent)}
+                  className="flex-1 px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                >
                   Edit Event
                 </button>
                 <button className="flex-1 px-3 py-2 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors">
@@ -353,12 +399,13 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* Event Creation Modal */}
+      {/* Event Creation/Edit Modal */}
       <EventModal
         isOpen={isEventModalOpen}
         onClose={() => setIsEventModalOpen(false)}
-        onSave={handleCreateEvent}
+        onSave={eventModalData?.event ? handleUpdateEvent : handleCreateEvent}
         initialData={eventModalData || undefined}
+        isEditing={!!eventModalData?.event}
       />
     </div>
   );

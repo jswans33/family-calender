@@ -1,10 +1,5 @@
-// Type definition for calendar events - matches the Calendar component interface
-interface CalendarEvent {
-  id: string;
-  title: string;
-  date: string;   // 'YYYY-MM-DD' format
-  time?: string;  // 'HH:mm' 24h format, optional
-}
+// Import the full CalendarEvent interface from DayCell
+import { CalendarEvent } from '../components/primitives/DayCell';
 
 /**
  * CalendarService - Handles communication with the backend server
@@ -31,7 +26,27 @@ class CalendarService {
         id: event.id,
         title: event.title,
         date: this.formatDateToYMD(event.date),
-        time: this.formatTimeTo24h(event.time)
+        time: this.formatTimeTo24h(event.time),
+        // Preserve all rich CalDAV data
+        description: event.description,
+        location: event.location,
+        organizer: event.organizer,
+        attendees: event.attendees,
+        categories: event.categories,
+        priority: event.priority,
+        status: event.status,
+        visibility: event.visibility,
+        dtend: event.dtend,
+        duration: event.duration,
+        rrule: event.rrule,
+        created: event.created,
+        lastModified: event.lastModified,
+        sequence: event.sequence,
+        url: typeof event.url === 'object' ? event.url?.val : event.url,
+        geo: event.geo,
+        transparency: event.transparency,
+        attachments: event.attachments,
+        timezone: event.timezone
       }));
       
       return events;
@@ -107,6 +122,37 @@ class CalendarService {
     }
   }
   
+  /**
+   * Updates an existing calendar event
+   * @param event Updated event data
+   * @returns Promise<boolean> Success status
+   */
+  async updateEvent(event: CalendarEvent): Promise<boolean> {
+    try {
+      // Use Base64 encoding for event IDs with special characters to avoid Express routing issues
+      const encodedEventId = btoa(event.id).replace(/[+/=]/g, (match) => {
+        return { '+': '-', '/': '_', '=': '' }[match] || match;
+      });
+      const response = await fetch(`http://localhost:3001/events/${encodedEventId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(event)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update event: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result.success === true;
+    } catch (error) {
+      console.error('Error updating calendar event:', error);
+      return false;
+    }
+  }
+
   /**
    * Logs connection attempt to Apple Calendar
    * Actual connection is handled by the backend server

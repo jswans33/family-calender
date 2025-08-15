@@ -9,6 +9,7 @@ const app = express();
 const port = 3001;
 
 app.use(cors());
+app.use(express.json()); // Parse JSON request bodies
 
 // Initialize dependencies following proper layered architecture
 const credentials = CalDAVConfig.getFallbackCredentials();
@@ -18,9 +19,16 @@ const calendarController = new CalendarController(calendarService);
 
 // Routes
 app.get('/events', (req, res) => calendarController.getEvents(req, res));
-app.get('/events/today', (req, res) => calendarController.getTodaysEvents(req, res));
-app.get('/events/week', (req, res) => calendarController.getThisWeeksEvents(req, res));
-app.get('/events/month', (req, res) => calendarController.getThisMonthsEvents(req, res));
+app.get('/events/today', (req, res) =>
+  calendarController.getTodaysEvents(req, res)
+);
+app.get('/events/week', (req, res) =>
+  calendarController.getThisWeeksEvents(req, res)
+);
+app.get('/events/month', (req, res) =>
+  calendarController.getThisMonthsEvents(req, res)
+);
+app.put('/events/:id', (req, res) => calendarController.updateEvent(req, res));
 
 // Start the Express server
 app.listen(port, () => {
