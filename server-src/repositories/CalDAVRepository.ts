@@ -475,13 +475,12 @@ export class CalDAVRepository {
       const iCalData = iCalendarGenerator.generateVCalendar(event);
       console.log('Generated iCalendar data for creation:', iCalData);
 
-      // Use a timestamp-based filename to avoid conflicts
-      // Clean event ID for filename (remove @ and special chars as per Apple docs)
-      const cleanEventId = event.id.replace(/[@$()+ ]/g, '-').replace(/--+/g, '-');
-      const filename = `${cleanEventId}-${Date.now()}.ics`;
+      // Use a simple UUID-based filename as recommended by Apple docs
+      // Avoid special characters in URLs entirely
+      const filename = `event-${Date.now()}-${Math.random().toString(36).substring(2, 15)}.ics`;
       const eventUrl = `${this.credentials.path}${filename}`;
       console.log('Raw Event ID for creation:', event.id);
-      console.log('Clean Event ID for creation:', cleanEventId);
+      console.log('Filename for creation:', filename);
       console.log('Creating event at URL:', eventUrl);
 
       const options = {

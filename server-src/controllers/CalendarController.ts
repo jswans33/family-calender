@@ -1,10 +1,10 @@
 import { Request, Response } from 'express';
-import { CalendarService } from '../services/CalendarService.js';
+import { ICalendarService } from '../types/Calendar.js';
 
 export class CalendarController {
-  private calendarService: CalendarService;
+  private calendarService: ICalendarService;
 
-  constructor(calendarService: CalendarService) {
+  constructor(calendarService: ICalendarService) {
     this.calendarService = calendarService;
   }
 

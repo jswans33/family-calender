@@ -19,7 +19,7 @@ BEGIN:VEVENT
 UID:${event.id}
 DTSTAMP:${now}
 DTSTART${event.time ? '' : ';VALUE=DATE'}:${this.formatDateTime(event.date, event.time, event.timezone)}
-${event.dtend ? `DTEND:${this.formatDateTime(event.dtend, undefined, event.timezone)}` : ''}
+DTEND:${this.formatDateTime(event.dtend || this.calculateEndTime(event.date, event.time), event.time ? this.calculateEndTimeString(event.time) : undefined, event.timezone)}
 SUMMARY:${this.escapeText(event.title)}
 ${event.description ? `DESCRIPTION:${this.escapeText(event.description)}` : ''}
 ${event.location ? `LOCATION:${this.escapeText(event.location)}` : ''}
@@ -70,6 +70,31 @@ END:VCALENDAR`
   private static combineDateAndTime(date: Date, time: string): string {
     const dateStr = date.toISOString().split('T')[0];
     return `${dateStr}T${time}:00`;
+  }
+
+  /**
+   * Calculate end time - default to 1 hour after start
+   */
+  private static calculateEndTime(date: string, time?: string): string {
+    const startDate = new Date(date);
+    if (!time) {
+      // For all-day events, end is next day
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + 1);
+      return endDate.toISOString();
+    }
+    // For timed events, default to 1 hour duration
+    return date; // Same date, different time
+  }
+
+  /**
+   * Calculate end time string - add 1 hour to start time
+   */
+  private static calculateEndTimeString(startTime: string): string {
+    // Parse time string (HH:MM format)
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const endHours = (hours + 1) % 24;
+    return `${String(endHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
   }
 
   /**

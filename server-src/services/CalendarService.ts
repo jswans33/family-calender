@@ -1,7 +1,7 @@
-import { CalendarEvent } from '../types/Calendar.js';
+import { CalendarEvent, ICalendarService } from '../types/Calendar.js';
 import { CalDAVRepository } from '../repositories/CalDAVRepository.js';
 
-export class CalendarService {
+export class CalendarService implements ICalendarService {
   private calDAVRepository: CalDAVRepository;
 
   constructor(calDAVRepository: CalDAVRepository) {
