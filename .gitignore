@@ -49,3 +49,9 @@ coverage/
 # Cache directories
 .cache/
 .eslintcache
+
+# Database files
+data/
+*.db
+*.sqlite
+*.sqlite3

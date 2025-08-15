@@ -4,6 +4,7 @@
   "type": "module",
   "private": true,
   "dependencies": {
+    "@types/sqlite3": "^3.1.11",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "ical": "^0.8.0",
@@ -11,6 +12,7 @@
     "node-ical": "^0.20.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "sqlite3": "^5.1.7",
     "ts-caldav": "^0.2.3"
   },
   "scripts": {

@@ -42,3 +42,13 @@ export interface CalDAVCredentials {
   hostname: string;
   path: string;
 }
+
+export interface ICalendarService {
+  getEvents(startDate?: Date, endDate?: Date): Promise<CalendarEvent[]>;
+  getTodaysEvents(): Promise<CalendarEvent[]>;
+  getThisWeeksEvents(): Promise<CalendarEvent[]>;
+  getThisMonthsEvents(): Promise<CalendarEvent[]>;
+  getEventsInRange(startDate: Date, endDate: Date): Promise<CalendarEvent[]>;
+  validateEvent(event: any): event is CalendarEvent;
+  forceSync?(): Promise<void>;
+}
