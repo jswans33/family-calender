@@ -13,7 +13,7 @@ const app = express();
 const port = 3001;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json()); // Parse JSON request bodies
 app.use(express.urlencoded({ extended: false }));
 
 // Initialize dependencies with database layer
@@ -25,6 +25,7 @@ if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
 
+// Initialize repositories and service with SQLite caching
 const credentials = CalDAVConfig.getFallbackCredentials();
 const calDAVRepository = new CalDAVRepository(credentials);
 const sqliteRepository = new SQLiteRepository(dbConfig.path);

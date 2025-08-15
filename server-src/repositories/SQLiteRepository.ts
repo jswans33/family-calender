@@ -113,6 +113,13 @@ export class SQLiteRepository {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
       `;
 
+      // Handle empty events array
+      if (events.length === 0) {
+        console.log('No events to save');
+        resolve();
+        return;
+      }
+
       const stmt = this.db.prepare(sql);
 
       this.db.serialize(() => {
@@ -122,12 +129,11 @@ export class SQLiteRepository {
             reject(err);
             return;
           }
-        });
 
-        let hasError = false;
-        let processedCount = 0;
+          let hasError = false;
+          let processedCount = 0;
 
-        events.forEach(event => {
+          events.forEach(event => {
           const params = [
             event.id,
             event.title,
@@ -190,15 +196,16 @@ export class SQLiteRepository {
             }
           });
         });
-      });
 
-      stmt.finalize((err) => {
-        if (err) {
-          console.error('Failed to finalize statement:', err);
-        }
-      });
-    });
-  }
+        stmt.finalize((err) => {
+          if (err) {
+            console.error('Failed to finalize statement:', err);
+          }
+        });
+        }); // Close BEGIN TRANSACTION callback
+      }); // Close db.serialize
+    }); // Close Promise
+  } // Close function
 
   async getEvents(startDate?: Date, endDate?: Date): Promise<CalendarEvent[]> {
     return new Promise((resolve, reject) => {
