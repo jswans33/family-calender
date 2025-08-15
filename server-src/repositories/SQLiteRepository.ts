@@ -64,21 +64,56 @@ export class SQLiteRepository {
     });
   }
 
-  async saveEvents(events: CalendarEvent[]): Promise<void> {
+  async saveEvents(events: CalendarEvent[], preserveMetadata: boolean = false): Promise<void> {
     return new Promise((resolve, reject) => {
       if (events.length === 0) {
         resolve();
         return;
       }
 
-      const stmt = this.db.prepare(`
+      // Choose SQL based on whether to preserve metadata
+      const sql = preserveMetadata ? `
+        INSERT INTO events (
+          id, title, date, time, description, location, organizer,
+          attendees, categories, priority, status, visibility, dtend,
+          duration, rrule, created, last_modified, sequence, url,
+          geo_lat, geo_lon, transparency, attachments, timezone, synced_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT synced_at FROM events WHERE id = ?), CURRENT_TIMESTAMP))
+        ON CONFLICT(id) DO UPDATE SET
+          title = excluded.title,
+          date = excluded.date,
+          time = excluded.time,
+          description = excluded.description,
+          location = excluded.location,
+          organizer = excluded.organizer,
+          attendees = excluded.attendees,
+          categories = excluded.categories,
+          priority = excluded.priority,
+          status = excluded.status,
+          visibility = excluded.visibility,
+          dtend = excluded.dtend,
+          duration = excluded.duration,
+          rrule = excluded.rrule,
+          created = excluded.created,
+          last_modified = excluded.last_modified,
+          sequence = excluded.sequence,
+          url = excluded.url,
+          geo_lat = excluded.geo_lat,
+          geo_lon = excluded.geo_lon,
+          transparency = excluded.transparency,
+          attachments = excluded.attachments,
+          timezone = excluded.timezone
+          -- Note: synced_at and caldav_etag are preserved
+      ` : `
         INSERT OR REPLACE INTO events (
           id, title, date, time, description, location, organizer,
           attendees, categories, priority, status, visibility, dtend,
           duration, rrule, created, last_modified, sequence, url,
           geo_lat, geo_lon, transparency, attachments, timezone, synced_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-      `);
+      `;
+
+      const stmt = this.db.prepare(sql);
 
       this.db.serialize(() => {
         this.db.run('BEGIN TRANSACTION', (err) => {
@@ -93,7 +128,7 @@ export class SQLiteRepository {
         let processedCount = 0;
 
         events.forEach(event => {
-          stmt.run([
+          const params = [
             event.id,
             event.title,
             event.date,
@@ -118,7 +153,14 @@ export class SQLiteRepository {
             event.transparency,
             JSON.stringify(event.attachments || []),
             event.timezone
-          ], (err) => {
+          ];
+
+          // Add extra parameter for preserveMetadata case
+          if (preserveMetadata) {
+            params.push(event.id); // For COALESCE query
+          }
+
+          stmt.run(params, (err) => {
             if (err) {
               console.error(`Failed to save event ${event.id}:`, err);
               hasError = true;
@@ -242,6 +284,40 @@ export class SQLiteRepository {
     if (row.timezone) event.timezone = row.timezone;
 
     return event;
+  }
+
+  async updateEventMetadata(eventId: string, metadata: { caldav_etag?: string, custom_data?: any }): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const updateParts: string[] = [];
+      const params: any[] = [];
+
+      if (metadata.caldav_etag !== undefined) {
+        updateParts.push('caldav_etag = ?');
+        params.push(metadata.caldav_etag);
+      }
+
+      if (metadata.custom_data !== undefined) {
+        // Could add custom_data column in future
+        console.log('Custom metadata not yet supported:', metadata.custom_data);
+      }
+
+      if (updateParts.length === 0) {
+        resolve();
+        return;
+      }
+
+      params.push(eventId);
+      const sql = `UPDATE events SET ${updateParts.join(', ')} WHERE id = ?`;
+
+      this.db.run(sql, params, (err) => {
+        if (err) {
+          console.error(`Failed to update metadata for event ${eventId}:`, err);
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    });
   }
 
   close(): void {

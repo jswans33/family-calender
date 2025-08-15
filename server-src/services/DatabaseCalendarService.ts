@@ -48,7 +48,7 @@ export class DatabaseCalendarService implements ICalendarService {
       const xmlData = await this.calDAVRepository.fetchCalendarData();
       const events = this.calDAVRepository.parseCalendarEvents(xmlData);
 
-      await this.sqliteRepository.saveEvents(events);
+      await this.sqliteRepository.saveEvents(events, true); // preserveMetadata = true
 
       const sixMonthsAgo = new Date();
       sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
