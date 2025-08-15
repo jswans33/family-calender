@@ -21,8 +21,7 @@
     "exactOptionalPropertyTypes": true
   },
   "include": [
-    "server.ts",
-    "config.json"
+    "server-src/**/*"
   ],
   "exclude": [
     "src",

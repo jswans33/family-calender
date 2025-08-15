@@ -1,9 +1,9 @@
-// Type definition for calendar events
+// Type definition for calendar events - matches the Calendar component interface
 interface CalendarEvent {
   id: string;
   title: string;
-  date: string;
-  time: string;
+  date: string;   // 'YYYY-MM-DD' format
+  time?: string;  // 'HH:mm' 24h format, optional
 }
 
 /**
@@ -24,7 +24,16 @@ class CalendarService {
         throw new Error(`Failed to fetch events: ${response.status}`);
       }
       // Parse JSON response containing calendar events
-      const events: CalendarEvent[] = await response.json();
+      const rawEvents = await response.json();
+      
+      // Transform server response to match Calendar component interface
+      const events: CalendarEvent[] = rawEvents.map((event: any) => ({
+        id: event.id,
+        title: event.title,
+        date: this.formatDateToYMD(event.date),
+        time: this.formatTimeTo24h(event.time)
+      }));
+      
       return events;
     } catch (error) {
       console.error('Error fetching calendar events:', error);
@@ -39,20 +48,63 @@ class CalendarService {
    * @returns CalendarEvent[] Array of mock calendar events
    */
   private getMockEvents(): CalendarEvent[] {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    
     return [
       {
         id: '1',
         title: 'Meeting (Demo)',
-        date: new Date().toISOString(),
-        time: '10:00 AM'
+        date: this.formatDateToYMD(today.toISOString()),
+        time: '10:00'
       },
       {
         id: '2', 
         title: 'Lunch (Demo)',
-        date: new Date(Date.now() + 86400000).toISOString(),
-        time: '12:30 PM'
+        date: this.formatDateToYMD(tomorrow.toISOString()),
+        time: '12:30'
       }
     ];
+  }
+
+  /**
+   * Converts ISO date string to YYYY-MM-DD format
+   * @param isoDate ISO date string from server
+   * @returns YYYY-MM-DD formatted date string
+   */
+  private formatDateToYMD(isoDate: string): string {
+    const date = new Date(isoDate);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  /**
+   * Converts 12-hour time format to 24-hour HH:mm format
+   * @param time12h Time string from server (e.g., "10:00 AM", "2:30 PM")
+   * @returns 24-hour formatted time string (e.g., "10:00", "14:30") or undefined
+   */
+  private formatTimeTo24h(time12h?: string): string | undefined {
+    if (!time12h || time12h === 'All Day') return undefined;
+    
+    try {
+      // Handle format like "10:00 AM" or "2:30 PM"
+      const match = time12h.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+      if (!match) return undefined;
+      
+      let hours = parseInt(match[1] || '0', 10);
+      const minutes = match[2] || '00';
+      const period = match[3]?.toUpperCase() || 'AM';
+      
+      if (period === 'PM' && hours !== 12) hours += 12;
+      if (period === 'AM' && hours === 12) hours = 0;
+      
+      return `${String(hours).padStart(2, '0')}:${minutes}`;
+    } catch {
+      return undefined;
+    }
   }
   
   /**

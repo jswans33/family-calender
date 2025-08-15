@@ -1,6 +1,7 @@
 {
   "name": "simple-calendar-app",
   "version": "1.0.0",
+  "type": "module",
   "private": true,
   "dependencies": {
     "cors": "^2.8.5",
@@ -10,18 +11,27 @@
     "node-ical": "^0.20.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-scripts": "5.0.1",
     "ts-caldav": "^0.2.3"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "start:server": "node server.js",
-    "start:server:ts": "tsx server.ts",
-    "start:server:dev": "tsx watch server.ts",
-    "build": "react-scripts build",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "node scripts/dev.js",
+    "stop": "node scripts/stop.js",
+    "start:server": "node dist/server.js",
+    "start:server:ts": "tsx server-src/server.ts",
+    "start:server:dev": "tsx watch server-src/server.ts",
     "build:server": "tsc --project tsconfig.server.json && node dist/server.js",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
+    "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
+    "type-check": "tsc --noEmit",
+    "type-check:server": "tsc --project tsconfig.server.json --noEmit",
+    "check-all": "npm run type-check && npm run type-check:server && npm run lint && npm run format:check",
+    "fix-all": "npm run type-check && npm run type-check:server && npm run lint:fix && npm run format",
+    "prepare": "husky"
   },
   "eslintConfig": {
     "extends": [
@@ -42,14 +52,31 @@
     ]
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.12",
     "@types/cors": "^2.8.19",
     "@types/express": "^4.17.23",
     "@types/node": "^24.0.14",
-    "@types/react": "^19.1.8",
-    "@types/react-dom": "^19.1.6",
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.7",
+    "@typescript-eslint/eslint-plugin": "^8.39.1",
+    "@typescript-eslint/parser": "^8.39.1",
+    "@vitejs/plugin-react": "^5.0.0",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^9.33.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-prettier": "^5.5.4",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.5",
     "nodemon": "^3.1.10",
+    "postcss": "^8.5.6",
+    "prettier": "^3.6.2",
+    "tailwindcss": "^4.1.12",
     "ts-node": "^10.9.2",
     "tsx": "^4.20.3",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vite": "^7.1.2"
   }
 }

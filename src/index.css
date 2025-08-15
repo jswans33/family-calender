@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+/* Full-screen calendar layout */
+.calendar {
+  @apply w-full h-screen flex flex-col bg-gray-50;
+}
+
+/* Calendar header */
+.calendar-header {
+  @apply bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-sm;
+}
+
+.calendar-title {
+  @apply text-2xl font-semibold text-gray-900;
+}
+
+/* Calendar grid container */
+.calendar-container {
+  @apply flex-1 p-6 flex flex-col;
+}
+
+/* Day headers row */
+.calendar-headers {
+  @apply grid grid-cols-7 gap-px bg-gray-300 mb-px;
+}
+
+.day-header {
+  @apply bg-gray-100 flex items-center justify-center h-12 text-sm font-medium text-gray-700 uppercase tracking-wide;
+}
+
+/* Calendar days grid */
+.calendar-grid {
+  @apply flex-1 grid grid-cols-7 grid-rows-6 gap-px bg-gray-300 rounded-b-lg overflow-hidden shadow-lg;
+}
+
+/* Calendar day cells */
+.calendar-day {
+  @apply bg-white p-3 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset transition-colors duration-150 cursor-pointer flex flex-col;
+}
+
+.calendar-day.out-month {
+  @apply bg-gray-50 text-gray-400;
+}
+
+.calendar-day.today {
+  @apply bg-blue-50 border-l-4 border-l-blue-500;
+}
+
+/* Day numbers */
+.day-number {
+  @apply text-sm font-medium text-gray-900 mb-2 flex-shrink-0;
+}
+
+.calendar-day.out-month .day-number {
+  @apply text-gray-400;
+}
+
+.calendar-day.today .day-number {
+  @apply text-blue-700 font-bold;
+}
+
+/* Events container */
+.events-container {
+  @apply flex-1 space-y-1 overflow-hidden;
+}
+
+/* Individual events */
+.event {
+  @apply text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded truncate;
+}
+
+.event.overflow {
+  @apply bg-gray-200 text-gray-700 font-medium;
+}
