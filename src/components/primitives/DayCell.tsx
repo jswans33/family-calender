@@ -5,6 +5,30 @@ export interface CalendarEvent {
   title: string;
   date: string;   // 'YYYY-MM-DD'
   time?: string;  // 'HH:mm' 24h format
+  
+  // Rich CalDAV data
+  description?: string;
+  location?: string;
+  organizer?: string;
+  attendees?: string[];
+  categories?: string[];
+  priority?: number;
+  status?: string;
+  visibility?: string;
+  dtend?: string;     // End date/time
+  duration?: string;  // Duration format like "PT1H0M"
+  rrule?: string;     // Recurrence rule
+  created?: string;
+  lastModified?: string;
+  sequence?: number;
+  url?: string;       // Meeting/Zoom links
+  geo?: {
+    lat: number;
+    lon: number;
+  };
+  transparency?: string;
+  attachments?: string[];
+  timezone?: string;
 }
 
 export type CalendarView = 'month' | 'week' | 'day';

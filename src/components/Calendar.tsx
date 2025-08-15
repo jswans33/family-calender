@@ -4,6 +4,7 @@ import { CalendarHeader } from './primitives/CalendarHeader';
 import { ViewContainer } from './primitives/ViewContainer';
 import { WeekdayHeader } from './primitives/CalendarGrid';
 import { DayCell, CalendarEvent, CalendarView } from './primitives/DayCell';
+import { TimeGrid } from './primitives/TimeGrid';
 
 interface CalendarProps {
   events: CalendarEvent[];
@@ -14,6 +15,7 @@ interface CalendarProps {
   view?: CalendarView;            // default = 'month'
   onDayClick?: (dateISO: string) => void;
   onEventClick?: (event: CalendarEvent) => void;
+  onTimeSlotClick?: (date: string, time: string) => void;
 }
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -66,6 +68,7 @@ const Calendar: React.FC<CalendarProps> = ({
   view = 'month',
   onDayClick,
   onEventClick,
+  onTimeSlotClick,
 }) => {
   const [currentYear, setCurrentYear] = useState(year ?? new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(month ?? new Date().getMonth());
@@ -129,10 +132,10 @@ const Calendar: React.FC<CalendarProps> = ({
       case 'week':
         if (dates.length > 0) {
           const firstDay = dates[0];
-          const lastDay = dates[6];
-          if (firstDay.getMonth() === lastDay.getMonth()) {
+          const lastDay = dates[6] || dates[0]; // Fallback to first day if no 6th day
+          if (firstDay && lastDay && firstDay.getMonth() === lastDay.getMonth()) {
             return `${MONTHS[firstDay.getMonth()]} ${firstDay.getDate()}-${lastDay.getDate()}, ${firstDay.getFullYear()}`;
-          } else {
+          } else if (firstDay && lastDay) {
             return `${MONTHS[firstDay.getMonth()]} ${firstDay.getDate()} - ${MONTHS[lastDay.getMonth()]} ${lastDay.getDate()}, ${firstDay.getFullYear()}`;
           }
         }
@@ -140,7 +143,9 @@ const Calendar: React.FC<CalendarProps> = ({
       case 'day':
         if (dates.length > 0) {
           const day = dates[0];
-          return `${MONTHS[day.getMonth()]} ${day.getDate()}, ${day.getFullYear()}`;
+          if (day) {
+            return `${MONTHS[day.getMonth()]} ${day.getDate()}, ${day.getFullYear()}`;
+          }
         }
         return `${MONTHS[currentMonth]} ${currentYear}`;
       default:
@@ -184,40 +189,52 @@ const Calendar: React.FC<CalendarProps> = ({
       />
       
       <CalendarContent>
-        {/* Show weekday headers for month and week views */}
-        {(currentView === 'month' || currentView === 'week') && (
-          <WeekdayHeader weekdays={headers} className="mb-2" />
-        )}
-        
-        <ViewContainer view={currentView}>
-          {dates.map((date) => {
-            const key = dateKey(date);
-            const inCurrentMonth = date.getMonth() === currentMonth;
-            const dayEvents = buckets.get(key) ?? [];
-            const isToday =
-              date.getFullYear() === now.getFullYear() &&
-              date.getMonth() === now.getMonth() &&
-              date.getDate() === now.getDate();
-            
-            // Check if this date is in the past (before today)
-            const isPast = date < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        {/* Month View - Traditional Grid */}
+        {currentView === 'month' && (
+          <>
+            <WeekdayHeader weekdays={headers} className="mb-2" />
+            <ViewContainer view={currentView}>
+              {dates.map((date) => {
+                const key = dateKey(date);
+                const inCurrentMonth = date.getMonth() === currentMonth;
+                const dayEvents = buckets.get(key) ?? [];
+                const isToday =
+                  date.getFullYear() === now.getFullYear() &&
+                  date.getMonth() === now.getMonth() &&
+                  date.getDate() === now.getDate();
+                
+                // Check if this date is in the past (before today)
+                const isPast = date < new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-            return (
-              <DayCell
-                key={key}
-                day={date.getDate()}
-                isToday={isToday}
-                isCurrentMonth={inCurrentMonth}
-                isPast={isPast}
-                events={dayEvents}
-                maxEvents={maxEventsPerDay}
-                view={currentView}
-                onClick={() => onDayClick?.(key)}
-                {...(onEventClick && { onEventClick })}
-              />
-            );
-          })}
-        </ViewContainer>
+                return (
+                  <DayCell
+                    key={key}
+                    day={date.getDate()}
+                    isToday={isToday}
+                    isCurrentMonth={inCurrentMonth}
+                    isPast={isPast}
+                    events={dayEvents}
+                    maxEvents={maxEventsPerDay}
+                    view={currentView}
+                    onClick={() => onDayClick?.(key)}
+                    {...(onEventClick && { onEventClick })}
+                  />
+                );
+              })}
+            </ViewContainer>
+          </>
+        )}
+
+        {/* Week and Day Views - Time-based Grid */}
+        {(currentView === 'week' || currentView === 'day') && (
+          <TimeGrid
+            dates={dates}
+            events={events}
+            view={currentView}
+            {...(onEventClick && { onEventClick })}
+            {...(onTimeSlotClick && { onTimeSlotClick })}
+          />
+        )}
       </CalendarContent>
     </CalendarContainer>
   );

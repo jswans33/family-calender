@@ -1,0 +1,252 @@
+import React, { useState } from 'react';
+import { CalendarEvent } from './DayCell';
+
+export interface EventModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (event: Partial<CalendarEvent>) => void;
+  initialData?: {
+    date: string;
+    time?: string;
+  };
+}
+
+/**
+ * EventModal - Modal for creating and editing events
+ * 
+ * Features:
+ * - Create new events with basic info
+ * - Pre-fill date/time from clicked slot
+ * - Form validation
+ * - Clean, accessible interface
+ */
+export const EventModal: React.FC<EventModalProps> = ({
+  isOpen,
+  onClose,
+  onSave,
+  initialData,
+}) => {
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    location: '',
+    time: initialData?.time || '',
+    duration: '60', // minutes
+    url: '',
+    categories: '',
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.title.trim()) return;
+
+    // Calculate end time if duration is provided
+    let dtend: string | undefined;
+    if (formData.time && formData.duration) {
+      const startDate = new Date(`${initialData?.date}T${formData.time}:00`);
+      const endDate = new Date(startDate.getTime() + parseInt(formData.duration) * 60000);
+      dtend = endDate.toISOString();
+    }
+
+    const newEvent: Partial<CalendarEvent> = {
+      id: `temp-${Date.now()}`, // Temporary ID
+      title: formData.title.trim(),
+      date: initialData?.date || '',
+      time: formData.time || undefined,
+      description: formData.description.trim() || undefined,
+      location: formData.location.trim() || undefined,
+      url: formData.url.trim() || undefined,
+      dtend,
+      duration: formData.duration ? `PT${formData.duration}M` : undefined,
+      categories: formData.categories.trim() ? formData.categories.split(',').map(c => c.trim()) : undefined,
+      status: 'CONFIRMED',
+      created: new Date().toISOString(),
+      lastModified: new Date().toISOString(),
+    };
+
+    onSave(newEvent);
+    handleClose();
+  };
+
+  const handleClose = () => {
+    setFormData({
+      title: '',
+      description: '',
+      location: '',
+      time: initialData?.time || '',
+      duration: '60',
+      url: '',
+      categories: '',
+    });
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900">Create Event</h2>
+          <button
+            onClick={handleClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="Close modal"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Event Title */}
+          <div>
+            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+              Event Title *
+            </label>
+            <input
+              type="text"
+              id="title"
+              required
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter event title"
+              autoFocus
+            />
+          </div>
+
+          {/* Date and Time */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">
+                Date
+              </label>
+              <input
+                type="date"
+                id="date"
+                value={initialData?.date || ''}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-600"
+                disabled
+              />
+            </div>
+            <div>
+              <label htmlFor="time" className="block text-sm font-medium text-gray-700 mb-1">
+                Time
+              </label>
+              <input
+                type="time"
+                id="time"
+                value={formData.time}
+                onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
+
+          {/* Duration */}
+          <div>
+            <label htmlFor="duration" className="block text-sm font-medium text-gray-700 mb-1">
+              Duration (minutes)
+            </label>
+            <select
+              id="duration"
+              value={formData.duration}
+              onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="15">15 minutes</option>
+              <option value="30">30 minutes</option>
+              <option value="60">1 hour</option>
+              <option value="90">1.5 hours</option>
+              <option value="120">2 hours</option>
+              <option value="">All day</option>
+            </select>
+          </div>
+
+          {/* Location */}
+          <div>
+            <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
+              Location
+            </label>
+            <input
+              type="text"
+              id="location"
+              value={formData.location}
+              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter location"
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+              Description
+            </label>
+            <textarea
+              id="description"
+              rows={3}
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Event description"
+            />
+          </div>
+
+          {/* Meeting URL */}
+          <div>
+            <label htmlFor="url" className="block text-sm font-medium text-gray-700 mb-1">
+              Meeting URL
+            </label>
+            <input
+              type="url"
+              id="url"
+              value={formData.url}
+              onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="https://zoom.us/j/..."
+            />
+          </div>
+
+          {/* Categories */}
+          <div>
+            <label htmlFor="categories" className="block text-sm font-medium text-gray-700 mb-1">
+              Categories
+            </label>
+            <input
+              type="text"
+              id="categories"
+              value={formData.categories}
+              onChange={(e) => setFormData({ ...formData, categories: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="work, meeting, personal (comma separated)"
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!formData.title.trim()}
+              className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Create Event
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
