@@ -7,6 +7,7 @@ A modern, scalable calendar application with Apple Calendar/iCloud integration v
 This project provides a robust backend API for family calendar applications with full iCloud/Apple Calendar integration through the SHARED calendar. Built with TypeScript, clean architecture principles, and designed for households to coordinate schedules, assign tasks, and track TODOs together.
 
 ### 📱 IMPORTANT: Using SHARED Calendar
+
 - All events are created in the **SHARED** calendar (`2D7581FA-3A83-42D8-B6F4-8BCD8186AA6E`)
 - Perfect for family visibility - everyone sees the same events
 - Supports TODO tracking with rich metadata
@@ -37,7 +38,7 @@ Our documentation follows the **[Diátaxis Framework](https://diataxis.fr/)** - 
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - Apple ID with 2-factor authentication
 - App-specific password for CalDAV access
 
@@ -60,11 +61,11 @@ curl http://localhost:3001/events/today | jq
 
 ### Core Endpoints
 
-| Endpoint | Description | Example |
-|----------|-------------|---------|
-| `GET /events` | All events | `curl http://localhost:3001/events` |
-| `GET /events/today` | Today's events | `curl http://localhost:3001/events/today` |
-| `GET /events/week` | This week's events | `curl http://localhost:3001/events/week` |
+| Endpoint            | Description         | Example                                   |
+| ------------------- | ------------------- | ----------------------------------------- |
+| `GET /events`       | All events          | `curl http://localhost:3001/events`       |
+| `GET /events/today` | Today's events      | `curl http://localhost:3001/events/today` |
+| `GET /events/week`  | This week's events  | `curl http://localhost:3001/events/week`  |
 | `GET /events/month` | This month's events | `curl http://localhost:3001/events/month` |
 
 ### Date Range Queries
@@ -269,16 +270,19 @@ CMD ["node", "dist/server.js"]
 ### Common Issues
 
 **"401 Unauthorized"**
+
 - Use app-specific password, not Apple ID password
 - Verify 2FA is enabled
 - Check CalDAV URL is correct
 
 **"No events returned"**
+
 - Verify date ranges
 - Check CalDAV URL path
 - Test with curl directly
 
 **"Type errors"**
+
 - Run `npm run type-check:server`
 - Check interface compatibility
 - Verify import paths

@@ -7,7 +7,7 @@ export interface CalendarContainerProps {
 
 /**
  * CalendarContainer - Full-screen calendar layout container
- * 
+ *
  * Provides:
  * - Full viewport height layout
  * - Flex column structure for header + content
@@ -25,13 +25,11 @@ export const CalendarContainer: React.FC<CalendarContainerProps> = ({
     'bg-gray-50 rounded-lg',
     // Custom classes
     className,
-  ].filter(Boolean).join(' ');
+  ]
+    .filter(Boolean)
+    .join(' ');
 
-  return (
-    <div className={containerClasses}>
-      {children}
-    </div>
-  );
+  return <div className={containerClasses}>{children}</div>;
 };
 
 /**
@@ -53,11 +51,9 @@ export const CalendarContent: React.FC<CalendarContentProps> = ({
     'p-6',
     // Custom classes
     className,
-  ].filter(Boolean).join(' ');
+  ]
+    .filter(Boolean)
+    .join(' ');
 
-  return (
-    <div className={contentClasses}>
-      {children}
-    </div>
-  );
+  return <div className={contentClasses}>{children}</div>;
 };

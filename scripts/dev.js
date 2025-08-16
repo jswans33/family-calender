@@ -21,7 +21,7 @@ const colors = {
   yellow: '\x1b[33m',
   blue: '\x1b[34m',
   magenta: '\x1b[35m',
-  cyan: '\x1b[36m'
+  cyan: '\x1b[36m',
 };
 
 const log = (message, color = colors.reset) => {
@@ -33,9 +33,9 @@ let frontendProcess = null;
 let backendProcess = null;
 
 // Kill processes on specific ports
-const killPort = (port) => {
-  return new Promise((resolve) => {
-    exec(`lsof -ti:${port} | xargs kill -9`, (error) => {
+const killPort = port => {
+  return new Promise(resolve => {
+    exec(`lsof -ti:${port} | xargs kill -9`, error => {
       if (error) {
         log(`No process found on port ${port}`, colors.yellow);
       } else {
@@ -49,23 +49,23 @@ const killPort = (port) => {
 // Graceful shutdown handler
 const cleanup = async () => {
   log('\n🛑 Shutting down servers...', colors.yellow);
-  
+
   // Kill spawned processes
   if (frontendProcess) {
     frontendProcess.kill('SIGTERM');
     log('Frontend server stopped', colors.cyan);
   }
-  
+
   if (backendProcess) {
     backendProcess.kill('SIGTERM');
     log('Backend server stopped', colors.magenta);
   }
-  
+
   // Clean up ports
   log('Cleaning up ports...', colors.yellow);
   await killPort(3000); // Frontend
   await killPort(3001); // Backend
-  
+
   log('✅ Cleanup complete!', colors.green);
   process.exit(0);
 };
@@ -79,57 +79,57 @@ process.on('SIGUSR2', cleanup);
 // Main function to start both servers
 const startServers = async () => {
   log('🚀 Starting Swanson Light Calendar...', colors.bright);
-  
+
   // Clean up any existing processes on our ports
   log('Cleaning up existing processes...', colors.yellow);
   await killPort(3000);
   await killPort(3001);
-  
+
   // Start backend server
   log('Starting backend server...', colors.magenta);
   backendProcess = spawn('npm', ['run', 'start:server:dev'], {
     stdio: ['pipe', 'pipe', 'pipe'],
-    shell: true
+    shell: true,
   });
-  
-  backendProcess.stdout.on('data', (data) => {
+
+  backendProcess.stdout.on('data', data => {
     const output = data.toString().trim();
     if (output) {
       log(`[BACKEND] ${output}`, colors.magenta);
     }
   });
-  
-  backendProcess.stderr.on('data', (data) => {
+
+  backendProcess.stderr.on('data', data => {
     const output = data.toString().trim();
     if (output) {
       log(`[BACKEND ERROR] ${output}`, colors.red);
     }
   });
-  
+
   // Wait a moment for backend to start
   await new Promise(resolve => setTimeout(resolve, 2000));
-  
+
   // Start frontend server
   log('Starting frontend server...', colors.cyan);
   frontendProcess = spawn('npm', ['run', 'dev'], {
     stdio: ['pipe', 'pipe', 'pipe'],
-    shell: true
+    shell: true,
   });
-  
-  frontendProcess.stdout.on('data', (data) => {
+
+  frontendProcess.stdout.on('data', data => {
     const output = data.toString().trim();
     if (output) {
       log(`[FRONTEND] ${output}`, colors.cyan);
     }
   });
-  
-  frontendProcess.stderr.on('data', (data) => {
+
+  frontendProcess.stderr.on('data', data => {
     const output = data.toString().trim();
     if (output) {
       log(`[FRONTEND ERROR] ${output}`, colors.red);
     }
   });
-  
+
   // Success message
   setTimeout(() => {
     log('\n🎉 Servers started successfully!', colors.green);
@@ -137,16 +137,16 @@ const startServers = async () => {
     log('Backend:  http://localhost:3001', colors.magenta);
     log('\nPress Ctrl+C to stop both servers', colors.yellow);
   }, 3000);
-  
+
   // Handle process exits
-  frontendProcess.on('exit', (code) => {
+  frontendProcess.on('exit', code => {
     if (code !== 0) {
       log(`Frontend process exited with code ${code}`, colors.red);
       cleanup();
     }
   });
-  
-  backendProcess.on('exit', (code) => {
+
+  backendProcess.on('exit', code => {
     if (code !== 0) {
       log(`Backend process exited with code ${code}`, colors.red);
       cleanup();
@@ -155,7 +155,7 @@ const startServers = async () => {
 };
 
 // Start the application
-startServers().catch((error) => {
+startServers().catch(error => {
   log(`Error starting servers: ${error.message}`, colors.red);
   cleanup();
 });

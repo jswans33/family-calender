@@ -7,7 +7,7 @@ import { DatabaseCalendarService } from './services/DatabaseCalendarService.js';
 import { CalDAVRepository } from './repositories/CalDAVRepository.js';
 import { SQLiteRepository } from './repositories/SQLiteRepository.js';
 import { CalDAVConfig } from './config/CalDAVConfig.js';
-import { DatabaseConfig } from './config/DatabaseConfig.js';
+import { DatabaseConfigProvider } from './config/DatabaseConfig.js';
 
 const app = express();
 const port = 3001;
@@ -17,7 +17,7 @@ app.use(express.json()); // Parse JSON request bodies
 app.use(express.urlencoded({ extended: false }));
 
 // Initialize dependencies with database layer
-const dbConfig = DatabaseConfig.getConfig();
+const dbConfig = DatabaseConfigProvider.getConfig();
 
 // Ensure database directory exists
 const dbDir = path.dirname(dbConfig.path);
@@ -48,7 +48,9 @@ app.get('/events/month', (req, res) =>
   calendarController.getThisMonthsEvents(req, res)
 );
 app.put('/events/:id', (req, res) => calendarController.updateEvent(req, res));
-app.delete('/events/:id', (req, res) => calendarController.deleteEvent(req, res));
+app.delete('/events/:id', (req, res) =>
+  calendarController.deleteEvent(req, res)
+);
 app.post('/events', (req, res) => calendarController.createEvent(req, res)); // Create events
 
 // Admin routes for database management
@@ -61,9 +63,9 @@ app.post('/admin/sync', async (req, res) => {
       res.status(501).json({ error: 'Sync not supported by this service' });
     }
   } catch (error) {
-    res.status(500).json({ 
-      error: 'Sync failed', 
-      message: error instanceof Error ? error.message : 'Unknown error' 
+    res.status(500).json({
+      error: 'Sync failed',
+      message: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });
@@ -77,5 +79,7 @@ process.on('SIGINT', () => {
 
 // Start the Express server
 app.listen(port, () => {
-  console.log(`TypeScript CalDAV server with SQLite cache listening at http://localhost:${port}`);
+  console.log(
+    `TypeScript CalDAV server with SQLite cache listening at http://localhost:${port}`
+  );
 });

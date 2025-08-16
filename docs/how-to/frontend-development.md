@@ -7,17 +7,17 @@ Yes! Each event has both **start** and **end** data:
 ```typescript
 interface CalendarEvent {
   // Basic timing
-  date: string;        // Start date: "2025-08-15T09:00:00.000Z"
-  time: string;        // Formatted start: "09:00 AM"
-  dtend?: string;      // End date: "2025-08-15T10:00:00.000Z"
-  duration?: string;   // Duration: "PT1H0M" (1 hour)
-  
+  date: string; // Start date: "2025-08-15T09:00:00.000Z"
+  time: string; // Formatted start: "09:00 AM"
+  dtend?: string; // End date: "2025-08-15T10:00:00.000Z"
+  duration?: string; // Duration: "PT1H0M" (1 hour)
+
   // Core info
   id: string;
   title: string;
   description?: string;
   location?: string;
-  
+
   // Rich data
   organizer?: string;
   attendees?: string[];
@@ -35,7 +35,7 @@ interface CalendarEvent {
 const fetchMonthEvents = async (year: number, month: number) => {
   const startDate = new Date(year, month, 1).toISOString().split('T')[0];
   const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0];
-  
+
   const response = await fetch(`/events?start=${startDate}&end=${endDate}`);
   return await response.json();
 };
@@ -67,7 +67,7 @@ const CalendarGrid = ({ events }) => {
         const day = i + 1;
         const dateKey = `2025-08-${day.toString().padStart(2, '0')}`;
         const dayEvents = eventsByDate[dateKey] || [];
-        
+
         return (
           <div key={day} className="calendar-day">
             <div className="day-number">{day}</div>
@@ -98,7 +98,7 @@ const EventBubble = ({ event }) => {
   };
 
   // Determine if event is all-day
-  const isAllDay = event.time === 'All Day' || 
+  const isAllDay = event.time === 'All Day' ||
     (event.dtend && new Date(event.dtend).getDate() !== new Date(event.date).getDate());
 
   return (
@@ -163,7 +163,7 @@ const EventDetailModal = ({ event, onClose }) => {
   const getEventStatus = () => {
     switch(event.status) {
       case 'CONFIRMED': return '✅ Confirmed';
-      case 'TENTATIVE': return '❓ Tentative';  
+      case 'TENTATIVE': return '❓ Tentative';
       case 'CANCELLED': return '❌ Cancelled';
       default: return '';
     }
@@ -175,7 +175,7 @@ const EventDetailModal = ({ event, onClose }) => {
         <h2>{event.title}</h2>
         <button onClick={onClose}>×</button>
       </div>
-      
+
       <div className="modal-body">
         {/* Time */}
         <div className="event-field">
@@ -268,14 +268,16 @@ const useCalendarData = () => {
   useEffect(() => {
     const loadMonthData = async () => {
       setLoading(true);
-      
+
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
       const startDate = new Date(year, month, 1).toISOString().split('T')[0];
       const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0];
-      
+
       try {
-        const response = await fetch(`/events?start=${startDate}&end=${endDate}`);
+        const response = await fetch(
+          `/events?start=${startDate}&end=${endDate}`
+        );
         const monthEvents = await response.json();
         setEvents(monthEvents);
       } catch (error) {
@@ -297,11 +299,11 @@ const useCalendarData = () => {
 
 ```typescript
 // Filter events by various criteria
-const useEventFilters = (events) => {
+const useEventFilters = events => {
   const [filters, setFilters] = useState({
     status: 'all',
     hasAttendees: false,
-    category: null
+    category: null,
   });
 
   const filteredEvents = useMemo(() => {
@@ -310,17 +312,23 @@ const useEventFilters = (events) => {
       if (filters.status !== 'all' && event.status !== filters.status) {
         return false;
       }
-      
+
       // Attendees filter
-      if (filters.hasAttendees && (!event.attendees || event.attendees.length === 0)) {
+      if (
+        filters.hasAttendees &&
+        (!event.attendees || event.attendees.length === 0)
+      ) {
         return false;
       }
-      
+
       // Category filter
-      if (filters.category && (!event.categories || !event.categories.includes(filters.category))) {
+      if (
+        filters.category &&
+        (!event.categories || !event.categories.includes(filters.category))
+      ) {
         return false;
       }
-      
+
       return true;
     });
   }, [events, filters]);
@@ -367,12 +375,12 @@ const useEventFilters = (events) => {
     grid-template-columns: repeat(7, 1fr);
     gap: 1px;
   }
-  
+
   .calendar-day {
     min-height: 80px;
     padding: 4px;
   }
-  
+
   .event-bubble {
     font-size: 10px;
     padding: 2px 4px;

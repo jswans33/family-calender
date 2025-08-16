@@ -1,29 +1,35 @@
 # Calendar API Documentation
 
 ## Base URL
+
 ```
 http://localhost:3001
 ```
 
 ## Authentication
+
 Currently uses Apple CalDAV credentials configured server-side. Future versions will support API key authentication.
 
 ## Endpoints
 
 ### GET /events
+
 Retrieve all calendar events.
 
 **Query Parameters:**
+
 - `start` (optional): Start date in YYYY-MM-DD format
 - `end` (optional): End date in YYYY-MM-DD format
 
 **Example:**
+
 ```bash
 curl "http://localhost:3001/events"
 curl "http://localhost:3001/events?start=2025-01-01&end=2025-01-31"
 ```
 
 **Response:**
+
 ```json
 [
   {
@@ -55,25 +61,31 @@ curl "http://localhost:3001/events?start=2025-01-01&end=2025-01-31"
 ```
 
 ### GET /events/today
+
 Retrieve events for today.
 
 **Example:**
+
 ```bash
 curl "http://localhost:3001/events/today"
 ```
 
 ### GET /events/week
+
 Retrieve events for this week (Sunday to Saturday).
 
 **Example:**
+
 ```bash
 curl "http://localhost:3001/events/week"
 ```
 
 ### GET /events/month
+
 Retrieve events for this month.
 
 **Example:**
+
 ```bash
 curl "http://localhost:3001/events/month"
 ```
@@ -82,35 +94,36 @@ curl "http://localhost:3001/events/month"
 
 ### CalendarEvent Object
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `id` | string | Yes | Unique event identifier |
-| `title` | string | Yes | Event title/summary |
-| `date` | string | Yes | Start date in ISO 8601 format |
-| `time` | string | Yes | Formatted start time |
-| `description` | string | No | Event description/notes |
-| `location` | string | No | Event location |
-| `organizer` | string | No | Event organizer email |
-| `attendees` | string[] | No | List of attendee emails |
-| `categories` | string[] | No | Event categories/tags |
-| `priority` | number | No | Priority level (1-9) |
-| `status` | string | No | Event status: "CONFIRMED", "TENTATIVE", "CANCELLED" |
-| `visibility` | string | No | Visibility: "PUBLIC", "PRIVATE", "CONFIDENTIAL" |
-| `dtend` | string | No | End date in ISO 8601 format |
-| `duration` | string | No | Duration in ISO 8601 format |
-| `rrule` | string | No | Recurrence rule |
-| `created` | string | No | Creation timestamp |
-| `lastModified` | string | No | Last modification timestamp |
-| `sequence` | number | No | Version sequence number |
-| `url` | string | No | Related URL |
-| `geo` | object | No | GPS coordinates `{lat: number, lon: number}` |
-| `transparency` | string | No | Transparency: "OPAQUE", "TRANSPARENT" |
-| `attachments` | string[] | No | List of attachment URLs |
-| `timezone` | string | No | Event timezone |
+| Field          | Type     | Required | Description                                         |
+| -------------- | -------- | -------- | --------------------------------------------------- |
+| `id`           | string   | Yes      | Unique event identifier                             |
+| `title`        | string   | Yes      | Event title/summary                                 |
+| `date`         | string   | Yes      | Start date in ISO 8601 format                       |
+| `time`         | string   | Yes      | Formatted start time                                |
+| `description`  | string   | No       | Event description/notes                             |
+| `location`     | string   | No       | Event location                                      |
+| `organizer`    | string   | No       | Event organizer email                               |
+| `attendees`    | string[] | No       | List of attendee emails                             |
+| `categories`   | string[] | No       | Event categories/tags                               |
+| `priority`     | number   | No       | Priority level (1-9)                                |
+| `status`       | string   | No       | Event status: "CONFIRMED", "TENTATIVE", "CANCELLED" |
+| `visibility`   | string   | No       | Visibility: "PUBLIC", "PRIVATE", "CONFIDENTIAL"     |
+| `dtend`        | string   | No       | End date in ISO 8601 format                         |
+| `duration`     | string   | No       | Duration in ISO 8601 format                         |
+| `rrule`        | string   | No       | Recurrence rule                                     |
+| `created`      | string   | No       | Creation timestamp                                  |
+| `lastModified` | string   | No       | Last modification timestamp                         |
+| `sequence`     | number   | No       | Version sequence number                             |
+| `url`          | string   | No       | Related URL                                         |
+| `geo`          | object   | No       | GPS coordinates `{lat: number, lon: number}`        |
+| `transparency` | string   | No       | Transparency: "OPAQUE", "TRANSPARENT"               |
+| `attachments`  | string[] | No       | List of attachment URLs                             |
+| `timezone`     | string   | No       | Event timezone                                      |
 
 ## Error Responses
 
 ### 500 Internal Server Error
+
 ```json
 {
   "error": "Failed to fetch calendar events",
@@ -119,26 +132,33 @@ curl "http://localhost:3001/events/month"
 ```
 
 ## Rate Limiting
+
 Currently no rate limiting implemented. Future versions will include:
+
 - 100 requests per minute per IP
 - 1000 requests per hour per API key
 
 ## Pagination
+
 Not currently implemented. All matching events are returned in a single response.
 
 ## Filtering
+
 Events can be filtered by date range using query parameters. Additional filtering options planned:
+
 - Category filtering
 - Status filtering
 - Attendee filtering
 - Location-based filtering
 
 ## WebSocket Support
+
 Planned for future versions to provide real-time event updates.
 
 ## SDK Examples
 
 ### JavaScript/Node.js
+
 ```javascript
 const response = await fetch('http://localhost:3001/events/today');
 const events = await response.json();
@@ -153,6 +173,7 @@ events.forEach(event => {
 ```
 
 ### Python
+
 ```python
 import requests
 from datetime import datetime, timedelta
@@ -173,6 +194,7 @@ for event in events:
 ```
 
 ### curl
+
 ```bash
 # Get today's events with formatted output
 curl -s "http://localhost:3001/events/today" | \
@@ -190,6 +212,7 @@ curl -s "http://localhost:3001/events/week" | \
 ## Changelog
 
 ### v1.0.0 (Current)
+
 - Initial release
 - Basic CalDAV integration
 - Core CRUD endpoints
@@ -197,6 +220,7 @@ curl -s "http://localhost:3001/events/week" | \
 - Date range filtering
 
 ### Planned v1.1.0
+
 - Event creation/modification
 - WebSocket real-time updates
 - Advanced filtering options
@@ -204,6 +228,7 @@ curl -s "http://localhost:3001/events/week" | \
 - Rate limiting
 
 ### Planned v2.0.0
+
 - Multiple calendar provider support
 - GraphQL API
 - Event conflict detection

@@ -64,9 +64,12 @@ END:VCALENDAR`
     // Format: YYYYMMDDTHHMMSSZ (e.g., 20231215T140000Z)
     const dateTime = this.combineDateAndTime(date, time);
     const utcDateTime = new Date(dateTime);
-    
+
     // Format to YYYYMMDDTHHMMSSZ - Apple requires this exact format
-    return utcDateTime.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+    return utcDateTime
+      .toISOString()
+      .replace(/[-:]/g, '')
+      .replace(/\.\d{3}/, '');
   }
 
   /**
@@ -74,17 +77,17 @@ END:VCALENDAR`
    */
   private static combineDateAndTime(date: Date, time: string): string {
     const dateStr = date.toISOString().split('T')[0];
-    
+
     // Handle "All Day" events by defaulting to midnight
     if (time === 'All Day' || time === 'all day') {
       return `${dateStr}T00:00:00`;
     }
-    
+
     // Handle time formats like "14:00" or "2:30 PM"
     if (time.includes(':')) {
       return `${dateStr}T${time}:00`;
     }
-    
+
     // Default fallback
     return `${dateStr}T${time}:00`;
   }

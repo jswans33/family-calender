@@ -37,6 +37,7 @@ server-src/
 ### File Responsibilities
 
 **CalendarController.ts** (20 lines per method max)
+
 - HTTP request/response handling
 - Query parameter parsing
 - Response formatting
@@ -44,6 +45,7 @@ server-src/
 - NO business logic
 
 **DatabaseCalendarService.ts** (3-5 public methods max)
+
 - Event filtering logic with SQLite caching
 - Background sync orchestration
 - Business rule validation
@@ -51,12 +53,14 @@ server-src/
 - NO direct database access, NO HTTP
 
 **CalendarService.ts** (Legacy direct CalDAV service)
+
 - Direct CalDAV event operations
 - Maintained for fallback scenarios
 - Event validation logic
 - NO database operations
 
 **SQLiteRepository.ts** (Single responsibility)
+
 - SQLite database operations with metadata preservation
 - Transaction management and atomic operations
 - Error handling and recovery mechanisms
@@ -65,6 +69,7 @@ server-src/
 - NO business logic
 
 **CalDAVRepository.ts** (Single responsibility)
+
 - CalDAV protocol communication
 - XML parsing and generation
 - Network error handling
@@ -72,12 +77,14 @@ server-src/
 - NO business logic
 
 **DatabaseConfig.ts** (Configuration only)
+
 - Environment variable mapping
 - Database connection parameters
 - Sync interval configuration
 - NO implementation logic
 
 **Calendar.ts** (Interface definitions)
+
 - Event data structure
 - Configuration interfaces
 - ICalendarService interface for clean architecture
@@ -99,6 +106,7 @@ server-src/
 ### Database Management Workflow
 
 **Schema Migrations:**
+
 ```typescript
 // Add new field to SQLiteRepository.ts
 ALTER TABLE events ADD COLUMN new_field TEXT;
@@ -106,11 +114,12 @@ ALTER TABLE events ADD COLUMN new_field TEXT;
 // Update rowToEvent() method
 if (row.new_field) event.newField = row.new_field;
 
-// Update saveEvents() method  
+// Update saveEvents() method
 // Add new_field to INSERT statement parameters
 ```
 
 **Performance Monitoring:**
+
 ```bash
 # Check database size
 ls -lh data/calendar.db
@@ -123,6 +132,7 @@ curl -X POST http://localhost:3002/admin/sync
 ```
 
 **Backup Strategy:**
+
 ```bash
 # Automated backup (add to cron)
 cp data/calendar.db data/calendar-backup-$(date +%Y%m%d).db
@@ -132,6 +142,7 @@ cp data/calendar-backup-20250815.db data/calendar.db
 ```
 
 **Metadata Management Examples:**
+
 ```bash
 # View sync timestamps
 sqlite3 data/calendar.db "SELECT id, title, synced_at FROM events ORDER BY synced_at DESC LIMIT 5;"
@@ -144,6 +155,7 @@ sqlite3 data/calendar.db "SELECT * FROM events WHERE id = 'specific-event-id';"
 ```
 
 **Custom Metadata Extensions:**
+
 ```sql
 -- Add custom fields for future features
 ALTER TABLE events ADD COLUMN user_priority INTEGER DEFAULT 0;
@@ -175,6 +187,7 @@ Background Sync → Local DB → Instant Response
 ```
 
 **Performance Benefits:**
+
 - **Sub-10ms response times** vs 200-500ms CalDAV API calls
 - **Offline capability** - works without CalDAV connectivity
 - **Reduced API load** - sync every 15 minutes vs every request
@@ -183,6 +196,7 @@ Background Sync → Local DB → Instant Response
 ### Database Schema Design
 
 **Events Table:** Comprehensive storage for all CalDAV fields
+
 ```sql
 CREATE TABLE events (
   id TEXT PRIMARY KEY,              -- CalDAV UID
@@ -221,6 +235,7 @@ CREATE INDEX idx_events_sync ON events(synced_at);
 ### Database Configuration
 
 **Environment Variables:**
+
 ```bash
 DATABASE_PATH="./data/calendar.db"    # Database file location
 SYNC_INTERVAL_MINUTES="15"           # Background sync frequency
@@ -228,13 +243,14 @@ MAX_AGE_MONTHS="6"                   # Auto-cleanup threshold
 ```
 
 **Configuration Class:**
+
 ```typescript
 export class DatabaseConfig {
   static getConfig(): DatabaseConfig {
     return {
       path: process.env.DATABASE_PATH || './data/calendar.db',
       syncIntervalMinutes: parseInt(process.env.SYNC_INTERVAL_MINUTES || '15'),
-      maxAgeMonths: parseInt(process.env.MAX_AGE_MONTHS || '6')
+      maxAgeMonths: parseInt(process.env.MAX_AGE_MONTHS || '6'),
     };
   }
 }
@@ -255,14 +271,16 @@ await sqliteRepository.saveEvents(events, false); // preserveMetadata = false
 ```
 
 **Preserved Fields During Sync:**
+
 - `synced_at` - Original sync timestamp maintained
 - `caldav_etag` - ETag for change detection preserved
 - `custom_data` - Future user metadata fields (extensible)
 
 **Implementation:**
+
 ```sql
 -- Metadata-preserving sync uses ON CONFLICT DO UPDATE
-INSERT INTO events (..., synced_at) 
+INSERT INTO events (..., synced_at)
 VALUES (..., COALESCE((SELECT synced_at FROM events WHERE id = ?), CURRENT_TIMESTAMP))
 ON CONFLICT(id) DO UPDATE SET
   title = excluded.title,
@@ -275,20 +293,22 @@ INSERT OR REPLACE INTO events (...) VALUES (..., CURRENT_TIMESTAMP);
 ```
 
 **Granular Metadata Updates:**
+
 ```typescript
 // Update specific metadata without touching event data
 await sqliteRepository.updateEventMetadata(eventId, {
   caldav_etag: 'abc123',
-  custom_data: { userFlag: 'important', priority: 'high' }
+  custom_data: { userFlag: 'important', priority: 'high' },
 });
 ```
 
 ### Transaction Safety & Error Handling
 
 **Atomic Operations:** All bulk operations use proper transactions
+
 ```typescript
 // Begin transaction with error handling
-this.db.run('BEGIN TRANSACTION', (err) => {
+this.db.run('BEGIN TRANSACTION', err => {
   if (err) {
     console.error('Failed to start transaction:', err);
     reject(err);
@@ -298,7 +318,7 @@ this.db.run('BEGIN TRANSACTION', (err) => {
 
 // Individual operation error tracking
 events.forEach(event => {
-  stmt.run([...eventData], (err) => {
+  stmt.run([...eventData], err => {
     if (err) {
       console.error(`Failed to save event ${event.id}:`, err);
       hasError = true;
@@ -308,12 +328,12 @@ events.forEach(event => {
 
 // Commit or rollback based on results
 if (hasError) {
-  this.db.run('ROLLBACK', (rollbackErr) => {
+  this.db.run('ROLLBACK', rollbackErr => {
     if (rollbackErr) console.error('Rollback failed:', rollbackErr);
     reject(new Error('Transaction failed and was rolled back'));
   });
 } else {
-  this.db.run('COMMIT', (commitErr) => {
+  this.db.run('COMMIT', commitErr => {
     if (commitErr) {
       this.db.run('ROLLBACK');
       reject(commitErr);
@@ -327,6 +347,7 @@ if (hasError) {
 ### Background Sync Strategy
 
 **Current Implementation: Intelligent Full Sync**
+
 - **Initial sync** on server startup
 - **Periodic sync** every 15 minutes (configurable)
 - **Manual sync** via `/admin/sync` endpoint
@@ -337,10 +358,10 @@ if (hasError) {
 private async checkAndSync(): Promise<void> {
   const lastSync = await this.sqliteRepository.getLastSyncTime();
   const now = new Date();
-  
-  const shouldSync = !lastSync || 
+
+  const shouldSync = !lastSync ||
     (now.getTime() - lastSync.getTime()) > (this.syncIntervalMinutes * 60 * 1000);
-    
+
   if (shouldSync) {
     await this.forceSync(); // Full sync with metadata preservation
   }
@@ -356,28 +377,29 @@ The metadata preservation foundation enables efficient incremental sync:
 async incrementalSync(): Promise<void> {
   // 1. Get stored ETags for change detection
   const storedETags = await this.sqliteRepository.getEventETags();
-  
+
   // 2. Fetch only changed events since last sync
   const changes = await this.calDAVRepository.getChangedEventsSince(
     await this.getLastSyncTime(),
     storedETags
   );
-  
+
   // 3. Apply changes with metadata preservation
   await this.sqliteRepository.saveEvents(changes.events, true);
-  
+
   // 4. Update ETags for next incremental sync
   for (const event of changes.events) {
     await this.sqliteRepository.updateEventMetadata(event.id, {
       caldav_etag: event.etag
     });
   }
-  
+
   console.log(`Incremental sync: ${changes.events.length} changed events`);
 }
 ```
 
 **Benefits of Current + Future Approach:**
+
 - **Current:** Reliable full sync with metadata preservation
 - **Future:** ETag-based incremental sync for efficiency
 - **Bandwidth:** Reduce from 274 events to ~5-10 changed events per sync
@@ -386,6 +408,7 @@ async incrementalSync(): Promise<void> {
 ### Data Lifecycle Management
 
 **Automatic Cleanup:**
+
 ```typescript
 // Remove events older than 6 months
 const sixMonthsAgo = new Date();
@@ -394,6 +417,7 @@ await this.sqliteRepository.clearOldEvents(sixMonthsAgo);
 ```
 
 **Graceful Shutdown:**
+
 ```typescript
 process.on('SIGINT', () => {
   console.log('Shutting down gracefully...');
@@ -405,12 +429,14 @@ process.on('SIGINT', () => {
 ### Performance Optimization
 
 **Query Optimization:**
+
 - **Date-range filtering** with indexed queries
-- **Streaming results** for large datasets  
+- **Streaming results** for large datasets
 - **Prepared statements** for bulk operations
 - **Connection pooling** via singleton pattern
 
 **Memory Management:**
+
 - **JSON serialization** for complex fields (attendees, categories)
 - **Lazy loading** of optional fields
 - **Efficient row mapping** with conditional assignment
@@ -418,9 +444,10 @@ process.on('SIGINT', () => {
 ### Monitoring & Observability
 
 **Database Health Checks:**
+
 ```typescript
 // Connection validation
-this.db = new sqlite3.Database(dbPath, (err) => {
+this.db = new sqlite3.Database(dbPath, err => {
   if (err) {
     console.error('Failed to connect to SQLite database:', err);
     throw err;
@@ -434,30 +461,32 @@ console.log('Force syncing events from CalDAV to database...');
 ```
 
 **Admin Endpoints:**
+
 ```typescript
 // Manual sync trigger
-POST /admin/sync
+POST / admin / sync;
 // Response: { "success": true, "message": "Sync completed" }
 
 // Database health status (future enhancement)
-GET /admin/health
+GET / admin / health;
 // Response: { "database": "connected", "lastSync": "2025-08-15T21:45:00Z" }
 ```
 
 ### Error Recovery & Resilience
 
 **Fallback Strategy:**
+
 ```typescript
 async getEvents(startDate?: Date, endDate?: Date): Promise<CalendarEvent[]> {
   try {
     // Primary: Serve from SQLite database
     const events = await this.sqliteRepository.getEvents(startDate, endDate);
-    
+
     // Background: Check if sync needed
     this.checkAndSync().catch(error => {
       console.error('Background sync failed:', error);
     });
-    
+
     return events.length > 0 ? events : this.getFallbackEvents();
   } catch (error) {
     // Fallback: Direct CalDAV query
@@ -468,6 +497,7 @@ async getEvents(startDate?: Date, endDate?: Date): Promise<CalendarEvent[]> {
 ```
 
 **Connection Recovery:**
+
 - Auto-retry failed transactions
 - Graceful degradation to CalDAV
 - Connection validation on startup
@@ -476,12 +506,14 @@ async getEvents(startDate?: Date, endDate?: Date): Promise<CalendarEvent[]> {
 ### Security Considerations
 
 **Data Protection:**
+
 - Database files excluded from version control (`.gitignore`)
 - No sensitive credentials stored in database
 - Local-only access (no network exposure)
 - File permissions restricted to application user
 
 **SQL Injection Prevention:**
+
 - **Prepared statements** for all queries
 - **Parameterized queries** with proper escaping
 - **Input validation** at service layer
@@ -490,7 +522,9 @@ async getEvents(startDate?: Date, endDate?: Date): Promise<CalendarEvent[]> {
 ## 📊 CalDAV Integration Details
 
 ### 🚨 IMPORTANT: Using SHARED Calendar
+
 **We're using the SHARED calendar (`2D7581FA-3A83-42D8-B6F4-8BCD8186AA6E`) for all events!**
+
 - This is the only calendar that accepts PUT requests for creating events
 - Perfect for family calendar where everyone can see/edit events
 - See `SHARED_CALENDAR_GUIDE.md` for family setup instructions
@@ -498,12 +532,14 @@ async getEvents(startDate?: Date, endDate?: Date): Promise<CalendarEvent[]> {
 ### Event Data Fields Extracted
 
 **Core Fields (Required)**
+
 - `id` - Event UID from CalDAV
 - `title` - Event summary (use "TODO:" prefix for tasks)
 - `date` - Start date (ISO 8601)
 - `time` - Formatted start time
 
 **Rich Fields (Optional) - Perfect for TODOs**
+
 - `description` - Event notes/TODO checklists
 - `location` - Where to complete task
 - `organizer` - Who created the task
@@ -545,6 +581,7 @@ async getEvents(startDate?: Date, endDate?: Date): Promise<CalendarEvent[]> {
 ### Date Range Filtering
 
 **Server-side filtering** for performance:
+
 - CalDAV supports `<C:time-range>` filtering
 - Reduces network payload
 - Handles timezone conversions
@@ -553,6 +590,7 @@ async getEvents(startDate?: Date, endDate?: Date): Promise<CalendarEvent[]> {
 ## 🧪 Testing Strategy
 
 ### Test Scripts Location
+
 ```
 scripts/
 ├── simple-test.sh        # Demo all endpoints
@@ -561,6 +599,7 @@ scripts/
 ```
 
 ### Test Coverage
+
 - ✅ All API endpoints
 - ✅ Date range filtering
 - ✅ Rich data extraction
@@ -577,6 +616,7 @@ scripts/
 ## 🔐 Security & Configuration
 
 ### Environment Variables (Recommended)
+
 ```bash
 export CALDAV_USERNAME="your-apple-id@icloud.com"
 export CALDAV_PASSWORD="your-app-specific-password"
@@ -585,12 +625,15 @@ export CALDAV_PATH="/1110188709/calendars/home/"
 ```
 
 ### CalDAV URL Discovery
+
 Apple CalDAV URLs are user-specific. Discovery process:
+
 1. PROPFIND to `https://caldav.icloud.com/.well-known/caldav`
 2. Extract `<calendar-home-set>` from response
 3. Use extracted URL in configuration
 
 ### Apple App-Specific Passwords
+
 - Required for CalDAV access
 - Generate at appleid.apple.com → Security
 - Format: `xxxx-xxxx-xxxx-xxxx`
@@ -599,16 +642,19 @@ Apple CalDAV URLs are user-specific. Discovery process:
 ## 🚀 Performance Optimizations
 
 ### Server-Side Filtering
+
 - CalDAV time-range queries reduce payload
 - Date calculations done in CalendarService
 - Efficient XML parsing with streaming
 
 ### Memory Management
+
 - Process events in streams, not batches
 - Minimal object allocation in parsing
 - Proper error handling prevents memory leaks
 
 ### Response Optimization
+
 - Rich data only when needed
 - Compressed JSON responses
 - Proper HTTP caching headers
@@ -618,14 +664,16 @@ Apple CalDAV URLs are user-specific. Discovery process:
 ### Adding New Calendar Provider
 
 1. **Create New Repository**
+
    ```typescript
    export class GoogleCalendarRepository {
-     async fetchCalendarData(start?: Date, end?: Date): Promise<string>
-     parseCalendarEvents(data: string): CalendarEvent[]
+     async fetchCalendarData(start?: Date, end?: Date): Promise<string>;
+     parseCalendarEvents(data: string): CalendarEvent[];
    }
    ```
 
 2. **Update Service**
+
    ```typescript
    constructor(private repository: CalDAVRepository | GoogleCalendarRepository)
    ```
@@ -633,7 +681,7 @@ Apple CalDAV URLs are user-specific. Discovery process:
 3. **Update Configuration**
    ```typescript
    interface CalendarConfig {
-     provider: 'caldav' | 'google'
+     provider: 'caldav' | 'google';
      // provider-specific config
    }
    ```
@@ -641,11 +689,13 @@ Apple CalDAV URLs are user-specific. Discovery process:
 ### Adding Event Filtering
 
 1. **Update Service**
+
    ```typescript
    async getEventsByCategory(category: string): Promise<CalendarEvent[]>
    ```
 
 2. **Update Controller**
+
    ```typescript
    async getEventsByCategory(req: Request, res: Response)
    ```
@@ -658,6 +708,7 @@ Apple CalDAV URLs are user-specific. Discovery process:
 ### Adding Caching
 
 1. **Add Redis Repository**
+
    ```typescript
    export class CachedCalDAVRepository {
      constructor(
@@ -669,7 +720,7 @@ Apple CalDAV URLs are user-specific. Discovery process:
 
 2. **Update Dependency Injection**
    ```typescript
-   const cachedRepo = new CachedCalDAVRepository(calDAVRepo, redis)
+   const cachedRepo = new CachedCalDAVRepository(calDAVRepo, redis);
    ```
 
 ## 🐛 Debugging & Troubleshooting
@@ -677,16 +728,19 @@ Apple CalDAV URLs are user-specific. Discovery process:
 ### Common Issues
 
 **401 Unauthorized**
+
 - Check app-specific password format
 - Verify CalDAV URL is correct
 - Test with curl directly
 
 **Empty Event Arrays**
+
 - Check date range parameters
 - Verify calendar has events in range
 - Test CalDAV query manually
 
 **Type Errors**
+
 - Run `npm run type-check:server`
 - Check interface compatibility
 - Verify import paths
@@ -697,8 +751,10 @@ Apple CalDAV URLs are user-specific. Discovery process:
 // Add to service methods
 console.log('CalendarService.getEvents:', { startDate, endDate });
 
-// Add to repository methods  
-console.log('CalDAVRepository.fetchCalendarData:', { xmlResponse: data.length });
+// Add to repository methods
+console.log('CalDAVRepository.fetchCalendarData:', {
+  xmlResponse: data.length,
+});
 
 // Add to controller methods
 console.log('CalendarController.getEvents:', { queryParams: req.query });
@@ -718,21 +774,25 @@ curl -v -X REPORT \
 ## 📈 Scaling Considerations
 
 ### Horizontal Scaling
+
 - Stateless server design
 - No in-memory caching
 - Multiple instances behind load balancer
 
 ### Database Layer
+
 - Add PostgreSQL for event caching
 - Store processed events for faster queries
 - Implement background sync jobs
 
 ### API Rate Limiting
+
 - Add Redis-based rate limiting
 - Implement CalDAV request queuing
 - Add circuit breaker for CalDAV failures
 
 ### Monitoring
+
 - Add structured logging
 - Implement health check endpoints
 - Monitor CalDAV response times
@@ -740,6 +800,7 @@ curl -v -X REPORT \
 ## 🔮 Future Enhancements
 
 ### Planned Features
+
 - [ ] WebSocket event streaming
 - [ ] Event creation/modification
 - [ ] Multiple calendar support
@@ -747,12 +808,14 @@ curl -v -X REPORT \
 - [ ] Smart event categorization
 
 ### Architecture Improvements
+
 - [ ] GraphQL API layer
 - [ ] Event sourcing pattern
 - [ ] CQRS for read/write separation
 - [ ] Microservices decomposition
 
 ### Integration Possibilities
+
 - [ ] Google Calendar support
 - [ ] Outlook integration
 - [ ] Slack notifications
@@ -762,16 +825,19 @@ curl -v -X REPORT \
 ## 📚 References
 
 ### CalDAV Specifications
+
 - RFC 4791: CalDAV Protocol
 - RFC 5545: iCalendar Data Format
 - RFC 6352: CardDAV Extensions
 
 ### Apple Documentation
+
 - iCloud CalDAV Documentation
 - App-Specific Password Guide
 - Two-Factor Authentication Setup
 
 ### Clean Architecture
+
 - Uncle Bob's Clean Architecture
 - Hexagonal Architecture Pattern
 - Dependency Inversion Principle

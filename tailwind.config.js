@@ -1,9 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
       colors: {
@@ -19,13 +16,13 @@ export default {
           'out-month': '#f3f4f6',
           'event-bg': '#dbeafe',
           'event-text': '#1e40af',
-          'overflow': '#ef4444',
-        }
+          overflow: '#ef4444',
+        },
       },
       gridTemplateColumns: {
-        '7': 'repeat(7, minmax(0, 1fr))',
-      }
+        7: 'repeat(7, minmax(0, 1fr))',
+      },
     },
   },
   plugins: [],
-}
+};

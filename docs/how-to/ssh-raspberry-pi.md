@@ -3,6 +3,7 @@
 ## Quick Connect
 
 Load environment variables and connect:
+
 ```bash
 source .env
 sshpass -p "$RASPI_PASSWORD" ssh "$RASPI_USER@$RASPI_HOST"
@@ -11,9 +12,11 @@ sshpass -p "$RASPI_PASSWORD" ssh "$RASPI_USER@$RASPI_HOST"
 ## Manual Connect
 
 If you prefer to enter password manually:
+
 ```bash
 ssh <username>@<pi_ip_address>
 ```
+
 Enter password when prompted.
 
 ## Device Information
@@ -25,6 +28,7 @@ Enter password when prompted.
 ## Environment Variables
 
 SSH credentials are stored in `.env` (not committed to git):
+
 ```bash
 RASPI_HOST=<pi_ip_address>
 RASPI_USER=<username>
@@ -35,6 +39,7 @@ RASPI_HOSTNAME=<hostname>
 ## Prerequisites
 
 Install sshpass for automated authentication:
+
 ```bash
 sudo apt-get install sshpass
 ```
@@ -42,6 +47,7 @@ sudo apt-get install sshpass
 ## Run Commands Remotely
 
 Execute single commands without interactive session:
+
 ```bash
 source .env
 sshpass -p "$RASPI_PASSWORD" ssh "$RASPI_USER@$RASPI_HOST" 'command_here'

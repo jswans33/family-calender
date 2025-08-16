@@ -1,5 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { CalendarContainer, CalendarContent } from './primitives/CalendarContainer';
+import {
+  CalendarContainer,
+  CalendarContent,
+} from './primitives/CalendarContainer';
 import { CalendarHeader } from './primitives/CalendarHeader';
 import { ViewContainer } from './primitives/ViewContainer';
 import { WeekdayHeader } from './primitives/CalendarGrid';
@@ -9,21 +12,35 @@ import { MultiDayEventBar } from './primitives/MultiDayEventBar';
 
 interface CalendarProps {
   events: CalendarEvent[];
-  year?: number;                  // default = now
-  month?: number;                 // 0-11, default = now
-  startOfWeek?: 0|1|2|3|4|5|6;    // 0=Sun, default=1
-  maxEventsPerDay?: number;       // default=3
-  view?: CalendarView;            // default = 'month'
+  year?: number; // default = now
+  month?: number; // 0-11, default = now
+  startOfWeek?: 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0=Sun, default=1
+  maxEventsPerDay?: number; // default=3
+  view?: CalendarView; // default = 'month'
   onDayClick?: (dateISO: string) => void;
   onEventClick?: (event: CalendarEvent) => void;
   onTimeSlotClick?: (date: string, time: string) => void;
 }
 
-const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MONTHS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const pad2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
-const dateKey = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const dateKey = (d: Date) =>
+  `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 
 function parseLocal(date: string, time?: string): Date {
   // Safe for 'YYYY-MM-DD' and optional 'HH:mm' without UTC shift
@@ -46,7 +63,11 @@ function rotatedDays(startOfWeek: number) {
   return out;
 }
 
-function monthGridDates(year: number, month: number, startOfWeek: number): Date[] {
+function monthGridDates(
+  year: number,
+  month: number,
+  startOfWeek: number
+): Date[] {
   const first = new Date(year, month, 1);
   const dow = first.getDay(); // 0=Sun
   const lead = (dow - startOfWeek + 7) % 7;
@@ -71,14 +92,18 @@ const Calendar: React.FC<CalendarProps> = ({
   onEventClick,
   onTimeSlotClick,
 }) => {
-  const [currentYear, setCurrentYear] = useState(year ?? new Date().getFullYear());
-  const [currentMonth, setCurrentMonth] = useState(month ?? new Date().getMonth());
+  const [currentYear, setCurrentYear] = useState(
+    year ?? new Date().getFullYear()
+  );
+  const [currentMonth, setCurrentMonth] = useState(
+    month ?? new Date().getMonth()
+  );
   const [currentDate, setCurrentDate] = useState(new Date().getDate()); // Track the specific date for day/week navigation
   const currentView = view; // Use the view prop directly
 
   const now = new Date();
   const headers = useMemo(() => rotatedDays(startOfWeek), [startOfWeek]);
-  
+
   // Generate dates based on current view
   const dates = useMemo(() => {
     switch (currentView) {
@@ -91,7 +116,7 @@ const Calendar: React.FC<CalendarProps> = ({
         const dayOfWeek = targetDate.getDay();
         const daysFromStart = (dayOfWeek - startOfWeek + 7) % 7;
         weekStart.setDate(targetDate.getDate() - daysFromStart);
-        
+
         const weekDates = [];
         for (let i = 0; i < 7; i++) {
           const date = new Date(weekStart);
@@ -110,21 +135,37 @@ const Calendar: React.FC<CalendarProps> = ({
   // Event bucketing - separates single-day and multi-day events
   const { singleDayBuckets, multiDayEvents } = useMemo(() => {
     const singleDayMap = new Map<string, CalendarEvent[]>();
-    const multiDayEvents: Array<{event: CalendarEvent, startDate: Date, endDate: Date}> = [];
-    
+    const multiDayEvents: Array<{
+      event: CalendarEvent;
+      startDate: Date;
+      endDate: Date;
+    }> = [];
+
     for (const e of events) {
       // For all-day events, don't pass time to parseLocal
-      const isAllDay = e.time === 'All Day' || e.time === 'all day' || !e.time;
-      const startDate = parseLocal(e.date, isAllDay ? undefined : e.time);
+      const isAllDay =
+        e.time === 'All Day' ||
+        e.time === 'all day' ||
+        !e.time ||
+        e.time === '12:00 AM';
+      const datePart = e.date.split('T')[0];
+      if (!datePart) continue; // Skip if date is malformed
+      const startDate = parseLocal(datePart); // Parse just the date part
       const startKey = dateKey(startDate);
-      
-      // Check if this is a multi-day event
-      if (e.dtend && isAllDay) {
+
+      // Check if this is a multi-day event based on dtend
+      if (e.dtend) {
         const endDate = new Date(e.dtend);
-        if (endDate > startDate) {
+        const startDateClean = new Date(e.date);
+
+        // Check if event spans multiple days (more than 24 hours)
+        const daysDiff = Math.floor(
+          (endDate.getTime() - startDateClean.getTime()) / (1000 * 60 * 60 * 24)
+        );
+
+        if (daysDiff > 1 || (daysDiff === 1 && isAllDay)) {
           // Multi-day event - store separately for spanning rendering
           multiDayEvents.push({ event: e, startDate, endDate });
-          console.log(`Multi-day event detected: "${e.title}" from ${dateKey(startDate)} to ${dateKey(endDate)}`);
         } else {
           // Single day event
           if (!singleDayMap.has(startKey)) singleDayMap.set(startKey, []);
@@ -136,18 +177,12 @@ const Calendar: React.FC<CalendarProps> = ({
         singleDayMap.get(startKey)!.push(e);
       }
     }
-    
+
     // Sort events within each day
     for (const arr of singleDayMap.values()) {
       arr.sort((a, b) => minutesFromTime(a.time) - minutesFromTime(b.time));
     }
-    
-    console.log('Event bucketing complete:', {
-      singleDayCount: singleDayMap.size,
-      multiDayCount: multiDayEvents.length,
-      multiDayEvents: multiDayEvents.map(m => m.event.title)
-    });
-    
+
     return { singleDayBuckets: singleDayMap, multiDayEvents };
   }, [events]);
 
@@ -160,7 +195,11 @@ const Calendar: React.FC<CalendarProps> = ({
         if (dates.length > 0) {
           const firstDay = dates[0];
           const lastDay = dates[6] || dates[0]; // Fallback to first day if no 6th day
-          if (firstDay && lastDay && firstDay.getMonth() === lastDay.getMonth()) {
+          if (
+            firstDay &&
+            lastDay &&
+            firstDay.getMonth() === lastDay.getMonth()
+          ) {
             return `${MONTHS[firstDay.getMonth()]} ${firstDay.getDate()}-${lastDay.getDate()}, ${firstDay.getFullYear()}`;
           } else if (firstDay && lastDay) {
             return `${MONTHS[firstDay.getMonth()]} ${firstDay.getDate()} - ${MONTHS[lastDay.getMonth()]} ${lastDay.getDate()}, ${firstDay.getFullYear()}`;
@@ -192,7 +231,7 @@ const Calendar: React.FC<CalendarProps> = ({
         setCurrentMonth(prevDay.getMonth());
         setCurrentDate(prevDay.getDate());
         break;
-      
+
       case 'week':
         // Move to previous week
         const prevWeek = new Date(currentYear, currentMonth, currentDate);
@@ -201,7 +240,7 @@ const Calendar: React.FC<CalendarProps> = ({
         setCurrentMonth(prevWeek.getMonth());
         setCurrentDate(prevWeek.getDate());
         break;
-      
+
       case 'month':
       default:
         // Move to previous month
@@ -227,7 +266,7 @@ const Calendar: React.FC<CalendarProps> = ({
         setCurrentMonth(nextDay.getMonth());
         setCurrentDate(nextDay.getDate());
         break;
-      
+
       case 'week':
         // Move to next week
         const nextWeek = new Date(currentYear, currentMonth, currentDate);
@@ -236,7 +275,7 @@ const Calendar: React.FC<CalendarProps> = ({
         setCurrentMonth(nextWeek.getMonth());
         setCurrentDate(nextWeek.getDate());
         break;
-      
+
       case 'month':
       default:
         // Move to next month
@@ -267,15 +306,15 @@ const Calendar: React.FC<CalendarProps> = ({
         onNext={handleNext}
         onToday={handleToday}
       />
-      
+
       <CalendarContent>
         {/* Month View - Traditional Grid */}
         {currentView === 'month' && (
           <>
             <WeekdayHeader weekdays={headers} className="mb-2" />
-            <div className="relative">
+            <div className="relative h-full">
               <ViewContainer view={currentView}>
-                {dates.map((date) => {
+                {dates.map(date => {
                   const key = dateKey(date);
                   const inCurrentMonth = date.getMonth() === currentMonth;
                   const dayEvents = singleDayBuckets.get(key) ?? [];
@@ -283,10 +322,12 @@ const Calendar: React.FC<CalendarProps> = ({
                     date.getFullYear() === now.getFullYear() &&
                     date.getMonth() === now.getMonth() &&
                     date.getDate() === now.getDate();
-                  
+
                   // Check if this date is in the past (before today)
-                  const isPast = date < new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                  
+                  const isPast =
+                    date <
+                    new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
                   // Check if this date is a weekend (Saturday = 6, Sunday = 0)
                   const dayOfWeek = date.getDay();
                   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
@@ -308,54 +349,64 @@ const Calendar: React.FC<CalendarProps> = ({
                   );
                 })}
               </ViewContainer>
-              
-              {/* Multi-day Event Overlays */}
-              {multiDayEvents.map((multiEvent) => {
-                const { event, startDate, endDate } = multiEvent;
-                
-                // Calculate grid position for spanning
-                const startIndex = dates.findIndex(date => dateKey(date) === dateKey(startDate));
-                const endIndex = dates.findIndex(date => {
-                  const endDateAdjusted = new Date(endDate.getTime() - 86400000); // End date minus 1 day
-                  return dateKey(date) === dateKey(endDateAdjusted);
-                });
-                
-                if (startIndex === -1) return null; // Event starts outside visible range
-                
-                const actualEndIndex = endIndex === -1 ? dates.length - 1 : endIndex;
-                const startRow = Math.floor(startIndex / 7);
-                const endRow = Math.floor(actualEndIndex / 7);
-                
-                // For events spanning multiple weeks, create separate bars for each week
-                const eventBars = [];
-                for (let row = startRow; row <= endRow; row++) {
-                  const rowStartIndex = row * 7;
-                  const rowEndIndex = Math.min(rowStartIndex + 6, dates.length - 1);
-                  
-                  const barStartIndex = Math.max(startIndex, rowStartIndex);
-                  const barEndIndex = Math.min(actualEndIndex, rowEndIndex);
-                  
-                  if (barStartIndex <= barEndIndex) {
-                    const startCol = barStartIndex % 7;
-                    const endCol = barEndIndex % 7;
-                    const colSpan = endCol - startCol + 1;
-                    
-                    eventBars.push(
-                      <MultiDayEventBar
-                        key={`${event.id}-row-${row}`}
-                        event={event}
-                        startCol={startCol}
-                        colSpan={colSpan}
-                        row={row}
-                        isFirstSegment={row === startRow}
-                        onClick={onEventClick}
-                      />
+
+              {/* Multi-day Event Overlays - positioned absolutely over grid */}
+              <div className="absolute inset-0 pointer-events-none">
+                {multiDayEvents.map(multiEvent => {
+                  const { event, startDate, endDate } = multiEvent;
+
+                  // Calculate grid position for spanning
+                  const startIndex = dates.findIndex(
+                    date => dateKey(date) === dateKey(startDate)
+                  );
+                  const endIndex = dates.findIndex(date => {
+                    const endDateAdjusted = new Date(
+                      endDate.getTime() - 86400000
+                    ); // End date minus 1 day
+                    return dateKey(date) === dateKey(endDateAdjusted);
+                  });
+
+                  if (startIndex === -1) return null; // Event starts outside visible range
+
+                  const actualEndIndex =
+                    endIndex === -1 ? dates.length - 1 : endIndex;
+                  const startRow = Math.floor(startIndex / 7);
+                  const endRow = Math.floor(actualEndIndex / 7);
+
+                  // For events spanning multiple weeks, create separate bars for each week
+                  const eventBars = [];
+                  for (let row = startRow; row <= endRow; row++) {
+                    const rowStartIndex = row * 7;
+                    const rowEndIndex = Math.min(
+                      rowStartIndex + 6,
+                      dates.length - 1
                     );
+
+                    const barStartIndex = Math.max(startIndex, rowStartIndex);
+                    const barEndIndex = Math.min(actualEndIndex, rowEndIndex);
+
+                    if (barStartIndex <= barEndIndex) {
+                      const startCol = barStartIndex % 7;
+                      const endCol = barEndIndex % 7;
+                      const colSpan = endCol - startCol + 1;
+
+                      eventBars.push(
+                        <MultiDayEventBar
+                          key={`${event.id}-row-${row}`}
+                          event={event}
+                          startCol={startCol}
+                          colSpan={colSpan}
+                          row={row}
+                          isFirstSegment={row === startRow}
+                          onClick={onEventClick}
+                        />
+                      );
+                    }
                   }
-                }
-                
-                return eventBars;
-              })}
+
+                  return eventBars;
+                })}
+              </div>
             </div>
           </>
         )}

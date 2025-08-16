@@ -77,32 +77,32 @@ export class CalendarService implements ICalendarService {
 
   /**
    * Updates an existing calendar event using delete-then-create approach
-   * 
+   *
    * WHY DELETE-THEN-CREATE APPROACH:
    * Apple CalDAV has complex requirements for PUT operations on existing events:
    * - Requires exact URL matching with .ics extension
-   * - Often requires ETag headers for conflict detection  
+   * - Often requires ETag headers for conflict detection
    * - URL structure can be inconsistent between different CalDAV servers
    * - Many CalDAV clients (like Thunderbird, Evolution) use this approach
-   * 
+   *
    * DELETE-THEN-CREATE BENEFITS:
    * - Simpler than handling complex CalDAV update semantics
    * - Avoids ETag/conflict resolution complexity
    * - Works reliably across different CalDAV server implementations
    * - DELETE is straightforward (just needs event ID)
    * - CREATE uses timestamp-based filenames to avoid conflicts
-   * 
+   *
    * TRADE-OFFS:
    * - Brief moment where event doesn't exist (not atomic)
-   * - Changes the internal CalDAV URL/filename 
+   * - Changes the internal CalDAV URL/filename
    * - May affect sync clients that cache URLs
    * - Requires two HTTP requests instead of one
-   * 
+   *
    * ROLLBACK STRATEGY:
    * If create fails after successful delete, we log the error but cannot
    * restore the original event. This is an accepted limitation for simplicity.
    * In production, consider implementing a backup/restore mechanism.
-   * 
+   *
    * @param event Updated event data with existing ID
    * @returns Promise<boolean> Success status of the complete operation
    */
@@ -120,23 +120,25 @@ export class CalendarService implements ICalendarService {
       // This removes the event from the CalDAV server completely
       console.log(`Step 1: Deleting existing event ${event.id}`);
       const deleteSuccess = await this.calDAVRepository.deleteEvent(event.id);
-      
+
       if (!deleteSuccess) {
-        console.error(`Failed to delete existing event ${event.id} - aborting update`);
+        console.error(
+          `Failed to delete existing event ${event.id} - aborting update`
+        );
         return false;
       }
-      
+
       console.log(`Step 1 completed: Event ${event.id} deleted successfully`);
 
       // STEP 2: Create the event with updated data
       // Uses timestamp-based filename to avoid any URL conflicts
       console.log(`Step 2: Creating event ${event.id} with updated data`);
       const createSuccess = await this.calDAVRepository.createEvent(event);
-      
+
       if (!createSuccess) {
         console.error(
           `CRITICAL: Event ${event.id} was deleted but recreation failed! ` +
-          `Event data may be lost. Consider manual recovery.`
+            `Event data may be lost. Consider manual recovery.`
         );
         return false;
       }
@@ -144,11 +146,11 @@ export class CalendarService implements ICalendarService {
       console.log(
         `Event ${event.id} updated successfully using delete-then-create approach`
       );
-      
+
       return true;
     } catch (error) {
       console.error(
-        `Error in CalendarService.updateEvent for event ${event.id}:`, 
+        `Error in CalendarService.updateEvent for event ${event.id}:`,
         error
       );
       return false;

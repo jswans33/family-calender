@@ -1,9 +1,11 @@
 # Bidirectional CalDAV Sync - Standard Operating Procedure
 
 ## Overview
+
 This system provides bidirectional synchronization between a local SQLite database and Apple CalDAV, ensuring events can be created/modified locally with fast response times while maintaining sync with Apple Calendar.
 
 ## Architecture Flow
+
 ```
 ┌─────────────┐     ┌──────────────┐     ┌─────────────┐     ┌──────────────┐
 │   Client    │────▶│   API Layer  │────▶│   SQLite    │────▶│  Apple       │
@@ -18,6 +20,7 @@ This system provides bidirectional synchronization between a local SQLite databa
 ## Database Schema
 
 ### Events Table Structure
+
 ```sql
 events (
   id TEXT PRIMARY KEY,              -- Unique event identifier
@@ -42,6 +45,7 @@ events (
 ## API Endpoints
 
 ### Create Event (POST /events)
+
 ```bash
 POST http://localhost:3001/events
 Content-Type: application/json
@@ -56,12 +60,14 @@ Content-Type: application/json
 ```
 
 **Process:**
+
 1. Generate unique ID if not provided: `local-{timestamp}-{random}`
 2. Save to SQLite with `sync_status = 'pending'`
 3. Trigger background reverse sync
 4. Return 201 with event ID
 
 ### Update Event (PUT /events/:id)
+
 ```bash
 PUT http://localhost:3001/events/{event-id}
 Content-Type: application/json
@@ -76,17 +82,20 @@ Content-Type: application/json
 ```
 
 **Process:**
+
 1. Update in SQLite with `sync_status = 'pending'`
 2. Set `local_modified = CURRENT_TIMESTAMP`
 3. Trigger background reverse sync
 4. Return 200 on success
 
 ### Manual Sync (POST /admin/sync)
+
 ```bash
 POST http://localhost:3001/admin/sync
 ```
 
 **Process:**
+
 1. **Forward Sync:** Fetch all events from CalDAV → SQLite
 2. **Reverse Sync:** Push pending events from SQLite → CalDAV
 3. Return sync statistics
@@ -94,6 +103,7 @@ POST http://localhost:3001/admin/sync
 ## Sync Procedures
 
 ### Forward Sync (CalDAV → SQLite)
+
 **Frequency:** Every 15 minutes or on-demand
 
 1. Fetch all events from CalDAV using REPORT method
@@ -102,6 +112,7 @@ POST http://localhost:3001/admin/sync
 4. Preserve existing `local_modified` timestamps
 
 ### Reverse Sync (SQLite → CalDAV)
+
 **Trigger:** After local create/update or manual sync
 
 1. Query database: `SELECT * FROM events WHERE sync_status = 'pending'`
@@ -112,6 +123,7 @@ POST http://localhost:3001/admin/sync
    - On failure: Log error, keep as 'pending' for retry
 
 ### Conflict Resolution
+
 **Current Strategy:** Last-write-wins
 
 - Local changes overwrite CalDAV on reverse sync
@@ -121,20 +133,24 @@ POST http://localhost:3001/admin/sync
 ## Event ID Conventions
 
 ### Local Events
+
 - Format: `local-{timestamp}-{random}`
 - Example: `local-1755297504693-sv6ns8`
 
-### CalDAV Events  
+### CalDAV Events
+
 - Format: Preserve original CalDAV UID
 - Example: `69E053D2-2F90-4CF9-9581-46C1F61A05C4`
 
 ### Test Events
+
 - Format: `test-{purpose}-{timestamp}`
 - Example: `test-from-db-1755297096`
 
 ## CalDAV Integration Details
 
 ### iCalendar Generation
+
 ```
 BEGIN:VCALENDAR
 VERSION:2.0
@@ -154,6 +170,7 @@ END:VCALENDAR
 ```
 
 ### CalDAV URL Structure
+
 ```
 https://{hostname}/{user-id}/calendars/{calendar-id}/{filename}.ics
 
@@ -164,19 +181,21 @@ https://p36-caldav.icloud.com/1110188709/calendars/home/event-1755297504711-tgx5
 ## Monitoring & Debugging
 
 ### Check Sync Status
+
 ```sql
 -- View pending events
-SELECT id, title, sync_status, local_modified 
-FROM events 
+SELECT id, title, sync_status, local_modified
+FROM events
 WHERE sync_status = 'pending';
 
 -- Count by status
-SELECT sync_status, COUNT(*) 
-FROM events 
+SELECT sync_status, COUNT(*)
+FROM events
 GROUP BY sync_status;
 ```
 
 ### Server Logs
+
 - Event creation: `Event {id} created locally, marked for sync`
 - Sync start: `Starting reverse sync: Local → CalDAV`
 - Sync success: `Event {id} synced to CalDAV`
@@ -200,6 +219,7 @@ GROUP BY sync_status;
 ## Testing Procedures
 
 ### Test Event Creation
+
 ```bash
 # Create test event
 curl -X POST http://localhost:3001/events \
@@ -222,6 +242,7 @@ sqlite3 data/calendar.db \
 ```
 
 ### Test Manual Sync
+
 ```bash
 # Trigger full sync
 curl -X POST http://localhost:3001/admin/sync
@@ -247,14 +268,17 @@ curl -X POST http://localhost:3001/admin/sync
 ## Maintenance Tasks
 
 ### Daily
+
 - Monitor pending events count
 - Check for sync errors in logs
 
-### Weekly  
+### Weekly
+
 - Verify CalDAV connectivity
 - Review sync performance metrics
 
 ### Monthly
+
 - Clean old events: `DELETE FROM events WHERE date < DATE('now', '-6 months')`
 - Backup database: `cp data/calendar.db data/calendar-backup-$(date +%Y%m%d).db`
 

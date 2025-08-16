@@ -7,7 +7,7 @@ export interface CalendarGridProps {
 
 /**
  * CalendarGrid - Container for the 6x7 calendar layout
- * 
+ *
  * Provides:
  * - CSS Grid with 7 columns for days of week
  * - 6 rows for weeks of the month
@@ -27,7 +27,9 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
     'h-full w-full',
     // Custom classes
     className,
-  ].filter(Boolean).join(' ');
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <div className={gridClasses} role="grid">
@@ -48,14 +50,13 @@ export const WeekdayHeader: React.FC<WeekdayHeaderProps> = ({
   weekdays,
   className = '',
 }) => {
-  const headerClasses = [
-    'grid grid-cols-7 gap-px bg-gray-300 mb-px',
-    className,
-  ].filter(Boolean).join(' ');
+  const headerClasses = ['grid grid-cols-7 gap-px bg-gray-300 mb-px', className]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <div className={headerClasses}>
-      {weekdays.map((day) => (
+      {weekdays.map(day => (
         <div
           key={day}
           className="bg-gray-100 flex items-center justify-center h-12 text-sm font-medium text-gray-700 uppercase tracking-wide"

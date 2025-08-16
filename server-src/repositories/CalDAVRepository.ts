@@ -392,7 +392,7 @@ export class CalDAVRepository {
       ).toString('base64');
 
       // Apple CalDAV event URL format: /path/event-uid.ics
-      // URL-encode the event ID to handle special characters like $ ( ) + @ 
+      // URL-encode the event ID to handle special characters like $ ( ) + @
       const encodedEventId = encodeURIComponent(eventId);
       const eventUrl = `${this.credentials.path}${encodedEventId}.ics`;
       console.log('Raw Event ID:', eventId);

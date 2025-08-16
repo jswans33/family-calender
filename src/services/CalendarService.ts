@@ -20,7 +20,7 @@ class CalendarService {
       }
       // Parse JSON response containing calendar events
       const rawEvents = await response.json();
-      
+
       // Transform server response to match Calendar component interface
       const events: CalendarEvent[] = rawEvents.map((event: any) => ({
         id: event.id,
@@ -46,9 +46,9 @@ class CalendarService {
         geo: event.geo,
         transparency: event.transparency,
         attachments: event.attachments,
-        timezone: event.timezone
+        timezone: event.timezone,
       }));
-      
+
       return events;
     } catch (error) {
       console.error('Error fetching calendar events:', error);
@@ -66,20 +66,20 @@ class CalendarService {
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
-    
+
     return [
       {
         id: '1',
         title: 'Meeting (Demo)',
         date: this.formatDateToYMD(today.toISOString()),
-        time: '10:00'
+        time: '10:00',
       },
       {
-        id: '2', 
+        id: '2',
         title: 'Lunch (Demo)',
         date: this.formatDateToYMD(tomorrow.toISOString()),
-        time: '12:30'
-      }
+        time: '12:30',
+      },
     ];
   }
 
@@ -103,25 +103,25 @@ class CalendarService {
    */
   private formatTimeTo24h(time12h?: string): string | undefined {
     if (!time12h || time12h === 'All Day') return undefined;
-    
+
     try {
       // Handle format like "10:00 AM" or "2:30 PM"
       const match = time12h.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
       if (!match) return undefined;
-      
+
       let hours = parseInt(match[1] || '0', 10);
       const minutes = match[2] || '00';
       const period = match[3]?.toUpperCase() || 'AM';
-      
+
       if (period === 'PM' && hours !== 12) hours += 12;
       if (period === 'AM' && hours === 12) hours = 0;
-      
+
       return `${String(hours).padStart(2, '0')}:${minutes}`;
     } catch {
       return undefined;
     }
   }
-  
+
   /**
    * Updates an existing calendar event
    * @param event Updated event data
@@ -130,16 +130,19 @@ class CalendarService {
   async updateEvent(event: CalendarEvent): Promise<boolean> {
     try {
       // Use Base64 encoding for event IDs with special characters to avoid Express routing issues
-      const encodedEventId = btoa(event.id).replace(/[+/=]/g, (match) => {
+      const encodedEventId = btoa(event.id).replace(/[+/=]/g, match => {
         return { '+': '-', '/': '_', '=': '' }[match] || match;
       });
-      const response = await fetch(`http://localhost:3001/events/${encodedEventId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(event)
-      });
+      const response = await fetch(
+        `http://localhost:3001/events/${encodedEventId}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(event),
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`Failed to update event: ${response.status}`);
@@ -161,13 +164,16 @@ class CalendarService {
   async deleteEvent(eventId: string): Promise<boolean> {
     try {
       // Use Base64 encoding for event IDs with special characters
-      const encodedEventId = btoa(eventId).replace(/[+/=]/g, (match) => {
+      const encodedEventId = btoa(eventId).replace(/[+/=]/g, match => {
         return { '+': '-', '/': '_', '=': '' }[match] || match;
       });
-      
-      const response = await fetch(`http://localhost:3001/events/${encodedEventId}`, {
-        method: 'DELETE',
-      });
+
+      const response = await fetch(
+        `http://localhost:3001/events/${encodedEventId}`,
+        {
+          method: 'DELETE',
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`Failed to delete event: ${response.status}`);

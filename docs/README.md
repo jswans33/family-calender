@@ -7,27 +7,35 @@ Documentation organized using the **Diátaxis Framework** - a systematic approac
 Our documentation is organized into four categories:
 
 ### 🎓 [Tutorials](./tutorials/) - Learning
+
 **I want to learn** - Take a beginner from zero to competent
+
 - [Getting Started](./tutorials/01-getting-started.md)
 - [Create Your First Event](./tutorials/02-first-event.md)
 - [Set Up Family Sharing](./tutorials/03-family-sharing.md)
 
 ### 🔧 [How-To Guides](./how-to/) - Problem-solving
+
 **I want to accomplish something** - Help users complete specific tasks
+
 - [Set Up CalDAV Authentication](./how-to/setup-caldav-auth.md)
 - [Create TODO Events](./how-to/create-todo-events.md)
 - [Debug Sync Issues](./how-to/debug-sync-issues.md)
 - [Share Calendar with Family](./how-to/share-with-family.md)
 
 ### 📖 [Reference](./reference/) - Information
+
 **I need specific information** - Technical descriptions and specifications
+
 - [API Reference](./reference/api.md)
 - [Database Schema](./reference/database-schema.md)
 - [CalDAV Fields](./reference/caldav-fields.md)
 - [Configuration Options](./reference/configuration.md)
 
 ### 💡 [Explanation](./explanation/) - Understanding
+
 **I want to understand** - Discussions and background
+
 - [Architecture Overview](./explanation/architecture.md)
 - [Why We Use SHARED Calendar](./explanation/shared-calendar-rationale.md)
 - [Bidirectional Sync Design](./explanation/bidirectional-sync.md)

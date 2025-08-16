@@ -24,6 +24,7 @@ When you double-click "Swanson Light Calendar":
 ## Access URLs
 
 Once started, access the calendar at:
+
 - **Local**: http://localhost:3000
 - **Network**: http://192.168.68.54:3000 (from other devices)
 - **Backend API**: http://localhost:3001 or http://192.168.68.54:3001
@@ -36,26 +37,30 @@ You can also run these commands manually in terminal:
 # Start calendar
 ~/swanson-light/start-calendar.sh
 
-# Stop calendar  
+# Stop calendar
 ~/swanson-light/stop-calendar.sh
 ```
 
 ## Logs
 
 Application logs are saved in the project directory:
+
 - `~/swanson-light/frontend.log` - Frontend server logs
 - `~/swanson-light/backend.log` - Backend server logs
 
 ## Troubleshooting
 
 **If the application won't start:**
+
 1. Click "Stop Calendar" first
 2. Wait 5 seconds
 3. Click "Swanson Light Calendar" again
 
 **If browser doesn't open automatically:**
+
 - Manually navigate to http://localhost:3000
 
 **To view logs:**
+
 - The terminal window shows live logs when running
 - Or check the log files manually: `tail -f ~/swanson-light/frontend.log`

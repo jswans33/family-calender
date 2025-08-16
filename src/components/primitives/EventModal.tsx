@@ -9,13 +9,13 @@ export interface EventModalProps {
     date: string;
     time?: string;
     event?: CalendarEvent;
-  };
+  } | undefined;
   isEditing?: boolean;
 }
 
 /**
  * EventModal - Modal for creating and editing events
- * 
+ *
  * Features:
  * - Create new events with basic info
  * - Pre-fill date/time from clicked slot
@@ -30,55 +30,62 @@ export const EventModal: React.FC<EventModalProps> = ({
   isEditing = false,
 }) => {
   const existingEvent = initialData?.event;
-  
+
   const [formData, setFormData] = useState({
     title: existingEvent?.title || '',
     description: existingEvent?.description || '',
     location: existingEvent?.location || '',
     time: existingEvent?.time || initialData?.time || '',
-    duration: existingEvent?.duration ? 
-      existingEvent.duration.replace('PT', '').replace('M', '').replace('H', '') : '60',
+    duration: existingEvent?.duration
+      ? existingEvent.duration
+          .replace('PT', '')
+          .replace('M', '')
+          .replace('H', '')
+      : '60',
     url: existingEvent?.url || '',
     categories: existingEvent?.categories?.join(', ') || '',
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.title.trim()) return;
 
     // Calculate end time if duration is provided
     let dtend: string | undefined;
     if (formData.time && formData.duration) {
       const startDate = new Date(`${initialData?.date}T${formData.time}:00`);
-      const endDate = new Date(startDate.getTime() + parseInt(formData.duration) * 60000);
+      const endDate = new Date(
+        startDate.getTime() + parseInt(formData.duration) * 60000
+      );
       dtend = endDate.toISOString();
     }
 
     const newEvent: Partial<CalendarEvent> = {
-      ...(isEditing && existingEvent ? { id: existingEvent.id } : { id: `temp-${Date.now()}` }),
+      ...(isEditing && existingEvent
+        ? { id: existingEvent.id }
+        : { id: `temp-${Date.now()}` }),
       title: formData.title.trim(),
       date: initialData?.date || '',
-      time: formData.time || undefined,
-      description: formData.description.trim() || undefined,
-      location: formData.location.trim() || undefined,
-      url: formData.url.trim() || undefined,
-      dtend,
-      duration: formData.duration ? `PT${formData.duration}M` : undefined,
-      categories: formData.categories.trim() ? formData.categories.split(',').map(c => c.trim()) : undefined,
+      time: formData.time || '',
+      ...(formData.description.trim() && { description: formData.description.trim() }),
+      ...(formData.location.trim() && { location: formData.location.trim() }),
+      ...(formData.url.trim() && { url: formData.url.trim() }),
+      ...(dtend && { dtend }),
+      ...(formData.duration && { duration: `PT${formData.duration}M` }),
+      ...(formData.categories.trim() && { categories: formData.categories.split(',').map(c => c.trim()) }),
       status: 'CONFIRMED',
-      ...(isEditing && existingEvent ? 
-        { 
-          created: existingEvent.created,
-          lastModified: new Date().toISOString(),
-          sequence: (existingEvent.sequence || 0) + 1
-        } : 
-        { 
-          created: new Date().toISOString(),
-          lastModified: new Date().toISOString(),
-          sequence: 0
-        }
-      ),
+      ...(isEditing && existingEvent
+        ? {
+            created: existingEvent.created || new Date().toISOString(),
+            lastModified: new Date().toISOString(),
+            sequence: (existingEvent.sequence || 0) + 1,
+          }
+        : {
+            created: new Date().toISOString(),
+            lastModified: new Date().toISOString(),
+            sequence: 0,
+          }),
     };
 
     onSave(newEvent);
@@ -113,8 +120,18 @@ export const EventModal: React.FC<EventModalProps> = ({
             className="text-gray-400 hover:text-gray-600 transition-colors"
             aria-label="Close modal"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -123,7 +140,10 @@ export const EventModal: React.FC<EventModalProps> = ({
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Event Title */}
           <div>
-            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="title"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Event Title *
             </label>
             <input
@@ -131,7 +151,9 @@ export const EventModal: React.FC<EventModalProps> = ({
               id="title"
               required
               value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              onChange={e =>
+                setFormData({ ...formData, title: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="Enter event title"
               autoFocus
@@ -141,7 +163,10 @@ export const EventModal: React.FC<EventModalProps> = ({
           {/* Date and Time */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="date"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Date
               </label>
               <input
@@ -153,14 +178,19 @@ export const EventModal: React.FC<EventModalProps> = ({
               />
             </div>
             <div>
-              <label htmlFor="time" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="time"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Time
               </label>
               <input
                 type="time"
                 id="time"
                 value={formData.time}
-                onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                onChange={e =>
+                  setFormData({ ...formData, time: e.target.value })
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
@@ -168,13 +198,18 @@ export const EventModal: React.FC<EventModalProps> = ({
 
           {/* Duration */}
           <div>
-            <label htmlFor="duration" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="duration"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Duration (minutes)
             </label>
             <select
               id="duration"
               value={formData.duration}
-              onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+              onChange={e =>
+                setFormData({ ...formData, duration: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="15">15 minutes</option>
@@ -188,14 +223,19 @@ export const EventModal: React.FC<EventModalProps> = ({
 
           {/* Location */}
           <div>
-            <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="location"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Location
             </label>
             <input
               type="text"
               id="location"
               value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+              onChange={e =>
+                setFormData({ ...formData, location: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="Enter location"
             />
@@ -203,14 +243,19 @@ export const EventModal: React.FC<EventModalProps> = ({
 
           {/* Description */}
           <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="description"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Description
             </label>
             <textarea
               id="description"
               rows={3}
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={e =>
+                setFormData({ ...formData, description: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="Event description"
             />
@@ -218,14 +263,17 @@ export const EventModal: React.FC<EventModalProps> = ({
 
           {/* Meeting URL */}
           <div>
-            <label htmlFor="url" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="url"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Meeting URL
             </label>
             <input
               type="url"
               id="url"
               value={formData.url}
-              onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+              onChange={e => setFormData({ ...formData, url: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="https://zoom.us/j/..."
             />
@@ -233,14 +281,19 @@ export const EventModal: React.FC<EventModalProps> = ({
 
           {/* Categories */}
           <div>
-            <label htmlFor="categories" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="categories"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Categories
             </label>
             <input
               type="text"
               id="categories"
               value={formData.categories}
-              onChange={(e) => setFormData({ ...formData, categories: e.target.value })}
+              onChange={e =>
+                setFormData({ ...formData, categories: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="work, meeting, personal (comma separated)"
             />

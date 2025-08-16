@@ -6,6 +6,7 @@
 ## What You'll Build
 
 By the end of this tutorial, you will have:
+
 - A running calendar server connected to Apple iCloud
 - Your first event created and synced
 - The calendar visible on your iPhone
@@ -13,6 +14,7 @@ By the end of this tutorial, you will have:
 ## Prerequisites
 
 Before starting, you need:
+
 - Node.js 18+ installed
 - An Apple ID with 2-factor authentication enabled
 - An iPhone or Mac with Calendar app
@@ -67,6 +69,7 @@ npm run start:server:dev
 ```
 
 You should see:
+
 ```
 TypeScript CalDAV server with SQLite cache listening at http://localhost:3001
 Connected to SQLite database at: ./data/calendar.db
@@ -91,6 +94,7 @@ curl -X POST http://localhost:3001/events \
 ```
 
 You should see:
+
 ```json
 {
   "success": true,
@@ -120,6 +124,7 @@ You'll see your event with all its details!
 ## What You've Accomplished
 
 Congratulations! You have:
+
 - ✅ Set up a calendar server
 - ✅ Connected it to Apple iCloud
 - ✅ Created your first event
@@ -129,6 +134,7 @@ Congratulations! You have:
 ## Next Steps
 
 Now that you have a working calendar:
+
 - [Tutorial: Create Your First TODO Event](./02-first-todo.md)
 - [Tutorial: Set Up Family Sharing](./03-family-sharing.md)
 - [How-To: Create Recurring Events](../how-to/create-recurring-events.md)
@@ -136,15 +142,18 @@ Now that you have a working calendar:
 ## Troubleshooting
 
 **Server won't start?**
+
 - Check that port 3001 is free: `lsof -i :3001`
 - Verify Node.js version: `node --version` (should be 18+)
 
 **401 Unauthorized error?**
+
 - Double-check your Apple ID email
 - Regenerate app-specific password
 - Make sure you're using the app password, not your Apple ID password
 
 **Events not appearing on iPhone?**
+
 - Pull down to refresh in Calendar app
 - Check that "Shared" calendar is enabled
 - Wait 2-3 minutes for sync

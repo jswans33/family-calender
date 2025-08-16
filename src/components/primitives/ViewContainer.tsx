@@ -10,9 +10,9 @@ export interface ViewContainerProps {
 
 /**
  * ViewContainer - Adaptive container that changes layout based on view type
- * 
+ *
  * Month: Full grid layout
- * Week: Single row layout  
+ * Week: Single row layout
  * Day: Single column layout
  */
 export const ViewContainer: React.FC<ViewContainerProps> = ({
@@ -38,7 +38,9 @@ export const ViewContainer: React.FC<ViewContainerProps> = ({
     'bg-gray-300 rounded-lg overflow-hidden shadow-lg',
     'h-full w-full',
     className,
-  ].filter(Boolean).join(' ');
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <div className={containerClasses} role="grid">
