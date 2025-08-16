@@ -49,7 +49,9 @@ export class SQLiteRepository {
         attachments TEXT,
         timezone TEXT,
         synced_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        caldav_etag TEXT
+        caldav_etag TEXT,
+        sync_status TEXT DEFAULT 'synced',
+        local_modified DATETIME
       )
     `;
 
