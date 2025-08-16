@@ -50,6 +50,7 @@ export class SQLiteRepository {
         timezone TEXT,
         synced_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         caldav_etag TEXT,
+        caldav_filename TEXT,
         sync_status TEXT DEFAULT 'synced',
         local_modified DATETIME
       )

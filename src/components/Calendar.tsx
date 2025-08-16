@@ -360,10 +360,7 @@ const Calendar: React.FC<CalendarProps> = ({
                     date => dateKey(date) === dateKey(startDate)
                   );
                   const endIndex = dates.findIndex(date => {
-                    const endDateAdjusted = new Date(
-                      endDate.getTime() - 86400000
-                    ); // End date minus 1 day
-                    return dateKey(date) === dateKey(endDateAdjusted);
+                    return dateKey(date) === dateKey(endDate);
                   });
 
                   if (startIndex === -1) return null; // Event starts outside visible range

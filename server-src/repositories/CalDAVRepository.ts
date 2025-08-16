@@ -477,9 +477,8 @@ export class CalDAVRepository {
       console.log(iCalData);
       console.log('=== End iCalendar data ===');
 
-      // Use a simple UUID-based filename as recommended by Apple docs
-      // Avoid special characters in URLs entirely
-      const filename = `event-${Date.now()}-${Math.random().toString(36).substring(2, 15)}.ics`;
+      // Use event UID as filename for consistent deletion
+      const filename = `${encodeURIComponent(event.id)}.ics`;
       const eventUrl = `${this.credentials.path}${filename}`;
       console.log('Raw Event ID for creation:', event.id);
       console.log('Filename for creation:', filename);
