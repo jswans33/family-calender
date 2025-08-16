@@ -51,4 +51,7 @@ export interface ICalendarService {
   getEventsInRange(startDate: Date, endDate: Date): Promise<CalendarEvent[]>;
   validateEvent(event: any): event is CalendarEvent;
   forceSync?(): Promise<void>;
+  updateEvent?(event: CalendarEvent): Promise<boolean>;
+  createEvent?(event: CalendarEvent): Promise<boolean>;
+  deleteEvent?(eventId: string): Promise<boolean>;
 }

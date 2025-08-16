@@ -122,4 +122,91 @@ export class CalendarController {
       });
     }
   }
+
+  async deleteEvent(req: Request, res: Response): Promise<void> {
+    try {
+      // Decode Base64-encoded event ID
+      const encodedId = req.params.id;
+      const base64Id = encodedId.replace(/[-_]/g, (match) => {
+        return { '-': '+', '_': '/' }[match] || match;
+      });
+      const paddedBase64 = base64Id + '='.repeat((4 - base64Id.length % 4) % 4);
+      const eventId = Buffer.from(paddedBase64, 'base64').toString('utf-8');
+
+      console.log(`Deleting event ${eventId}...`);
+
+      // Type check for DatabaseCalendarService
+      const service = this.calendarService as any;
+      if (typeof service.deleteEvent !== 'function') {
+        res.status(501).json({
+          error: 'Event deletion not supported',
+          message: 'This service does not support event deletion'
+        });
+        return;
+      }
+
+      const success = await service.deleteEvent(eventId);
+
+      if (success) {
+        console.log(`Event ${eventId} deleted successfully`);
+        res.json({ success: true, message: 'Event deleted successfully' });
+      } else {
+        res.status(404).json({
+          error: 'Event not found',
+          message: 'The specified event could not be found',
+        });
+      }
+    } catch (error) {
+      console.error('Error in CalendarController.deleteEvent:', error);
+      res.status(500).json({
+        error: 'Failed to delete event',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  async createEvent(req: Request, res: Response): Promise<void> {
+    try {
+      const eventData = req.body;
+      
+      // Generate ID if not provided
+      if (!eventData.id) {
+        eventData.id = `local-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      }
+      
+      console.log(`Creating event ${eventData.id}...`);
+      
+      // Type check for DatabaseCalendarService
+      const service = this.calendarService as any;
+      if (typeof service.createEvent !== 'function') {
+        res.status(501).json({
+          error: 'Event creation not supported',
+          message: 'This service does not support event creation'
+        });
+        return;
+      }
+      
+      const success = await service.createEvent(eventData);
+      
+      if (success) {
+        console.log(`Event ${eventData.id} created successfully`);
+        res.status(201).json({ 
+          success: true, 
+          message: 'Event created successfully',
+          id: eventData.id 
+        });
+      } else {
+        res.status(500).json({
+          error: 'Failed to create event',
+          message: 'Event creation failed'
+        });
+      }
+    } catch (error) {
+      console.error('Error in CalendarController.createEvent:', error);
+      res.status(500).json({
+        error: 'Failed to create event',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
 }

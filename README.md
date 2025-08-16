@@ -1,10 +1,26 @@
-# Swanson Light - Enterprise Calendar API
+# Swanson Light - Family Shared Calendar System
 
-A modern, scalable calendar application with Apple Calendar/iCloud integration via CalDAV. Features clean architecture, rich event data extraction, and comprehensive API endpoints for building calendar applications.
+A modern, scalable calendar application with Apple Calendar/iCloud integration via CalDAV, designed for family coordination and TODO management. Features clean architecture, rich event data extraction, and comprehensive API endpoints for building collaborative calendar applications.
 
 ## 🎯 Overview
 
-This project provides a robust backend API for calendar applications with full iCloud/Apple Calendar integration. Built with TypeScript, clean architecture principles, and enterprise-grade scalability in mind.
+This project provides a robust backend API for family calendar applications with full iCloud/Apple Calendar integration through the SHARED calendar. Built with TypeScript, clean architecture principles, and designed for households to coordinate schedules, assign tasks, and track TODOs together.
+
+### 📱 IMPORTANT: Using SHARED Calendar
+- All events are created in the **SHARED** calendar (`2D7581FA-3A83-42D8-B6F4-8BCD8186AA6E`)
+- Perfect for family visibility - everyone sees the same events
+- Supports TODO tracking with rich metadata
+
+## 📚 Documentation
+
+Our documentation follows the **[Diátaxis Framework](https://diataxis.fr/)** - organized by user needs:
+
+- 🎓 **[Tutorials](./docs/tutorials/)** - Learn by doing (start here if new!)
+- 🔧 **[How-To Guides](./docs/how-to/)** - Solve specific problems
+- 📖 **[Reference](./docs/reference/)** - Technical specifications
+- 💡 **[Explanation](./docs/explanation/)** - Understanding the design
+
+**Quick Start:** [Getting Started Tutorial](./docs/tutorials/01-getting-started.md)
 
 ### ✨ Key Features
 

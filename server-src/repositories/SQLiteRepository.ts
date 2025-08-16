@@ -47,6 +47,14 @@ export class SQLiteRepository {
       )
     `;
 
+    const createDeletedTableSQL = `
+      CREATE TABLE IF NOT EXISTS deleted_events (
+        id TEXT PRIMARY KEY,
+        deleted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        synced_to_caldav BOOLEAN DEFAULT 0
+      )
+    `;
+
     this.db.run(createTableSQL, (err) => {
       if (err) {
         console.error('Failed to create events table:', err);
@@ -55,12 +63,130 @@ export class SQLiteRepository {
       console.log('Events table initialized successfully');
     });
 
+    this.db.run(createDeletedTableSQL, (err) => {
+      if (err) {
+        console.error('Failed to create deleted_events table:', err);
+      } else {
+        console.log('Deleted events tracking table initialized');
+      }
+    });
+
     this.db.run(`CREATE INDEX IF NOT EXISTS idx_events_date ON events(date)`, (err) => {
       if (err) console.error('Failed to create date index:', err);
     });
 
     this.db.run(`CREATE INDEX IF NOT EXISTS idx_events_sync ON events(synced_at)`, (err) => {
       if (err) console.error('Failed to create sync index:', err);
+    });
+  }
+
+  /**
+   * Save events with smart sync - filters out locally deleted events AND handles CalDAV deletions
+   */
+  async saveEventsWithSmartSync(events: CalendarEvent[]): Promise<void> {
+    return new Promise(async (resolve) => {
+      // Get current event IDs from CalDAV
+      const caldavEventIds = new Set(events.map(e => e.id));
+      
+      // Find events in local database that are missing from CalDAV
+      const localEvents = await this.getAllEventIds();
+      const missingFromCalDAV = localEvents.filter(id => !caldavEventIds.has(id));
+      
+      // Track CalDAV deletions (iPhone deletions)
+      for (const eventId of missingFromCalDAV) {
+        const isAlreadyDeleted = await this.isEventDeleted(eventId);
+        if (!isAlreadyDeleted) {
+          console.log(`Event ${eventId} missing from CalDAV - tracking as iPhone deletion`);
+          await this.trackRemoteDeletion(eventId);
+        }
+      }
+
+      if (events.length === 0) {
+        resolve();
+        return;
+      }
+
+      // Filter out events that were deleted locally
+      const filteredEvents: CalendarEvent[] = [];
+      for (const event of events) {
+        const isDeleted = await this.isEventDeleted(event.id);
+        if (!isDeleted) {
+          filteredEvents.push(event);
+        } else {
+          console.log(`Skipping event ${event.id} - was deleted locally`);
+        }
+      }
+
+      if (filteredEvents.length === 0) {
+        console.log('No events to save after filtering deleted events');
+        resolve();
+        return;
+      }
+
+      // Save the filtered events with metadata preservation
+      await this.saveEvents(filteredEvents, true);
+      resolve();
+    });
+  }
+
+  /**
+   * Get all event IDs from the events table
+   */
+  async getAllEventIds(): Promise<string[]> {
+    return new Promise((resolve) => {
+      this.db.all(
+        'SELECT id FROM events',
+        [],
+        (err, rows: any[]) => {
+          if (err) {
+            console.error('Error getting event IDs:', err);
+            resolve([]);
+          } else {
+            resolve(rows.map(row => row.id));
+          }
+        }
+      );
+    });
+  }
+
+  /**
+   * Track a remote deletion (iPhone deletion) - delete from events and track in deleted_events
+   */
+  async trackRemoteDeletion(eventId: string): Promise<void> {
+    return new Promise((resolve) => {
+      this.db.serialize(() => {
+        this.db.run('BEGIN TRANSACTION');
+        
+        // Delete the event from events table
+        this.db.run(
+          'DELETE FROM events WHERE id = ?',
+          [eventId],
+          (err) => {
+            if (err) {
+              console.error('Error deleting event during remote deletion:', err);
+              this.db.run('ROLLBACK');
+              resolve();
+              return;
+            }
+          }
+        );
+        
+        // Track in deleted_events as already synced (since it came from CalDAV)
+        this.db.run(
+          'INSERT OR REPLACE INTO deleted_events (id, deleted_at, synced_to_caldav) VALUES (?, CURRENT_TIMESTAMP, 1)',
+          [eventId],
+          (err) => {
+            if (err) {
+              console.error('Error tracking remote deletion:', err);
+              this.db.run('ROLLBACK');
+            } else {
+              this.db.run('COMMIT');
+              console.log(`Event ${eventId} tracked as remote deletion`);
+            }
+            resolve();
+          }
+        );
+      });
     });
   }
 
@@ -77,8 +203,8 @@ export class SQLiteRepository {
           id, title, date, time, description, location, organizer,
           attendees, categories, priority, status, visibility, dtend,
           duration, rrule, created, last_modified, sequence, url,
-          geo_lat, geo_lon, transparency, attachments, timezone, synced_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT synced_at FROM events WHERE id = ?), CURRENT_TIMESTAMP))
+          geo_lat, geo_lon, transparency, attachments, timezone, sync_status, local_modified, synced_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT synced_at FROM events WHERE id = ?), CURRENT_TIMESTAMP))
         ON CONFLICT(id) DO UPDATE SET
           title = excluded.title,
           date = excluded.date,
@@ -109,8 +235,8 @@ export class SQLiteRepository {
           id, title, date, time, description, location, organizer,
           attendees, categories, priority, status, visibility, dtend,
           duration, rrule, created, last_modified, sequence, url,
-          geo_lat, geo_lon, transparency, attachments, timezone, synced_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+          geo_lat, geo_lon, transparency, attachments, timezone, sync_status, local_modified, synced_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
       `;
 
       // Handle empty events array
@@ -158,7 +284,9 @@ export class SQLiteRepository {
             event.geo?.lon,
             event.transparency,
             JSON.stringify(event.attachments || []),
-            event.timezone
+            event.timezone,
+            (event as any).sync_status || 'synced', // Add sync_status
+            (event as any).local_modified || null    // Add local_modified
           ];
 
           // Add extra parameter for preserveMetadata case
@@ -327,6 +455,129 @@ export class SQLiteRepository {
     });
   }
 
+  /**
+   * Delete an event from the database and track it as deleted
+   */
+  async deleteEvent(eventId: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      this.db.serialize(() => {
+        // Start transaction
+        this.db.run('BEGIN TRANSACTION');
+        
+        // Delete the event
+        this.db.run(
+          'DELETE FROM events WHERE id = ?',
+          [eventId],
+          (err) => {
+            if (err) {
+              console.error('Error deleting event:', err);
+              this.db.run('ROLLBACK');
+              resolve(false);
+              return;
+            }
+          }
+        );
+        
+        // Track the deletion
+        this.db.run(
+          'INSERT OR REPLACE INTO deleted_events (id, deleted_at, synced_to_caldav) VALUES (?, CURRENT_TIMESTAMP, 0)',
+          [eventId],
+          (err) => {
+            if (err) {
+              console.error('Error tracking deleted event:', err);
+              this.db.run('ROLLBACK');
+              resolve(false);
+            } else {
+              this.db.run('COMMIT');
+              console.log(`Event ${eventId} deleted and tracked for sync`);
+              resolve(true);
+            }
+          }
+        );
+      });
+    });
+  }
+
+  /**
+   * Check if an event was deleted locally
+   */
+  async isEventDeleted(eventId: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      this.db.get(
+        'SELECT id FROM deleted_events WHERE id = ?',
+        [eventId],
+        (err, row) => {
+          if (err) {
+            console.error('Error checking deleted event:', err);
+            resolve(false);
+          } else {
+            resolve(!!row);
+          }
+        }
+      );
+    });
+  }
+
+  /**
+   * Get all deleted event IDs that need to sync to CalDAV
+   */
+  async getDeletedEventsToSync(): Promise<string[]> {
+    return new Promise((resolve) => {
+      this.db.all(
+        'SELECT id FROM deleted_events WHERE synced_to_caldav = 0',
+        [],
+        (err, rows: any[]) => {
+          if (err) {
+            console.error('Error getting deleted events:', err);
+            resolve([]);
+          } else {
+            resolve(rows.map(row => row.id));
+          }
+        }
+      );
+    });
+  }
+
+  /**
+   * Mark a deleted event as synced to CalDAV
+   */
+  async markDeletedEventSynced(eventId: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        'UPDATE deleted_events SET synced_to_caldav = 1 WHERE id = ?',
+        [eventId],
+        (err) => {
+          if (err) {
+            console.error('Error marking deleted event as synced:', err);
+            reject(err);
+          } else {
+            resolve();
+          }
+        }
+      );
+    });
+  }
+
+  /**
+   * Clean up old deleted event records (older than 30 days)
+   */
+  async cleanupDeletedEvents(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        "DELETE FROM deleted_events WHERE deleted_at < datetime('now', '-30 days') AND synced_to_caldav = 1",
+        [],
+        (err) => {
+          if (err) {
+            console.error('Error cleaning up deleted events:', err);
+            reject(err);
+          } else {
+            resolve();
+          }
+        }
+      );
+    });
+  }
+
   close(): void {
     this.db.close((err) => {
       if (err) {
@@ -334,6 +585,42 @@ export class SQLiteRepository {
       } else {
         console.log('SQLite database connection closed successfully');
       }
+    });
+  }
+
+  /**
+   * Get events that need to be synced to CalDAV
+   */
+  async getPendingEvents(): Promise<CalendarEvent[]> {
+    return new Promise((resolve, reject) => {
+      this.db.all(
+        "SELECT * FROM events WHERE sync_status = 'pending' ORDER BY local_modified ASC",
+        [],
+        (err, rows: any[]) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          const events = rows.map(this.rowToEvent);
+          resolve(events);
+        }
+      );
+    });
+  }
+
+  /**
+   * Mark an event as synced to CalDAV
+   */
+  async markEventSynced(eventId: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        "UPDATE events SET sync_status = 'synced' WHERE id = ?",
+        [eventId],
+        (err) => {
+          if (err) reject(err);
+          else resolve();
+        }
+      );
     });
   }
 }

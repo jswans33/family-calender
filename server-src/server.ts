@@ -48,6 +48,8 @@ app.get('/events/month', (req, res) =>
   calendarController.getThisMonthsEvents(req, res)
 );
 app.put('/events/:id', (req, res) => calendarController.updateEvent(req, res));
+app.delete('/events/:id', (req, res) => calendarController.deleteEvent(req, res));
+app.post('/events', (req, res) => calendarController.createEvent(req, res)); // Create events
 
 // Admin routes for database management
 app.post('/admin/sync', async (req, res) => {

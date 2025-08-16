@@ -154,6 +154,56 @@ class CalendarService {
   }
 
   /**
+   * Deletes a calendar event
+   * @param eventId Event ID to delete
+   * @returns Promise<boolean> Success status
+   */
+  async deleteEvent(eventId: string): Promise<boolean> {
+    try {
+      // Use Base64 encoding for event IDs with special characters
+      const encodedEventId = btoa(eventId).replace(/[+/=]/g, (match) => {
+        return { '+': '-', '/': '_', '=': '' }[match] || match;
+      });
+      
+      const response = await fetch(`http://localhost:3001/events/${encodedEventId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete event: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result.success === true;
+    } catch (error) {
+      console.error('Error deleting calendar event:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Triggers a manual sync with Apple Calendar
+   * @returns Promise<boolean> Success status
+   */
+  async syncCalendar(): Promise<boolean> {
+    try {
+      const response = await fetch('http://localhost:3001/admin/sync', {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to sync: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result.success === true;
+    } catch (error) {
+      console.error('Error syncing calendar:', error);
+      return false;
+    }
+  }
+
+  /**
    * Logs connection attempt to Apple Calendar
    * Actual connection is handled by the backend server
    * @returns Promise<boolean> Always returns true

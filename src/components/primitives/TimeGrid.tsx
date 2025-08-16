@@ -93,9 +93,11 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
             const dateKey = formatDate(date);
             const dayEvents = eventsByDate.get(dateKey) || [];
             const today = isToday(date);
+            const dayOfWeek = date.getDay();
+            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
             return (
-              <div key={dateIndex} className="bg-white flex flex-col">
+              <div key={dateIndex} className={`flex flex-col ${isWeekend ? 'bg-purple-50' : 'bg-white'}`}>
                 {/* Date Header */}
                 <div className={`h-16 flex flex-col items-center justify-center border-b border-gray-200 ${
                   today ? 'bg-blue-50 text-blue-700' : 'bg-gray-50'
@@ -113,7 +115,9 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
                   {timeSlots.map((slot, slotIndex) => (
                     <div
                       key={slot.hour}
-                      className="h-16 border-b border-gray-100 relative cursor-pointer hover:bg-blue-50 transition-colors"
+                      className={`h-16 border-b relative cursor-pointer transition-colors ${
+                        isWeekend ? 'border-purple-100 hover:bg-purple-100' : 'border-gray-100 hover:bg-blue-50'
+                      }`}
                       onClick={() => onTimeSlotClick?.(dateKey, slot.time24)}
                       title={`Create event at ${slot.label}`}
                     />

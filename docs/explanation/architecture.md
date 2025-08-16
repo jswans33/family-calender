@@ -489,33 +489,39 @@ async getEvents(startDate?: Date, endDate?: Date): Promise<CalendarEvent[]> {
 
 ## 📊 CalDAV Integration Details
 
+### 🚨 IMPORTANT: Using SHARED Calendar
+**We're using the SHARED calendar (`2D7581FA-3A83-42D8-B6F4-8BCD8186AA6E`) for all events!**
+- This is the only calendar that accepts PUT requests for creating events
+- Perfect for family calendar where everyone can see/edit events
+- See `SHARED_CALENDAR_GUIDE.md` for family setup instructions
+
 ### Event Data Fields Extracted
 
 **Core Fields (Required)**
 - `id` - Event UID from CalDAV
-- `title` - Event summary
+- `title` - Event summary (use "TODO:" prefix for tasks)
 - `date` - Start date (ISO 8601)
 - `time` - Formatted start time
 
-**Rich Fields (Optional)**
-- `description` - Event notes/body
-- `location` - Physical/virtual location
-- `organizer` - Event organizer email
-- `attendees[]` - List of participant emails
-- `categories[]` - Event tags/labels
-- `priority` - Importance level (1-9)
-- `status` - CONFIRMED/TENTATIVE/CANCELLED
+**Rich Fields (Optional) - Perfect for TODOs**
+- `description` - Event notes/TODO checklists
+- `location` - Where to complete task
+- `organizer` - Who created the task
+- `attendees[]` - Who's assigned to task
+- `categories[]` - Tags like ["todo", "shopping", "urgent"]
+- `priority` - 1-9 (1=highest priority)
+- `status` - CONFIRMED (active) / CANCELLED (completed)
 - `visibility` - PUBLIC/PRIVATE/CONFIDENTIAL
-- `dtend` - End date (ISO 8601)
-- `duration` - Duration in ISO 8601 format
-- `rrule` - Recurrence rule
-- `created` - Creation timestamp
-- `lastModified` - Last update timestamp
-- `sequence` - Version number
-- `url` - Related web link
-- `geo` - GPS coordinates {lat, lon}
+- `dtend` - Deadline for TODO
+- `duration` - Time estimate (PT1H30M = 1.5 hours)
+- `rrule` - For recurring tasks (FREQ=WEEKLY)
+- `created` - When TODO was created
+- `lastModified` - Last update to TODO
+- `sequence` - Version tracking
+- `url` - Links to documents/resources
+- `geo` - Location coordinates
 - `transparency` - OPAQUE/TRANSPARENT
-- `attachments[]` - File attachments
+- `attachments[]` - Related files
 - `timezone` - Event timezone
 
 ### CalDAV Query Structure

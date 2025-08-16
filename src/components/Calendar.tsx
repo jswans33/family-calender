@@ -72,6 +72,7 @@ const Calendar: React.FC<CalendarProps> = ({
 }) => {
   const [currentYear, setCurrentYear] = useState(year ?? new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(month ?? new Date().getMonth());
+  const [currentDate, setCurrentDate] = useState(new Date().getDate()); // Track the specific date for day/week navigation
   const currentView = view; // Use the view prop directly
 
   const now = new Date();
@@ -83,12 +84,12 @@ const Calendar: React.FC<CalendarProps> = ({
       case 'month':
         return monthGridDates(currentYear, currentMonth, startOfWeek);
       case 'week':
-        // Get the week containing the 15th of the current month (middle of month)
-        const midMonth = new Date(currentYear, currentMonth, 15);
-        const weekStart = new Date(midMonth);
-        const dayOfWeek = midMonth.getDay();
+        // Get the week containing the current date
+        const targetDate = new Date(currentYear, currentMonth, currentDate);
+        const weekStart = new Date(targetDate);
+        const dayOfWeek = targetDate.getDay();
         const daysFromStart = (dayOfWeek - startOfWeek + 7) % 7;
-        weekStart.setDate(midMonth.getDate() - daysFromStart);
+        weekStart.setDate(targetDate.getDate() - daysFromStart);
         
         const weekDates = [];
         for (let i = 0; i < 7; i++) {
@@ -98,17 +99,12 @@ const Calendar: React.FC<CalendarProps> = ({
         }
         return weekDates;
       case 'day':
-        // Show today or the 15th of the current month if navigating through months
-        const dayDate = new Date();
-        if (currentYear !== dayDate.getFullYear() || currentMonth !== dayDate.getMonth()) {
-          // If viewing a different month/year, show the 15th of that month
-          return [new Date(currentYear, currentMonth, 15)];
-        }
-        return [dayDate];
+        // Show the specific current date
+        return [new Date(currentYear, currentMonth, currentDate)];
       default:
         return monthGridDates(currentYear, currentMonth, startOfWeek);
     }
-  }, [currentYear, currentMonth, currentView, startOfWeek]);
+  }, [currentYear, currentMonth, currentDate, currentView, startOfWeek]);
 
   // Event bucketing
   const buckets = useMemo(() => {
@@ -156,20 +152,72 @@ const Calendar: React.FC<CalendarProps> = ({
   const viewTitle = getViewTitle();
 
   const handlePrevious = () => {
-    if (currentMonth === 0) {
-      setCurrentMonth(11);
-      setCurrentYear(currentYear - 1);
-    } else {
-      setCurrentMonth(currentMonth - 1);
+    switch (currentView) {
+      case 'day':
+        // Move to previous day
+        const prevDay = new Date(currentYear, currentMonth, currentDate);
+        prevDay.setDate(prevDay.getDate() - 1);
+        setCurrentYear(prevDay.getFullYear());
+        setCurrentMonth(prevDay.getMonth());
+        setCurrentDate(prevDay.getDate());
+        break;
+      
+      case 'week':
+        // Move to previous week
+        const prevWeek = new Date(currentYear, currentMonth, currentDate);
+        prevWeek.setDate(prevWeek.getDate() - 7);
+        setCurrentYear(prevWeek.getFullYear());
+        setCurrentMonth(prevWeek.getMonth());
+        setCurrentDate(prevWeek.getDate());
+        break;
+      
+      case 'month':
+      default:
+        // Move to previous month
+        if (currentMonth === 0) {
+          setCurrentMonth(11);
+          setCurrentYear(currentYear - 1);
+        } else {
+          setCurrentMonth(currentMonth - 1);
+        }
+        // Keep date at 15th for month view
+        setCurrentDate(15);
+        break;
     }
   };
 
   const handleNext = () => {
-    if (currentMonth === 11) {
-      setCurrentMonth(0);
-      setCurrentYear(currentYear + 1);
-    } else {
-      setCurrentMonth(currentMonth + 1);
+    switch (currentView) {
+      case 'day':
+        // Move to next day
+        const nextDay = new Date(currentYear, currentMonth, currentDate);
+        nextDay.setDate(nextDay.getDate() + 1);
+        setCurrentYear(nextDay.getFullYear());
+        setCurrentMonth(nextDay.getMonth());
+        setCurrentDate(nextDay.getDate());
+        break;
+      
+      case 'week':
+        // Move to next week
+        const nextWeek = new Date(currentYear, currentMonth, currentDate);
+        nextWeek.setDate(nextWeek.getDate() + 7);
+        setCurrentYear(nextWeek.getFullYear());
+        setCurrentMonth(nextWeek.getMonth());
+        setCurrentDate(nextWeek.getDate());
+        break;
+      
+      case 'month':
+      default:
+        // Move to next month
+        if (currentMonth === 11) {
+          setCurrentMonth(0);
+          setCurrentYear(currentYear + 1);
+        } else {
+          setCurrentMonth(currentMonth + 1);
+        }
+        // Keep date at 15th for month view
+        setCurrentDate(15);
+        break;
     }
   };
 
@@ -177,6 +225,7 @@ const Calendar: React.FC<CalendarProps> = ({
     const today = new Date();
     setCurrentYear(today.getFullYear());
     setCurrentMonth(today.getMonth());
+    setCurrentDate(today.getDate());
   };
 
   return (
@@ -205,6 +254,10 @@ const Calendar: React.FC<CalendarProps> = ({
                 
                 // Check if this date is in the past (before today)
                 const isPast = date < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                
+                // Check if this date is a weekend (Saturday = 6, Sunday = 0)
+                const dayOfWeek = date.getDay();
+                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
                 return (
                   <DayCell
@@ -213,6 +266,7 @@ const Calendar: React.FC<CalendarProps> = ({
                     isToday={isToday}
                     isCurrentMonth={inCurrentMonth}
                     isPast={isPast}
+                    isWeekend={isWeekend}
                     events={dayEvents}
                     maxEvents={maxEventsPerDay}
                     view={currentView}

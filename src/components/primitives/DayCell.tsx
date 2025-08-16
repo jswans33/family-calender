@@ -38,6 +38,7 @@ export interface DayCellProps {
   isToday: boolean;
   isCurrentMonth: boolean;
   isPast: boolean;
+  isWeekend?: boolean;  // New prop to identify weekends
   events: CalendarEvent[];
   maxEvents?: number;
   view?: CalendarView;
@@ -59,6 +60,7 @@ export const DayCell: React.FC<DayCellProps> = ({
   isToday,
   isCurrentMonth,
   isPast,
+  isWeekend = false,
   events,
   maxEvents = 3,
   view = 'month',
@@ -83,8 +85,8 @@ export const DayCell: React.FC<DayCellProps> = ({
     // Base styles - adapt height based on view
     'border border-gray-200 flex flex-col',
     view === 'month' ? 'p-3 h-full' : view === 'week' ? 'p-2 min-h-[120px]' : 'p-4 min-h-[200px]',
-    // Background based on state
-    isPast && !isToday ? 'bg-gray-100' : 'bg-white',
+    // Background based on state - weekend gets special treatment
+    isWeekend && !isToday ? 'bg-purple-50' : isPast && !isToday ? 'bg-gray-100' : 'bg-white',
     // Interactive states
     !isPast && 'hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset',
     isPast ? 'cursor-default' : 'cursor-pointer',
@@ -92,7 +94,8 @@ export const DayCell: React.FC<DayCellProps> = ({
     // Conditional styles
     isToday && 'bg-blue-50 border-blue-300 ring-1 ring-blue-200',
     !isCurrentMonth && view === 'month' && 'bg-gray-50 text-gray-400',
-    isPast && !isToday && 'text-gray-500',
+    isPast && !isToday && !isWeekend && 'text-gray-500',
+    isWeekend && !isToday && 'border-purple-200',
   ].filter(Boolean).join(' ');
 
   const dayNumberClasses = [

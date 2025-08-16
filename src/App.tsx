@@ -58,6 +58,57 @@ const App: React.FC = () => {
     setIsEventModalOpen(true);
   };
 
+  // Handle event deletion
+  const handleDeleteEvent = async (eventId: string) => {
+    if (!window.confirm('Are you sure you want to delete this event?')) return;
+    
+    try {
+      const calendarService = new CalendarService();
+      const success = await calendarService.deleteEvent(eventId);
+      
+      if (success) {
+        // Remove from local state
+        setEvents(prevEvents => prevEvents.filter(event => event.id !== eventId));
+        
+        // Clear selected event if it was deleted
+        if (selectedEvent && selectedEvent.id === eventId) {
+          setSelectedEvent(null);
+        }
+        
+        console.log('Event deleted successfully');
+      } else {
+        alert('Failed to delete event');
+      }
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      alert('Error deleting event');
+    }
+  };
+
+  // Handle manual sync
+  const handleSync = async () => {
+    try {
+      console.log('Starting manual sync...');
+      const calendarService = new CalendarService();
+      const success = await calendarService.syncCalendar();
+      
+      if (success) {
+        console.log('Sync completed successfully');
+        // Reload events after sync
+        setLoading(true);
+        const fetchedEvents = await calendarService.fetchEvents();
+        setEvents(fetchedEvents);
+        setLoading(false);
+        alert('Calendar synced successfully!');
+      } else {
+        alert('Failed to sync calendar');
+      }
+    } catch (error) {
+      console.error('Error syncing calendar:', error);
+      alert('Error syncing calendar');
+    }
+  };
+
   // Handle event update
   const handleUpdateEvent = async (updatedEvent: Partial<CalendarEvent>) => {
     if (!updatedEvent.id) return;
@@ -156,6 +207,12 @@ const App: React.FC = () => {
             </button>
             <button className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded">
               Today's Events
+            </button>
+            <button 
+              onClick={handleSync}
+              className="w-full text-left px-3 py-2 text-sm text-white bg-green-600 hover:bg-green-700 rounded transition-colors font-medium"
+            >
+              🔄 Sync with Apple Calendar
             </button>
           </div>
         </div>
@@ -382,7 +439,10 @@ const App: React.FC = () => {
                 >
                   Edit Event
                 </button>
-                <button className="flex-1 px-3 py-2 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors">
+                <button 
+                  onClick={() => handleDeleteEvent(selectedEvent.id)}
+                  className="flex-1 px-3 py-2 text-sm border border-red-300 text-red-600 rounded hover:bg-red-50 transition-colors"
+                >
                   Delete
                 </button>
               </div>

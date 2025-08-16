@@ -473,7 +473,9 @@ export class CalDAVRepository {
 
       // Generate iCalendar data for the new event
       const iCalData = iCalendarGenerator.generateVCalendar(event);
-      console.log('Generated iCalendar data for creation:', iCalData);
+      console.log('=== Generated iCalendar data ===');
+      console.log(iCalData);
+      console.log('=== End iCalendar data ===');
 
       // Use a simple UUID-based filename as recommended by Apple docs
       // Avoid special characters in URLs entirely
@@ -509,15 +511,17 @@ export class CalDAVRepository {
         let data = '';
 
         console.log(
-          'Create Response Status:',
+          '=== CalDAV CREATE Response ===',
+          '\nStatus:',
           res.statusCode,
-          res.statusMessage
+          res.statusMessage,
+          '\nHeaders:',
+          JSON.stringify(res.headers, null, 2)
         );
-        console.log('Create Response Headers:', res.headers);
 
         res.on('data', chunk => (data += chunk));
         res.on('end', () => {
-          console.log('Create Response Body:', data);
+          console.log('Response Body:', data);
 
           if (
             res.statusCode === 200 ||

@@ -45,19 +45,52 @@ export class DatabaseCalendarService implements ICalendarService {
     console.log('Force syncing events from CalDAV to database...');
 
     try {
+      // First, sync deletions to CalDAV
+      await this.syncDeletionsToCalDAV();
+      
+      // Then fetch events from CalDAV
       const xmlData = await this.calDAVRepository.fetchCalendarData();
       const events = this.calDAVRepository.parseCalendarEvents(xmlData);
 
-      await this.sqliteRepository.saveEvents(events, true); // preserveMetadata = true
+      // Use smart sync that filters out locally deleted events
+      await this.sqliteRepository.saveEventsWithSmartSync(events);
 
+      // Clean up old events
       const sixMonthsAgo = new Date();
       sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
       await this.sqliteRepository.clearOldEvents(sixMonthsAgo);
+      
+      // Clean up old deletion records
+      await this.sqliteRepository.cleanupDeletedEvents();
 
-      console.log(`Synced ${events.length} events to database`);
+      console.log(`Synced ${events.length} events to database (after filtering deletions)`);
     } catch (error) {
       console.error('Force sync failed:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Sync local deletions to CalDAV
+   */
+  private async syncDeletionsToCalDAV(): Promise<void> {
+    try {
+      const deletedEventIds = await this.sqliteRepository.getDeletedEventsToSync();
+      console.log(`Found ${deletedEventIds.length} deleted events to sync to CalDAV`);
+      
+      for (const eventId of deletedEventIds) {
+        try {
+          await this.calDAVRepository.deleteEvent(eventId);
+          await this.sqliteRepository.markDeletedEventSynced(eventId);
+          console.log(`Deleted event ${eventId} from CalDAV`);
+        } catch (error) {
+          console.log(`Event ${eventId} may not exist in CalDAV:`, error);
+          // Mark as synced anyway to avoid retrying
+          await this.sqliteRepository.markDeletedEventSynced(eventId);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to sync deletions to CalDAV:', error);
     }
   }
 
@@ -138,5 +171,135 @@ export class DatabaseCalendarService implements ICalendarService {
       typeof event.date === 'string' &&
       typeof event.time === 'string'
     );
+  }
+
+  /**
+   * Update an existing event locally and mark it for sync to CalDAV
+   */
+  async updateEvent(event: CalendarEvent): Promise<boolean> {
+    try {
+      // Mark as pending sync for reverse sync to CalDAV
+      const eventWithStatus = {
+        ...event,
+        sync_status: 'pending',
+        local_modified: new Date().toISOString()
+      };
+      
+      // Update in database (will replace the existing event)
+      await this.sqliteRepository.saveEvents([eventWithStatus], false);
+      console.log(`Event ${event.id} updated locally, marked for sync`);
+      
+      // Trigger reverse sync in background
+      this.syncLocalToCalDAV().catch(error => {
+        console.error('Background reverse sync failed:', error);
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to update event:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Create a new event locally and mark it for sync to CalDAV
+   */
+  async createEvent(event: CalendarEvent): Promise<boolean> {
+    try {
+      // Mark as pending sync
+      const eventWithStatus = {
+        ...event,
+        sync_status: 'pending',
+        local_modified: new Date().toISOString()
+      };
+      
+      await this.sqliteRepository.saveEvents([eventWithStatus], false);
+      console.log(`Event ${event.id} created locally, marked for sync`);
+      
+      // Trigger reverse sync in background
+      this.syncLocalToCalDAV().catch(error => {
+        console.error('Background reverse sync failed:', error);
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to create event:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Delete an event from both local database and CalDAV
+   */
+  async deleteEvent(eventId: string): Promise<boolean> {
+    try {
+      console.log(`Deleting event ${eventId}...`);
+      
+      // Delete from local database first
+      const dbSuccess = await this.sqliteRepository.deleteEvent(eventId);
+      
+      if (!dbSuccess) {
+        console.log(`Event ${eventId} not found in database`);
+        return false;
+      }
+      
+      // Try to delete from CalDAV (ignore errors if it doesn't exist there)
+      try {
+        await this.calDAVRepository.deleteEvent(eventId);
+        console.log(`Event ${eventId} deleted from CalDAV`);
+      } catch (caldavError) {
+        console.log(`Event ${eventId} not found in CalDAV or delete failed:`, caldavError);
+        // Still return success since we deleted from database
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to delete event:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Sync local pending events to CalDAV
+   */
+  async syncLocalToCalDAV(): Promise<void> {
+    try {
+      console.log('Starting reverse sync: Local → CalDAV');
+      
+      // Get pending events from database
+      const pendingEvents = await this.sqliteRepository.getPendingEvents();
+      console.log(`Found ${pendingEvents.length} pending events to sync`);
+      
+      for (const event of pendingEvents) {
+        try {
+          // Always try delete-then-create approach for all events
+          // This works for both new and existing events
+          console.log(`Syncing event ${event.id} to CalDAV`);
+          
+          // Try to delete if it exists (ignore errors)
+          await this.calDAVRepository.deleteEvent(event.id).catch(() => {
+            console.log(`Event ${event.id} not in CalDAV yet, will create`);
+          });
+          
+          // Now create/recreate the event
+          console.log(`Creating event ${event.id} in CalDAV...`);
+          const success = await this.calDAVRepository.createEvent(event);
+          
+          if (success) {
+            await this.sqliteRepository.markEventSynced(event.id);
+            console.log(`Event ${event.id} synced to CalDAV successfully`);
+          } else {
+            console.error(`Failed to sync event ${event.id} to CalDAV`);
+          }
+        } catch (error) {
+          console.error(`Error syncing event ${event.id}:`, error);
+        }
+      }
+      
+      console.log('Reverse sync completed');
+    } catch (error) {
+      console.error('Reverse sync failed:', error);
+      throw error;
+    }
   }
 }
