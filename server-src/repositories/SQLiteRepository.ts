@@ -3,20 +3,25 @@ import { CalendarEvent } from '../types/Calendar.js';
 
 export class SQLiteRepository {
   private db: sqlite3.Database;
+  private initPromise: Promise<void>;
 
   constructor(dbPath: string = './calendar.db') {
-    this.db = new sqlite3.Database(dbPath, (err) => {
-      if (err) {
-        console.error('Failed to connect to SQLite database:', err);
-        throw err;
-      }
-      console.log('Connected to SQLite database at:', dbPath);
-      // Initialize database after connection is established
-      this.initializeDatabase();
+    this.initPromise = new Promise((resolve, reject) => {
+      this.db = new sqlite3.Database(dbPath, (err) => {
+        if (err) {
+          console.error('Failed to connect to SQLite database:', err);
+          reject(err);
+          return;
+        }
+        console.log('Connected to SQLite database at:', dbPath);
+        // Initialize database after connection is established
+        this.initializeDatabase().then(resolve).catch(reject);
+      });
     });
   }
 
-  private initializeDatabase(): void {
+  private initializeDatabase(): Promise<void> {
+    return new Promise((resolve, reject) => {
     const createTableSQL = `
       CREATE TABLE IF NOT EXISTS events (
         id TEXT PRIMARY KEY,
@@ -56,30 +61,54 @@ export class SQLiteRepository {
       )
     `;
 
-    this.db.run(createTableSQL, (err) => {
-      if (err) {
-        console.error('Failed to create events table:', err);
-        throw err;
-      }
-      console.log('Events table initialized successfully');
+      let completedTasks = 0;
+      const totalTasks = 2; // events table + deleted_events table
       
-      // Create indexes after table is confirmed to exist
-      this.db.run(`CREATE INDEX IF NOT EXISTS idx_events_date ON events(date)`, (err) => {
-        if (err) console.error('Failed to create date index:', err);
+      const checkCompletion = () => {
+        completedTasks++;
+        if (completedTasks === totalTasks) {
+          console.log('Database initialization completed');
+          resolve();
+        }
+      };
+
+      this.db.run(createTableSQL, (err) => {
+        if (err) {
+          console.error('Failed to create events table:', err);
+          reject(err);
+          return;
+        }
+        console.log('Events table initialized successfully');
+        
+        // Create indexes after table is confirmed to exist
+        this.db.run(`CREATE INDEX IF NOT EXISTS idx_events_date ON events(date)`, (err) => {
+          if (err) console.error('Failed to create date index:', err);
+        });
+
+        this.db.run(`CREATE INDEX IF NOT EXISTS idx_events_sync ON events(synced_at)`, (err) => {
+          if (err) console.error('Failed to create sync index:', err);
+        });
+        
+        checkCompletion();
       });
 
-      this.db.run(`CREATE INDEX IF NOT EXISTS idx_events_sync ON events(synced_at)`, (err) => {
-        if (err) console.error('Failed to create sync index:', err);
-      });
-    });
-
-    this.db.run(createDeletedTableSQL, (err) => {
-      if (err) {
-        console.error('Failed to create deleted_events table:', err);
-      } else {
+      this.db.run(createDeletedTableSQL, (err) => {
+        if (err) {
+          console.error('Failed to create deleted_events table:', err);
+          reject(err);
+          return;
+        }
         console.log('Deleted events tracking table initialized');
-      }
+        checkCompletion();
+      });
     });
+  }
+
+  /**
+   * Wait for database initialization to complete
+   */
+  async ready(): Promise<void> {
+    return this.initPromise;
   }
 
   /**
