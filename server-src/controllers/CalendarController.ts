@@ -135,6 +135,14 @@ export class CalendarController {
     try {
       // Decode Base64-encoded event ID
       const encodedId = req.params.id;
+      if (!encodedId) {
+        res.status(400).json({
+          error: 'Missing event ID',
+          message: 'Event ID parameter is required'
+        });
+        return;
+      }
+      
       const base64Id = encodedId.replace(/[-_]/g, (match) => {
         return { '-': '+', '_': '/' }[match] || match;
       });
