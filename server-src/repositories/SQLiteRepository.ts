@@ -11,8 +11,9 @@ export class SQLiteRepository {
         throw err;
       }
       console.log('Connected to SQLite database at:', dbPath);
+      // Initialize database after connection is established
+      this.initializeDatabase();
     });
-    this.initializeDatabase();
   }
 
   private initializeDatabase(): void {
