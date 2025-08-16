@@ -16,7 +16,10 @@ export class DatabaseCalendarService implements ICalendarService {
     this.sqliteRepository = sqliteRepository;
     this.syncIntervalMinutes = syncIntervalMinutes;
 
-    this.startBackgroundSync();
+    // Delay initial sync to allow database initialization to complete
+    setTimeout(() => {
+      this.startBackgroundSync();
+    }, 1000);
   }
 
   async getEvents(startDate?: Date, endDate?: Date): Promise<CalendarEvent[]> {

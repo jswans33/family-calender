@@ -5,6 +5,7 @@ import { ViewContainer } from './primitives/ViewContainer';
 import { WeekdayHeader } from './primitives/CalendarGrid';
 import { DayCell, CalendarEvent, CalendarView } from './primitives/DayCell';
 import { TimeGrid } from './primitives/TimeGrid';
+import { MultiDayEventBar } from './primitives/MultiDayEventBar';
 
 interface CalendarProps {
   events: CalendarEvent[];
@@ -106,18 +107,48 @@ const Calendar: React.FC<CalendarProps> = ({
     }
   }, [currentYear, currentMonth, currentDate, currentView, startOfWeek]);
 
-  // Event bucketing
-  const buckets = useMemo(() => {
-    const map = new Map<string, CalendarEvent[]>();
+  // Event bucketing - separates single-day and multi-day events
+  const { singleDayBuckets, multiDayEvents } = useMemo(() => {
+    const singleDayMap = new Map<string, CalendarEvent[]>();
+    const multiDayEvents: Array<{event: CalendarEvent, startDate: Date, endDate: Date}> = [];
+    
     for (const e of events) {
-      const k = dateKey(parseLocal(e.date, e.time || undefined));
-      if (!map.has(k)) map.set(k, []);
-      map.get(k)!.push(e);
+      // For all-day events, don't pass time to parseLocal
+      const isAllDay = e.time === 'All Day' || e.time === 'all day' || !e.time;
+      const startDate = parseLocal(e.date, isAllDay ? undefined : e.time);
+      const startKey = dateKey(startDate);
+      
+      // Check if this is a multi-day event
+      if (e.dtend && isAllDay) {
+        const endDate = new Date(e.dtend);
+        if (endDate > startDate) {
+          // Multi-day event - store separately for spanning rendering
+          multiDayEvents.push({ event: e, startDate, endDate });
+          console.log(`Multi-day event detected: "${e.title}" from ${dateKey(startDate)} to ${dateKey(endDate)}`);
+        } else {
+          // Single day event
+          if (!singleDayMap.has(startKey)) singleDayMap.set(startKey, []);
+          singleDayMap.get(startKey)!.push(e);
+        }
+      } else {
+        // Single day event
+        if (!singleDayMap.has(startKey)) singleDayMap.set(startKey, []);
+        singleDayMap.get(startKey)!.push(e);
+      }
     }
-    for (const arr of map.values()) {
+    
+    // Sort events within each day
+    for (const arr of singleDayMap.values()) {
       arr.sort((a, b) => minutesFromTime(a.time) - minutesFromTime(b.time));
     }
-    return map;
+    
+    console.log('Event bucketing complete:', {
+      singleDayCount: singleDayMap.size,
+      multiDayCount: multiDayEvents.length,
+      multiDayEvents: multiDayEvents.map(m => m.event.title)
+    });
+    
+    return { singleDayBuckets: singleDayMap, multiDayEvents };
   }, [events]);
 
   // Generate appropriate title based on view
@@ -242,40 +273,90 @@ const Calendar: React.FC<CalendarProps> = ({
         {currentView === 'month' && (
           <>
             <WeekdayHeader weekdays={headers} className="mb-2" />
-            <ViewContainer view={currentView}>
-              {dates.map((date) => {
-                const key = dateKey(date);
-                const inCurrentMonth = date.getMonth() === currentMonth;
-                const dayEvents = buckets.get(key) ?? [];
-                const isToday =
-                  date.getFullYear() === now.getFullYear() &&
-                  date.getMonth() === now.getMonth() &&
-                  date.getDate() === now.getDate();
-                
-                // Check if this date is in the past (before today)
-                const isPast = date < new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                
-                // Check if this date is a weekend (Saturday = 6, Sunday = 0)
-                const dayOfWeek = date.getDay();
-                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+            <div className="relative">
+              <ViewContainer view={currentView}>
+                {dates.map((date) => {
+                  const key = dateKey(date);
+                  const inCurrentMonth = date.getMonth() === currentMonth;
+                  const dayEvents = singleDayBuckets.get(key) ?? [];
+                  const isToday =
+                    date.getFullYear() === now.getFullYear() &&
+                    date.getMonth() === now.getMonth() &&
+                    date.getDate() === now.getDate();
+                  
+                  // Check if this date is in the past (before today)
+                  const isPast = date < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                  
+                  // Check if this date is a weekend (Saturday = 6, Sunday = 0)
+                  const dayOfWeek = date.getDay();
+                  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-                return (
-                  <DayCell
-                    key={key}
-                    day={date.getDate()}
-                    isToday={isToday}
-                    isCurrentMonth={inCurrentMonth}
-                    isPast={isPast}
-                    isWeekend={isWeekend}
-                    events={dayEvents}
-                    maxEvents={maxEventsPerDay}
-                    view={currentView}
-                    onClick={() => onDayClick?.(key)}
-                    {...(onEventClick && { onEventClick })}
-                  />
-                );
+                  return (
+                    <DayCell
+                      key={key}
+                      day={date.getDate()}
+                      isToday={isToday}
+                      isCurrentMonth={inCurrentMonth}
+                      isPast={isPast}
+                      isWeekend={isWeekend}
+                      events={dayEvents}
+                      maxEvents={maxEventsPerDay}
+                      view={currentView}
+                      onClick={() => onDayClick?.(key)}
+                      {...(onEventClick && { onEventClick })}
+                    />
+                  );
+                })}
+              </ViewContainer>
+              
+              {/* Multi-day Event Overlays */}
+              {multiDayEvents.map((multiEvent) => {
+                const { event, startDate, endDate } = multiEvent;
+                
+                // Calculate grid position for spanning
+                const startIndex = dates.findIndex(date => dateKey(date) === dateKey(startDate));
+                const endIndex = dates.findIndex(date => {
+                  const endDateAdjusted = new Date(endDate.getTime() - 86400000); // End date minus 1 day
+                  return dateKey(date) === dateKey(endDateAdjusted);
+                });
+                
+                if (startIndex === -1) return null; // Event starts outside visible range
+                
+                const actualEndIndex = endIndex === -1 ? dates.length - 1 : endIndex;
+                const startRow = Math.floor(startIndex / 7);
+                const endRow = Math.floor(actualEndIndex / 7);
+                
+                // For events spanning multiple weeks, create separate bars for each week
+                const eventBars = [];
+                for (let row = startRow; row <= endRow; row++) {
+                  const rowStartIndex = row * 7;
+                  const rowEndIndex = Math.min(rowStartIndex + 6, dates.length - 1);
+                  
+                  const barStartIndex = Math.max(startIndex, rowStartIndex);
+                  const barEndIndex = Math.min(actualEndIndex, rowEndIndex);
+                  
+                  if (barStartIndex <= barEndIndex) {
+                    const startCol = barStartIndex % 7;
+                    const endCol = barEndIndex % 7;
+                    const colSpan = endCol - startCol + 1;
+                    
+                    eventBars.push(
+                      <MultiDayEventBar
+                        key={`${event.id}-row-${row}`}
+                        event={event}
+                        startCol={startCol}
+                        colSpan={colSpan}
+                        row={row}
+                        isFirstSegment={row === startRow}
+                        onClick={onEventClick}
+                      />
+                    );
+                  }
+                }
+                
+                return eventBars;
               })}
-            </ViewContainer>
+            </div>
           </>
         )}
 

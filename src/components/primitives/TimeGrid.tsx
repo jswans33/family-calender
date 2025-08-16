@@ -40,14 +40,43 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
     });
   }
 
-  // Group events by date
+  // Helper function to format date
+  const formatDate = (date: Date): string => {
+    return date.toISOString().split('T')[0] || '';
+  };
+
+  // Group events by date - handles multi-day events
   const eventsByDate = new Map<string, CalendarEvent[]>();
   events.forEach(event => {
-    const dateKey = event.date;
-    if (!eventsByDate.has(dateKey)) {
-      eventsByDate.set(dateKey, []);
+    // Start date
+    const startDate = new Date(event.date);
+    const startKey = formatDate(startDate);
+    
+    // Check if this is a multi-day event
+    const isAllDay = event.time === 'All Day' || event.time === 'all day';
+    if (event.dtend && isAllDay) {
+      // For multi-day all-day events, span across all days
+      const endDate = new Date(event.dtend);
+      const currentDate = new Date(startDate);
+      
+      // Add event to each day it spans
+      while (currentDate < endDate) {
+        const dateKey = formatDate(currentDate);
+        if (!eventsByDate.has(dateKey)) {
+          eventsByDate.set(dateKey, []);
+        }
+        eventsByDate.get(dateKey)!.push(event);
+        
+        // Move to next day
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+    } else {
+      // Single day event - original logic
+      if (!eventsByDate.has(startKey)) {
+        eventsByDate.set(startKey, []);
+      }
+      eventsByDate.get(startKey)!.push(event);
     }
-    eventsByDate.get(dateKey)!.push(event);
   });
 
   // Convert time string to hour position (6 AM = 0, 7 AM = 1, etc.)
@@ -60,10 +89,6 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
     const position = (totalMinutes - startMinutes) / 60; // Convert to hours from 6 AM
     
     return Math.max(0, Math.min(17, position)); // Clamp between 0-17 (6 AM to 11 PM)
-  };
-
-  const formatDate = (date: Date): string => {
-    return date.toISOString().split('T')[0] || '';
   };
 
   const isToday = (date: Date) => {
