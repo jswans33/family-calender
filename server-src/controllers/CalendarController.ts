@@ -77,6 +77,10 @@ export class CalendarController {
     try {
       // Decode Base64-encoded event ID to handle special characters safely
       const encodedId = req.params.id;
+      if (!encodedId) {
+        res.status(400).json({ error: 'Event ID is required' });
+        return;
+      }
       // Convert URL-safe Base64 back to standard Base64
       const base64Id = encodedId.replace(/[-_]/g, (match) => {
         return { '-': '+', '_': '/' }[match] || match;
@@ -102,6 +106,10 @@ export class CalendarController {
         eventData.id = eventId;
       }
 
+      if (!this.calendarService.updateEvent) {
+        res.status(501).json({ error: 'Update event not supported by calendar service' });
+        return;
+      }
       const success = await this.calendarService.updateEvent(eventData);
 
       if (success) {

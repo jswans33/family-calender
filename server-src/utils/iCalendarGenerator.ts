@@ -11,6 +11,7 @@ export class iCalendarGenerator {
   static generateVCalendar(event: CalendarEvent): string {
     const now =
       new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const isAllDay = event.time === 'All Day' || event.time === 'all day';
 
     return `BEGIN:VCALENDAR
 VERSION:2.0
@@ -18,8 +19,8 @@ PRODID:-//Swanson Light Calendar//EN
 BEGIN:VEVENT
 UID:${event.id}
 DTSTAMP:${now}
-DTSTART${event.time ? '' : ';VALUE=DATE'}:${this.formatDateTime(event.date, event.time, event.timezone)}
-DTEND:${this.formatDateTime(event.dtend || this.calculateEndTime(event.date, event.time), event.time ? this.calculateEndTimeString(event.time) : undefined, event.timezone)}
+DTSTART${isAllDay ? ';VALUE=DATE' : ''}:${this.formatDateTime(event.date, event.time, event.timezone)}
+DTEND${isAllDay ? ';VALUE=DATE' : ''}:${this.formatDateTime(event.dtend || this.calculateEndTime(event.date, event.time), isAllDay ? undefined : this.calculateEndTimeString(event.time), event.timezone)}
 SUMMARY:${this.escapeText(event.title)}
 ${event.description ? `DESCRIPTION:${this.escapeText(event.description)}` : ''}
 ${event.location ? `LOCATION:${this.escapeText(event.location)}` : ''}
@@ -50,9 +51,13 @@ END:VCALENDAR`
   ): string {
     const date = new Date(dateString);
 
-    if (!time) {
+    if (!time || time === 'All Day' || time === 'all day') {
       // All-day event - use DATE format (YYYYMMDD)
-      return date.toISOString().split('T')[0].replace(/-/g, '');
+      const datePart = date.toISOString().split('T')[0];
+      if (!datePart) {
+        throw new Error('Invalid date format');
+      }
+      return datePart.replace(/-/g, '');
     }
 
     // For Apple CalDAV, always use UTC format with Z suffix and include seconds
@@ -69,6 +74,18 @@ END:VCALENDAR`
    */
   private static combineDateAndTime(date: Date, time: string): string {
     const dateStr = date.toISOString().split('T')[0];
+    
+    // Handle "All Day" events by defaulting to midnight
+    if (time === 'All Day' || time === 'all day') {
+      return `${dateStr}T00:00:00`;
+    }
+    
+    // Handle time formats like "14:00" or "2:30 PM"
+    if (time.includes(':')) {
+      return `${dateStr}T${time}:00`;
+    }
+    
+    // Default fallback
     return `${dateStr}T${time}:00`;
   }
 
@@ -92,7 +109,12 @@ END:VCALENDAR`
    */
   private static calculateEndTimeString(startTime: string): string {
     // Parse time string (HH:MM format)
-    const [hours, minutes] = startTime.split(':').map(Number);
+    const timeParts = startTime.split(':').map(Number);
+    const hours = timeParts[0];
+    const minutes = timeParts[1];
+    if (hours === undefined || minutes === undefined) {
+      throw new Error('Invalid time format');
+    }
     const endHours = (hours + 1) % 24;
     return `${String(endHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
   }
