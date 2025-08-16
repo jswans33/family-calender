@@ -61,6 +61,15 @@ export class SQLiteRepository {
         throw err;
       }
       console.log('Events table initialized successfully');
+      
+      // Create indexes after table is confirmed to exist
+      this.db.run(`CREATE INDEX IF NOT EXISTS idx_events_date ON events(date)`, (err) => {
+        if (err) console.error('Failed to create date index:', err);
+      });
+
+      this.db.run(`CREATE INDEX IF NOT EXISTS idx_events_sync ON events(synced_at)`, (err) => {
+        if (err) console.error('Failed to create sync index:', err);
+      });
     });
 
     this.db.run(createDeletedTableSQL, (err) => {
@@ -69,14 +78,6 @@ export class SQLiteRepository {
       } else {
         console.log('Deleted events tracking table initialized');
       }
-    });
-
-    this.db.run(`CREATE INDEX IF NOT EXISTS idx_events_date ON events(date)`, (err) => {
-      if (err) console.error('Failed to create date index:', err);
-    });
-
-    this.db.run(`CREATE INDEX IF NOT EXISTS idx_events_sync ON events(synced_at)`, (err) => {
-      if (err) console.error('Failed to create sync index:', err);
     });
   }
 
