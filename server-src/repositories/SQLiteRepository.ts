@@ -2,7 +2,7 @@ import sqlite3 from 'sqlite3';
 import { CalendarEvent } from '../types/Calendar.js';
 
 export class SQLiteRepository {
-  private db: sqlite3.Database;
+  private db!: sqlite3.Database;
   private initPromise: Promise<void>;
 
   constructor(dbPath: string = './calendar.db') {
