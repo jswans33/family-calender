@@ -29,6 +29,8 @@ export abstract class SQLiteBaseRepository {
         title TEXT NOT NULL,
         date TEXT NOT NULL,
         time TEXT NOT NULL,
+        start TEXT,
+        end TEXT,
         description TEXT,
         location TEXT,
         organizer TEXT,
