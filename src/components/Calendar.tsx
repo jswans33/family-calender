@@ -22,6 +22,7 @@ interface CalendarProps {
   startOfWeek?: 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0=Sun, default=1
   maxEventsPerDay?: number; // default=3
   view?: CalendarView; // default = 'month'
+  selectedDate?: string | null; // ISO date string for day view
   onDayClick?: (dateISO: string) => void;
   onEventClick?: (event: CalendarEvent) => void;
   onTimeSlotClick?: (date: string, time: string) => void;
@@ -99,6 +100,7 @@ const Calendar: React.FC<CalendarProps> = ({
   startOfWeek = 1,
   maxEventsPerDay = 3,
   view = 'month',
+  selectedDate,
   onDayClick,
   onEventClick,
   onTimeSlotClick,
@@ -113,6 +115,19 @@ const Calendar: React.FC<CalendarProps> = ({
   );
   const [currentDate, setCurrentDate] = useState(new Date().getDate()); // Track the specific date for day/week navigation
   const currentView = view; // Use the view prop directly
+
+  // Update calendar position when selectedDate changes
+  React.useEffect(() => {
+    if (selectedDate) {
+      // Parse date string manually to avoid timezone issues
+      const [year, month, day] = selectedDate.split('-').map(Number);
+      const targetDate = new Date(year, month - 1, day); // month is 0-based
+      console.log('🗓️ Day view - switching to selectedDate:', selectedDate, 'parsed as:', targetDate);
+      setCurrentYear(year);
+      setCurrentMonth(month - 1); // month is 0-based
+      setCurrentDate(day);
+    }
+  }, [selectedDate]);
 
   const now = new Date();
   const headers = useMemo(() => rotatedDays(startOfWeek), [startOfWeek]);

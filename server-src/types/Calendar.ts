@@ -45,6 +45,7 @@ export interface CalDAVCredentials {
 
 export interface ICalendarService {
   getEvents(startDate?: Date, endDate?: Date, calendar?: string): Promise<CalendarEvent[]>;
+  getEventsWithMetadata(calendar?: string): Promise<Array<CalendarEvent & {calendar_path?: string, calendar_name?: string, caldav_filename?: string}>>;
   getTodaysEvents(): Promise<CalendarEvent[]>;
   getThisWeeksEvents(): Promise<CalendarEvent[]>;
   getThisMonthsEvents(): Promise<CalendarEvent[]>;

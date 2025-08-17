@@ -1,34 +1,28 @@
 import React from 'react';
+import { useColors } from '../../contexts/ColorContext';
 
-// Calendar color utility function
-const getCalendarColor = (calendarName?: string) => {
-  const colors = {
-    home: {
-      bg: 'bg-blue-100',
-      text: 'text-blue-800',
-      hover: 'hover:bg-blue-200'
-    },
-    work: {
-      bg: 'bg-red-100',
-      text: 'text-red-800',
-      hover: 'hover:bg-red-200'
-    },
-    shared: {
-      bg: 'bg-green-100',
-      text: 'text-green-800',
-      hover: 'hover:bg-green-200'
-    },
-    meals: {
-      bg: 'bg-yellow-100',
-      text: 'text-yellow-800',
-      hover: 'hover:bg-yellow-200'
-    }
-  };
+// Utility function to generate light/dark versions of a color
+const getColorShades = (color: string) => {
+  // Convert hex to RGB
+  const hex = color.replace('#', '');
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
   
-  return colors[calendarName as keyof typeof colors] || {
-    bg: 'bg-gray-100',
-    text: 'text-gray-800',
-    hover: 'hover:bg-gray-200'
+  // Generate light background (with alpha) - make it more visible
+  const lightBg = `rgba(${r}, ${g}, ${b}, 0.15)`;
+  
+  // Generate hover background (with higher alpha)
+  const hoverBg = `rgba(${r}, ${g}, ${b}, 0.25)`;
+  
+  // Generate text color (darker version)
+  const textColor = `rgb(${Math.max(0, r - 80)}, ${Math.max(0, g - 80)}, ${Math.max(0, b - 80)})`;
+  
+  return {
+    lightBg,
+    hoverBg,
+    textColor,
+    borderColor: color
   };
 };
 
@@ -178,27 +172,12 @@ export const DayCell: React.FC<DayCellProps> = ({
 
       {/* Events Container */}
       <div className="flex-1 space-y-1 overflow-hidden">
-        {shownEvents.map(event => {
-          const calendarColor = getCalendarColor(event.calendar_name);
-          return (
-            <div
-              key={event.id}
-              className={`text-xs px-2 py-1 rounded truncate transition-colors ${
-                isPast && !isToday
-                  ? 'bg-gray-200 text-gray-600'
-                  : `${calendarColor.bg} ${calendarColor.text} ${calendarColor.hover}`
-              }`}
-              onClick={e => {
-                e.stopPropagation();
-                onEventClick?.(event);
-              }}
-              title={`${event.time ? event.time + ' ' : ''}${event.title}${event.calendar_name ? ` (${event.calendar_name})` : ''}`}
-            >
-              {event.time && <span className="font-medium">{event.time} </span>}
-              <span>{event.title}</span>
-            </div>
-          );
-        })}
+        <EventList 
+          events={shownEvents}
+          isPast={isPast}
+          isToday={isToday}
+          onEventClick={onEventClick}
+        />
 
         {/* Overflow Indicator */}
         {overflowCount > 0 && (
@@ -208,5 +187,55 @@ export const DayCell: React.FC<DayCellProps> = ({
         )}
       </div>
     </button>
+  );
+};
+
+// Separate component for event list to use hooks
+const EventList: React.FC<{
+  events: CalendarEvent[];
+  isPast: boolean;
+  isToday: boolean;
+  onEventClick?: (event: CalendarEvent) => void;
+}> = ({ events, isPast, isToday, onEventClick }) => {
+  const { getCalendarColor } = useColors();
+  
+  return (
+    <>
+      {events.map(event => {
+        const calendarName = event.calendar_name || 'home';
+        const calendarColor = getCalendarColor(calendarName);
+        const colorShades = getColorShades(calendarColor);
+        
+        return (
+          <div
+            key={event.id}
+            className="text-xs px-2 py-1 rounded truncate transition-colors border-l-4 cursor-pointer"
+            style={{
+              backgroundColor: isPast && !isToday ? '#f3f4f6' : colorShades.lightBg,
+              color: isPast && !isToday ? '#6b7280' : colorShades.textColor,
+              borderLeftColor: isPast && !isToday ? '#9ca3af' : calendarColor,
+            }}
+            onMouseEnter={e => {
+              if (!(isPast && !isToday)) {
+                e.currentTarget.style.backgroundColor = colorShades.hoverBg;
+              }
+            }}
+            onMouseLeave={e => {
+              if (!(isPast && !isToday)) {
+                e.currentTarget.style.backgroundColor = colorShades.lightBg;
+              }
+            }}
+            onClick={e => {
+              e.stopPropagation();
+              onEventClick?.(event);
+            }}
+            title={`${event.time ? event.time + ' ' : ''}${event.title}${event.calendar_name ? ` (${event.calendar_name})` : ''}`}
+          >
+            {event.time && <span className="font-medium">{event.time} </span>}
+            <span>{event.title}</span>
+          </div>
+        );
+      })}
+    </>
   );
 };

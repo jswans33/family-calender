@@ -17,7 +17,7 @@ export class CalendarController {
       const endDate = end ? new Date(end as string) : undefined;
       const calendarFilter = calendar as string | undefined;
 
-      const events = await this.calendarService.getEvents(startDate, endDate, calendarFilter);
+      const events = await this.calendarService.getEventsWithMetadata(calendarFilter);
       console.log(`Found ${events.length} events${calendarFilter ? ` in ${calendarFilter} calendar` : ''}`);
       res.json(events);
     } catch (error) {
