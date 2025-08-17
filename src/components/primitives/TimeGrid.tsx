@@ -145,9 +145,41 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
       </div>
 
       {/* Days Container */}
-      <div className="flex-1 overflow-x-auto">
+      <div className="flex-1 overflow-x-auto relative">
+        {/* Multi-day Events Overlay for Week View */}
+        {view === 'week' && multiDayEvents.length > 0 && (
+          <div className="absolute top-0 left-0 right-0 z-10 p-2">
+            <div className="grid grid-cols-7 gap-px">
+              {dates.map((date, dateIndex) => {
+                const dateKey = formatDate(date);
+                const dayMultiEvents = multiDayEvents.filter(event => {
+                  const startDate = CalendarService.parseLocal(event.date.split('T')[0]);
+                  const endDate = event.dtend ? CalendarService.parseLocal(event.dtend.split('T')[0]) : startDate;
+                  return date >= startDate && date <= endDate;
+                });
+                
+                return (
+                  <div key={dateIndex} className="min-h-[32px] space-y-1">
+                    {dayMultiEvents.map(event => (
+                      <div
+                        key={event.id}
+                        className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-800 truncate cursor-pointer hover:bg-blue-200"
+                        title={event.title}
+                        onClick={() => onEventClick?.(event)}
+                      >
+                        {event.title}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        
         <div
           className={`grid ${view === 'week' ? 'grid-cols-7' : 'grid-cols-1'} gap-px bg-gray-200 h-full`}
+          style={{ paddingTop: view === 'week' && multiDayEvents.length > 0 ? '60px' : '0' }}
         >
           {dates.map((date, dateIndex) => {
             const dateKey = formatDate(date);
@@ -183,9 +215,14 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
                     <div
                       key={slot.hour}
                       className={`h-16 border-b relative cursor-pointer transition-colors ${
-                        isWeekend
-                          ? 'border-purple-100 hover:bg-purple-100'
-                          : 'border-gray-100 hover:bg-blue-50'
+                        // Highlight 7am-7pm business hours
+                        slot.hour >= 7 && slot.hour <= 19
+                          ? isWeekend
+                            ? 'border-purple-200 bg-purple-25 hover:bg-purple-100'
+                            : 'border-gray-200 bg-blue-25 hover:bg-blue-50'
+                          : isWeekend
+                            ? 'border-purple-100 bg-purple-10 hover:bg-purple-50'
+                            : 'border-gray-100 bg-gray-25 hover:bg-gray-50'
                       }`}
                       onClick={() => onTimeSlotClick?.(dateKey, slot.time24)}
                       title={`Create event at ${slot.label}`}
