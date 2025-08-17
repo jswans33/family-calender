@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Calendar from './components/Calendar';
 import CalendarService from './services/CalendarService';
-import { CalendarEvent, CalendarView } from './components/primitives/DayCell';
+import { CalendarEvent, CalendarView } from './types/shared';
 import { EventModal } from './components/primitives/EventModal';
 import { ColorProvider } from './contexts/ColorContext';
 import EventAccordion from './components/primitives/EventAccordion';

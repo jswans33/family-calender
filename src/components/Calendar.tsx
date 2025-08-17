@@ -6,7 +6,8 @@ import {
 import { CalendarHeader } from './primitives/CalendarHeader';
 import { ViewContainer } from './primitives/ViewContainer';
 import { WeekdayHeader } from './primitives/CalendarGrid';
-import { DayCell, CalendarEvent, CalendarView } from './primitives/DayCell';
+import { DayCell } from './primitives/DayCell';
+import { CalendarEvent, CalendarView } from '../types/shared';
 import { TimeGrid } from './primitives/TimeGrid';
 import { MultiDayEventBar } from './primitives/MultiDayEventBar';
 import CalendarSelector from './primitives/CalendarSelector';
@@ -122,7 +123,6 @@ const Calendar: React.FC<CalendarProps> = ({
       // Parse date string manually to avoid timezone issues
       const [year, month, day] = selectedDate.split('-').map(Number);
       const targetDate = new Date(year, month - 1, day); // month is 0-based
-      console.log('🗓️ Day view - switching to selectedDate:', selectedDate, 'parsed as:', targetDate);
       setCurrentYear(year);
       setCurrentMonth(month - 1); // month is 0-based
       setCurrentDate(day);
@@ -193,16 +193,18 @@ const Calendar: React.FC<CalendarProps> = ({
       if (!datePart) continue; // Skip if date is malformed
       const startDate = parseLocal(datePart); // Parse just the date part
       const startKey = dateKey(startDate);
+      
 
       // Check if this is a multi-day event based on dtend
       if (e.dtend) {
         const endDate = new Date(e.dtend);
-        const startDateClean = new Date(e.date);
+        const startDateClean = parseLocal(datePart); // Use datePart, not e.date
 
         // Check if event spans multiple days (more than 24 hours)
         const daysDiff = Math.floor(
           (endDate.getTime() - startDateClean.getTime()) / (1000 * 60 * 60 * 24)
         );
+
 
         if (daysDiff > 1 || (daysDiff === 1 && isAllDay)) {
           // Multi-day event - store separately for spanning rendering
@@ -211,11 +213,13 @@ const Calendar: React.FC<CalendarProps> = ({
           // Single day event
           if (!singleDayMap.has(startKey)) singleDayMap.set(startKey, []);
           singleDayMap.get(startKey)!.push(e);
+          
         }
       } else {
         // Single day event
         if (!singleDayMap.has(startKey)) singleDayMap.set(startKey, []);
         singleDayMap.get(startKey)!.push(e);
+        
       }
     }
 
@@ -408,11 +412,13 @@ const Calendar: React.FC<CalendarProps> = ({
           <>
             <WeekdayHeader weekdays={headers} className="mb-2" />
             <div className="relative h-full">
+              {/* Day cells layer */}
               <ViewContainer view={currentView}>
                 {dates.map(date => {
                   const key = dateKey(date);
                   const inCurrentMonth = date.getMonth() === currentMonth;
                   const dayEvents = singleDayBuckets.get(key) ?? [];
+                  
                   const isToday =
                     date.getFullYear() === now.getFullYear() &&
                     date.getMonth() === now.getMonth() &&
@@ -444,60 +450,63 @@ const Calendar: React.FC<CalendarProps> = ({
                   );
                 })}
               </ViewContainer>
-
-              {/* Multi-day Event Overlays - positioned absolutely over grid */}
+              
+              {/* Multi-day events overlay layer - same grid template */}
               <div className="absolute inset-0 pointer-events-none">
-                {multiDayEvents.map(multiEvent => {
-                  const { event, startDate, endDate } = multiEvent;
+                <div className="grid grid-cols-7 grid-rows-6 gap-px h-full w-full">
+                  {/* Multi-day Event Overlays - positioned using CSS Grid */}
+                  {multiDayEvents.map(multiEvent => {
+                    const { event, startDate, endDate } = multiEvent;
 
-                  // Calculate grid position for spanning
-                  const startIndex = dates.findIndex(
-                    date => dateKey(date) === dateKey(startDate)
-                  );
-                  const endIndex = dates.findIndex(date => {
-                    return dateKey(date) === dateKey(endDate);
-                  });
-
-                  if (startIndex === -1) return null; // Event starts outside visible range
-
-                  const actualEndIndex =
-                    endIndex === -1 ? dates.length - 1 : endIndex;
-                  const startRow = Math.floor(startIndex / 7);
-                  const endRow = Math.floor(actualEndIndex / 7);
-
-                  // For events spanning multiple weeks, create separate bars for each week
-                  const eventBars = [];
-                  for (let row = startRow; row <= endRow; row++) {
-                    const rowStartIndex = row * 7;
-                    const rowEndIndex = Math.min(
-                      rowStartIndex + 6,
-                      dates.length - 1
+                    // Calculate grid position for spanning
+                    const startIndex = dates.findIndex(
+                      date => dateKey(date) === dateKey(startDate)
                     );
+                    const endIndex = dates.findIndex(date => {
+                      return dateKey(date) === dateKey(endDate);
+                    });
 
-                    const barStartIndex = Math.max(startIndex, rowStartIndex);
-                    const barEndIndex = Math.min(actualEndIndex, rowEndIndex);
+                    if (startIndex === -1) return null; // Event starts outside visible range
 
-                    if (barStartIndex <= barEndIndex) {
-                      const startCol = barStartIndex % 7;
-                      const endCol = barEndIndex % 7;
-                      const colSpan = endCol - startCol + 1;
+                    const actualEndIndex =
+                      endIndex === -1 ? dates.length - 1 : endIndex;
+                    const startRow = Math.floor(startIndex / 7);
+                    const endRow = Math.floor(actualEndIndex / 7);
 
-                      eventBars.push(
-                        <MultiDayEventBar
-                          key={`${event.id}-row-${row}`}
-                          event={event}
-                          startCol={startCol}
-                          colSpan={colSpan}
-                          row={row}
-                          isFirstSegment={row === startRow}
-                          onClick={onEventClick}
-                        />
+                    // For events spanning multiple weeks, create separate bars for each week
+                    const eventBars = [];
+                    for (let row = startRow; row <= endRow; row++) {
+                      const rowStartIndex = row * 7;
+                      const rowEndIndex = Math.min(
+                        rowStartIndex + 6,
+                        dates.length - 1
                       );
-                    }
-                  }
 
-                  return eventBars;
-                })}
+                      const barStartIndex = Math.max(startIndex, rowStartIndex);
+                      const barEndIndex = Math.min(actualEndIndex, rowEndIndex);
+
+                      if (barStartIndex <= barEndIndex) {
+                        const startCol = barStartIndex % 7;
+                        const endCol = barEndIndex % 7;
+                        const colSpan = endCol - startCol + 1;
+
+                        eventBars.push(
+                          <MultiDayEventBar
+                            key={`${event.id}-row-${row}`}
+                            event={event}
+                            startCol={startCol}
+                            colSpan={colSpan}
+                            row={row}
+                            isFirstSegment={row === startRow}
+                            onClick={onEventClick}
+                          />
+                        );
+                      }
+                    }
+
+                    return eventBars;
+                  })}
+                </div>
               </div>
             </div>
           </>

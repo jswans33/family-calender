@@ -1,5 +1,5 @@
 // Import the full CalendarEvent interface from DayCell
-import { CalendarEvent } from '../components/primitives/DayCell';
+import { CalendarEvent } from '../types/shared';
 
 /**
  * CalendarService - Handles communication with the backend server
@@ -27,7 +27,7 @@ class CalendarService {
       const events: CalendarEvent[] = rawEvents.map((event: any) => ({
         id: event.id,
         title: event.title,
-        date: this.formatDateToYMD(event.date),
+        date: event.date, // Already in YYYY-MM-DD format from API
         time: this.formatTimeTo24h(event.time),
         // Preserve all rich CalDAV data
         description: event.description,
@@ -100,6 +100,41 @@ class CalendarService {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  /**
+   * Safe date parsing to avoid timezone issues
+   * @param date Date string in YYYY-MM-DD format
+   * @returns Date object in local timezone
+   */
+  static parseLocal(date: string): Date {
+    const [y, m, d] = date.split('-').map(Number);
+    if (!y || !m || !d) return new Date(NaN);
+    return new Date(y, m - 1, d);
+  }
+
+  /**
+   * Converts 24-hour time format to 12-hour format for display
+   * @param time24h Time string in 24-hour format (e.g., "14:30", "09:00")
+   * @returns 12-hour formatted time string (e.g., "2:30 PM", "9:00 AM") or undefined
+   */
+  static formatTimeTo12h(time24h?: string): string | undefined {
+    if (!time24h) return undefined;
+    
+    try {
+      const [hours, minutes] = time24h.split(':').map(Number);
+      if (isNaN(hours) || isNaN(minutes)) return undefined;
+      
+      const period = hours >= 12 ? 'PM' : 'AM';
+      let displayHours = hours;
+      
+      if (hours === 0) displayHours = 12; // 00:xx -> 12:xx AM
+      else if (hours > 12) displayHours = hours - 12; // 13:xx -> 1:xx PM
+      
+      return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
+    } catch {
+      return undefined;
+    }
   }
 
   /**

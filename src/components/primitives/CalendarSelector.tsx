@@ -2,10 +2,7 @@ import React, { useState } from 'react';
 import { useColors } from '../../contexts/ColorContext';
 import ColorPicker from './ColorPicker';
 
-interface CalendarOption {
-  name: string;
-  count: number;
-}
+import { CalendarOption, CalendarName } from '../../types/shared';
 
 interface CalendarSelectorProps {
   calendars: CalendarOption[];
@@ -14,12 +11,9 @@ interface CalendarSelectorProps {
   isLoading?: boolean;
 }
 
-const CALENDAR_LABELS = {
-  home: 'Home',
-  work: 'Work',
-  shared: 'Shared',
-  meals: 'Meals',
-} as const;
+import { CALENDAR_CONFIG } from '../../config/constants';
+
+const CALENDAR_LABELS = CALENDAR_CONFIG.LABELS;
 
 const CalendarSelector: React.FC<CalendarSelectorProps> = ({
   calendars,
@@ -62,7 +56,7 @@ const CalendarSelector: React.FC<CalendarSelectorProps> = ({
         {/* Individual Calendar Options */}
         {calendars.map(calendar => {
           const calendarColor = getCalendarColor(calendar.name);
-          const label = CALENDAR_LABELS[calendar.name as keyof typeof CALENDAR_LABELS] || calendar.name;
+          const label = CALENDAR_LABELS[calendar.name as CalendarName] || calendar.name;
           
           return (
             <div key={calendar.name} className="relative group">

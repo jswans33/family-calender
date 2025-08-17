@@ -1,8 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-interface CalendarColors {
-  [calendarName: string]: string;
-}
+import { CalendarColors } from '../types/shared';
 
 interface ColorContextType {
   colors: CalendarColors;
@@ -11,14 +9,11 @@ interface ColorContextType {
   getCalendarColor: (calendarName: string) => string;
 }
 
-const DEFAULT_COLORS: CalendarColors = {
-  home: '#3B82F6', // blue-500
-  work: '#EF4444', // red-500
-  shared: '#10B981', // green-500
-  meals: '#F59E0B', // yellow-500
-};
+import { CALENDAR_CONFIG, STORAGE_KEYS } from '../config/constants';
 
-const STORAGE_KEY = 'swanson-calendar-colors';
+const DEFAULT_COLORS: CalendarColors = CALENDAR_CONFIG.DEFAULT_COLORS;
+
+const STORAGE_KEY = STORAGE_KEYS.CALENDAR_COLORS;
 
 const ColorContext = createContext<ColorContextType | undefined>(undefined);
 
@@ -51,7 +46,7 @@ export const ColorProvider: React.FC<{
   };
 
   const getCalendarColor = (calendarName: string): string => {
-    return colors[calendarName] || DEFAULT_COLORS[calendarName] || '#6B7280'; // gray-500 fallback
+    return colors[calendarName] || DEFAULT_COLORS[calendarName] || CALENDAR_CONFIG.FALLBACK_COLOR;
   };
 
   return (

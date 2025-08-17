@@ -1,67 +1,9 @@
 import React from 'react';
 import { useColors } from '../../contexts/ColorContext';
-
-// Utility function to generate light/dark versions of a color
-const getColorShades = (color: string) => {
-  // Convert hex to RGB
-  const hex = color.replace('#', '');
-  const r = parseInt(hex.substring(0, 2), 16);
-  const g = parseInt(hex.substring(2, 4), 16);
-  const b = parseInt(hex.substring(4, 6), 16);
-  
-  // Generate light background (with alpha) - make it more visible
-  const lightBg = `rgba(${r}, ${g}, ${b}, 0.15)`;
-  
-  // Generate hover background (with higher alpha)
-  const hoverBg = `rgba(${r}, ${g}, ${b}, 0.25)`;
-  
-  // Generate text color (darker version)
-  const textColor = `rgb(${Math.max(0, r - 80)}, ${Math.max(0, g - 80)}, ${Math.max(0, b - 80)})`;
-  
-  return {
-    lightBg,
-    hoverBg,
-    textColor,
-    borderColor: color
-  };
-};
-
-export interface CalendarEvent {
-  id: string;
-  title: string;
-  date: string; // 'YYYY-MM-DD'
-  time?: string; // 'HH:mm' 24h format
-
-  // Rich CalDAV data
-  description?: string;
-  location?: string;
-  organizer?: string;
-  attendees?: string[];
-  categories?: string[];
-  priority?: number;
-  status?: string;
-  visibility?: string;
-  dtend?: string; // End date/time
-  duration?: string; // Duration format like "PT1H0M"
-  rrule?: string; // Recurrence rule
-  created?: string;
-  lastModified?: string;
-  sequence?: number;
-  url?: string; // Meeting/Zoom links
-  geo?: {
-    lat: number;
-    lon: number;
-  };
-  transparency?: string;
-  attachments?: string[];
-  timezone?: string;
-  // Calendar metadata for multi-calendar support
-  calendar_name?: string;
-  calendar_path?: string;
-  caldav_filename?: string;
-}
-
-export type CalendarView = 'month' | 'week' | 'day';
+import { getColorShades } from '../../utils/colorUtils';
+import { CalendarEvent, CalendarView } from '../../types/shared';
+import { EVENT_CONFIG } from '../../config/constants';
+import CalendarService from '../../services/CalendarService';
 
 export interface DayCellProps {
   day: number;
@@ -99,16 +41,7 @@ export const DayCell: React.FC<DayCellProps> = ({
 }) => {
   // Adjust event display based on view
   const getMaxEvents = () => {
-    switch (view) {
-      case 'month':
-        return maxEvents;
-      case 'week':
-        return 8;
-      case 'day':
-        return 20;
-      default:
-        return maxEvents;
-    }
+    return EVENT_CONFIG.MAX_EVENTS[view] || maxEvents;
   };
 
   const actualMaxEvents = getMaxEvents();
@@ -229,9 +162,9 @@ const EventList: React.FC<{
               e.stopPropagation();
               onEventClick?.(event);
             }}
-            title={`${event.time ? event.time + ' ' : ''}${event.title}${event.calendar_name ? ` (${event.calendar_name})` : ''}`}
+            title={`${event.time ? (CalendarService.formatTimeTo12h(event.time) || event.time) + ' ' : ''}${event.title}${event.calendar_name ? ` (${event.calendar_name})` : ''}`}
           >
-            {event.time && <span className="font-medium">{event.time} </span>}
+            {event.time && <span className="font-medium">{CalendarService.formatTimeTo12h(event.time) || event.time} </span>}
             <span>{event.title}</span>
           </div>
         );

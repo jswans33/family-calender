@@ -1,37 +1,10 @@
 import React from 'react';
-import { CalendarEvent } from './DayCell';
+import { CalendarEvent } from '../../types/shared';
+import { useColors } from '../../contexts/ColorContext';
+import { getColorShades } from '../../utils/colorUtils';
+import { TIME_GRID_CONFIG } from '../../config/constants';
+import CalendarService from '../../services/CalendarService';
 
-// Calendar color utility function for TimeGrid
-const getCalendarColor = (calendarName?: string) => {
-  const colors = {
-    home: {
-      bg: 'bg-blue-100',
-      text: 'text-blue-800',
-      hover: 'hover:bg-blue-200'
-    },
-    work: {
-      bg: 'bg-red-100',
-      text: 'text-red-800',
-      hover: 'hover:bg-red-200'
-    },
-    shared: {
-      bg: 'bg-green-100',
-      text: 'text-green-800',
-      hover: 'hover:bg-green-200'
-    },
-    meals: {
-      bg: 'bg-yellow-100',
-      text: 'text-yellow-800',
-      hover: 'hover:bg-yellow-200'
-    }
-  };
-  
-  return colors[calendarName as keyof typeof colors] || {
-    bg: 'bg-gray-100',
-    text: 'text-gray-800',
-    hover: 'hover:bg-gray-200'
-  };
-};
 
 export interface TimeSlot {
   hour: number;
@@ -60,7 +33,7 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
 }) => {
   // Generate time slots from 6 AM to 11 PM
   const timeSlots: TimeSlot[] = [];
-  for (let hour = 6; hour <= 23; hour++) {
+  for (let hour = TIME_GRID_CONFIG.START_HOUR; hour <= TIME_GRID_CONFIG.END_HOUR; hour++) {
     const hour12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
     const period = hour < 12 ? 'AM' : 'PM';
     const time24 = `${hour.toString().padStart(2, '0')}:00`;
@@ -74,6 +47,10 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
 
   // Helper function to format date
   const formatDate = (date: Date): string => {
+    if (isNaN(date.getTime())) {
+      console.warn('Invalid date passed to formatDate:', date);
+      return '';
+    }
     return date.toISOString().split('T')[0] || '';
   };
 
@@ -90,7 +67,8 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
       !event.time;
 
     if (event.dtend) {
-      const startDate = new Date(event.date);
+      const datePart = event.date.split('T')[0];
+      const startDate = CalendarService.parseLocal(datePart);
       const endDate = new Date(event.dtend);
       const daysDiff = Math.floor(
         (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
@@ -123,7 +101,8 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
       }
     } else {
       // Single day event
-      const startDate = new Date(event.date);
+      const datePart = event.date.split('T')[0];
+      const startDate = CalendarService.parseLocal(datePart);
       const startKey = formatDate(startDate);
       if (!eventsByDate.has(startKey)) {
         eventsByDate.set(startKey, []);
@@ -138,10 +117,10 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
 
     const [hours, minutes] = timeStr.split(':').map(Number);
     const totalMinutes = (hours || 0) * 60 + (minutes || 0);
-    const startMinutes = 6 * 60; // 6 AM in minutes
-    const position = (totalMinutes - startMinutes) / 60; // Convert to hours from 6 AM
+    const startMinutes = TIME_GRID_CONFIG.START_HOUR * 60;
+    const position = (totalMinutes - startMinutes) / 60;
 
-    return Math.max(0, Math.min(17, position)); // Clamp between 0-17 (6 AM to 11 PM)
+    return Math.max(0, Math.min(TIME_GRID_CONFIG.END_HOUR - TIME_GRID_CONFIG.START_HOUR, position));
   };
 
   const isToday = (date: Date) => {
@@ -214,43 +193,70 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
                   ))}
 
                   {/* Events Overlay */}
-                  <div className="absolute inset-0">
-                    {dayEvents.map((event, eventIndex) => {
-                      const position = getTimePosition(event.time);
-                      const isAllDay = !event.time;
-                      const calendarColor = getCalendarColor(event.calendar_name);
-
-                      return (
-                        <div
-                          key={event.id}
-                          className={`absolute left-1 right-1 px-2 py-1 text-xs rounded cursor-pointer transition-colors ${
-                            isAllDay
-                              ? `${calendarColor.bg} ${calendarColor.text} ${calendarColor.hover} h-6 top-1`
-                              : `${calendarColor.bg} ${calendarColor.text} ${calendarColor.hover} h-12`
-                          }`}
-                          style={{
-                            top: isAllDay ? '4px' : `${position * 64 + 4}px`, // 64px = height of each hour slot
-                            zIndex: 10 + eventIndex,
-                          }}
-                          onClick={() => onEventClick?.(event)}
-                          title={`${event.time || 'All day'} - ${event.title}${event.calendar_name ? ` (${event.calendar_name})` : ''}`}
-                        >
-                          <div className="font-medium truncate">
-                            {event.time && (
-                              <span className="text-xs">{event.time} </span>
-                            )}
-                            {event.title}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <TimeGridEvents
+                    events={dayEvents}
+                    getTimePosition={getTimePosition}
+                    onEventClick={onEventClick}
+                  />
                 </div>
               </div>
             );
           })}
         </div>
       </div>
+    </div>
+  );
+};
+
+
+// Separate component for events to use hooks
+const TimeGridEvents: React.FC<{
+  events: CalendarEvent[];
+  getTimePosition: (timeStr?: string) => number;
+  onEventClick?: (event: CalendarEvent) => void;
+}> = ({ events, getTimePosition, onEventClick }) => {
+  const { getCalendarColor } = useColors();
+  
+  return (
+    <div className="absolute inset-0">
+      {events.map((event, eventIndex) => {
+        const position = getTimePosition(event.time);
+        const isAllDay = !event.time;
+        const calendarName = event.calendar_name || 'home';
+        const calendarColor = getCalendarColor(calendarName);
+        const colorShades = getColorShades(calendarColor);
+
+        return (
+          <div
+            key={event.id}
+            className={`absolute left-1 right-1 px-2 py-1 text-xs rounded cursor-pointer transition-colors border-l-4 ${
+              isAllDay ? 'h-6' : 'h-12'
+            }`}
+            style={{
+              backgroundColor: colorShades.lightBg,
+              color: colorShades.textColor,
+              borderLeftColor: calendarColor,
+              top: isAllDay ? '4px' : `${position * TIME_GRID_CONFIG.HOUR_HEIGHT + 4}px`,
+              zIndex: 10 + eventIndex,
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.backgroundColor = colorShades.hoverBg;
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.backgroundColor = colorShades.lightBg;
+            }}
+            onClick={() => onEventClick?.(event)}
+            title={`${event.time || 'All day'} - ${event.title}${event.calendar_name ? ` (${event.calendar_name})` : ''}`}
+          >
+            <div className="font-medium truncate">
+              {event.time && (
+                <span className="text-xs">{event.time} </span>
+              )}
+              {event.title}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 };

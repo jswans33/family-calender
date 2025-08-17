@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useColors } from '../../contexts/ColorContext';
-import { CalendarEvent } from './DayCell';
+import { CalendarEvent } from '../../types/shared';
+import CalendarService from '../../services/CalendarService';
+
 
 interface EventGroup {
   calendarName: string;
@@ -44,7 +46,9 @@ const EventAccordion: React.FC<EventAccordionProps> = ({
   };
 
   const formatEventTime = (event: CalendarEvent) => {
-    const eventDate = new Date(event.date);
+    // Extract just the date part for safe parsing
+    const datePart = event.date.split('T')[0];
+    const eventDate = CalendarService.parseLocal(datePart);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     eventDate.setHours(0, 0, 0, 0);
@@ -55,11 +59,11 @@ const EventAccordion: React.FC<EventAccordionProps> = ({
     if (daysDiff === 0) dateLabel = 'Today';
     else if (daysDiff === 1) dateLabel = 'Tomorrow';
     else if (daysDiff === -1) dateLabel = 'Yesterday';
-    else dateLabel = new Date(event.date).toLocaleDateString();
+    else dateLabel = CalendarService.parseLocal(datePart).toLocaleDateString();
     
     return {
       dateLabel,
-      time: event.time || 'All day'
+      time: event.time ? CalendarService.formatTimeTo12h(event.time) || event.time : 'All day'
     };
   };
 
