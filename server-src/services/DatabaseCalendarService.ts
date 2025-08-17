@@ -196,12 +196,16 @@ export class DatabaseCalendarService implements ICalendarService {
   }
 
   private getFallbackEvents(): CalendarEvent[] {
+    const now = new Date();
+    const later = new Date(now.getTime() + 3600000);
     return [
       {
         id: '1',
         title: 'No Calendar Access - Demo Event',
-        date: new Date().toISOString(),
+        date: now.toISOString(),
         time: '10:00 AM',
+        start: now.toISOString(),
+        end: later.toISOString(),
       },
     ];
   }

@@ -64,12 +64,16 @@ export class CalendarQueryService {
   }
 
   private getFallbackEvents(): CalendarEvent[] {
+    const now = new Date();
+    const hourLater = new Date(Date.now() + 3600000);
     return [
       {
         id: 'fallback-1',
         title: 'No events available',
-        start: new Date().toISOString(),
-        end: new Date(Date.now() + 3600000).toISOString(),
+        date: now.toISOString(),
+        time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        start: now.toISOString(),
+        end: hourLater.toISOString(),
         description: 'Unable to fetch events. Please check your connection.',
       },
     ];

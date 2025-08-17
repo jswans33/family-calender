@@ -157,4 +157,26 @@ export class CalDAVMultiCalendarRepository {
 
     return this.operationsRepository.createEventInCalendar(event, calendarName);
   }
+
+  /**
+   * Update event in calendar
+   */
+  async updateEventInCalendar(
+    event: CalendarEvent,
+    filename: string,
+    calendar_path: string
+  ): Promise<boolean> {
+    const fullPath = `${calendar_path}${filename}`;
+    return this.operationsRepository.updateEvent(event, fullPath);
+  }
+
+  /**
+   * Delete event from calendar
+   */
+  async deleteEventFromCalendar(
+    filename: string,
+    calendar_path: string
+  ): Promise<boolean> {
+    return this.operationsRepository.deleteEvent(filename, calendar_path, filename);
+  }
 }

@@ -85,6 +85,8 @@ export class CalDAVParser {
         hour: '2-digit',
         minute: '2-digit',
       }),
+      start: startDate.toISOString(),
+      end: endDate ? endDate.toISOString() : startDate.toISOString(),
     };
 
     // Add basic optional fields

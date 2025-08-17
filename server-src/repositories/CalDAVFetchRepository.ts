@@ -83,7 +83,11 @@ export class CalDAVFetchRepository {
         res.on('data', chunk => (data += chunk));
         res.on('end', () => {
           const success = res.statusCode === 200 || res.statusCode === 201 || res.statusCode === 204;
-          resolve({ success, statusCode: res.statusCode });
+          if (res.statusCode !== undefined) {
+            resolve({ success, statusCode: res.statusCode });
+          } else {
+            resolve({ success });
+          }
         });
       });
 
@@ -118,7 +122,11 @@ export class CalDAVFetchRepository {
         res.on('data', chunk => (data += chunk));
         res.on('end', () => {
           const success = res.statusCode === 200 || res.statusCode === 204 || res.statusCode === 404;
-          resolve({ success, statusCode: res.statusCode });
+          if (res.statusCode !== undefined) {
+            resolve({ success, statusCode: res.statusCode });
+          } else {
+            resolve({ success });
+          }
         });
       });
 

@@ -27,18 +27,17 @@ export class CalendarUpdateService {
       const calendarPath = this.getCalendarPath(calendarName);
       
       // Create in CalDAV
-      const createdEvent = await this.multiCalendarRepository.createEventInCalendar(
+      const created = await this.multiCalendarRepository.createEventInCalendar(
         event,
-        calendarPath
+        calendarName
       );
 
-      if (createdEvent) {
+      if (created) {
         // Save to local database with metadata
-        const eventWithMetadata = {
-          ...createdEvent,
+        const eventWithMetadata: any = {
+          ...event,
           calendar_path: calendarPath,
           calendar_name: calendarName,
-          caldav_filename: createdEvent.caldav_filename,
         };
         await this.sqliteRepository.saveEvents([eventWithMetadata]);
         return true;
@@ -70,12 +69,13 @@ export class CalendarUpdateService {
 
       if (updated) {
         // Update local database by saving the updated event
-        await this.sqliteRepository.saveEvents([{
+        const eventWithMetadata: any = {
           ...event,
           caldav_filename: existingEvent.caldav_filename,
           calendar_path: existingEvent.calendar_path,
           calendar_name: existingEvent.calendar_name
-        }]);
+        };
+        await this.sqliteRepository.saveEvents([eventWithMetadata]);
         return true;
       }
       return false;
@@ -125,6 +125,7 @@ export class CalendarUpdateService {
   }
 
   private getCalendarPath(calendarName: string): string {
-    return this.CALENDAR_PATHS[calendarName] || this.CALENDAR_PATHS.shared;
+    const path = this.CALENDAR_PATHS[calendarName];
+    return path !== undefined ? path : this.CALENDAR_PATHS.shared || '';
   }
 }

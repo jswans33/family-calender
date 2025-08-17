@@ -83,11 +83,24 @@ export class CalDAVParserRepository {
     const optionalFields = this.parseOptionalEventFields(event);
     const metadataFields = this.parseEventMetadata(event);
 
+    // Ensure required fields are present
+    const id = basicFields.id || eventKey;
+    const title = basicFields.title || 'No Title';
+    const date = basicFields.date || new Date().toISOString();
+    const time = basicFields.time || '00:00';
+    const start = basicFields.start || date;
+    const end = basicFields.end || date;
+
     return {
-      ...basicFields,
+      id,
+      title,
+      date,
+      time,
+      start,
+      end,
       ...optionalFields,
       ...metadataFields,
-    };
+    } as CalendarEvent;
   }
 
   private extractResponseBlocks(xmlData: string): string[] {
@@ -116,7 +129,7 @@ export class CalDAVParserRepository {
       /<calendar-data[^>]*><!\[CDATA\[([\s\S]*?)\]\]><\/calendar-data>/i
     );
     
-    return calendarDataMatch ? calendarDataMatch[1] : null;
+    return calendarDataMatch ? calendarDataMatch[1] || null : null;
   }
 
   private extractICalMatches(xmlData: string): string[] {
@@ -146,8 +159,10 @@ export class CalDAVParserRepository {
   }
 
   private parseBasicEventFields(event: ICalEventData, eventKey: string): Partial<CalendarEvent> {
-    const startDate = event.start ? new Date(event.start) : new Date();
-    const endDate = event.end ? new Date(event.end) : null;
+    const startDate = event.start instanceof Date ? event.start : 
+                     event.start ? new Date(String(event.start)) : new Date();
+    const endDate = event.end instanceof Date ? event.end :
+                   event.end ? new Date(String(event.end)) : null;
 
     return {
       id: event.uid || eventKey,
@@ -157,7 +172,7 @@ export class CalDAVParserRepository {
         hour: '2-digit',
         minute: '2-digit',
       }),
-      dtend: endDate ? endDate.toISOString() : undefined,
+      ...(endDate && { dtend: endDate.toISOString() }),
     };
   }
 
@@ -191,9 +206,17 @@ export class CalDAVParserRepository {
     const visibility = this.parseClass(event.class);
     if (visibility) metadata.visibility = visibility;
 
-    if (event.rrule) metadata.rrule = event.rrule.toString();
-    if (event.created) metadata.created = new Date(event.created).toISOString();
-    if (event.lastmodified) metadata.lastModified = new Date(event.lastmodified).toISOString();
+    if (event.rrule && typeof event.rrule === 'object' && event.rrule !== null && 'toString' in event.rrule && typeof event.rrule.toString === 'function') {
+      metadata.rrule = event.rrule.toString();
+    }
+    if (event.created) {
+      const createdDate = event.created instanceof Date ? event.created : new Date(String(event.created));
+      metadata.created = createdDate.toISOString();
+    }
+    if (event.lastmodified) {
+      const modifiedDate = event.lastmodified instanceof Date ? event.lastmodified : new Date(String(event.lastmodified));
+      metadata.lastModified = modifiedDate.toISOString();
+    }
 
     const geo = this.parseGeo(event.geo);
     if (geo) metadata.geo = geo;
@@ -204,10 +227,14 @@ export class CalDAVParserRepository {
     const attachments = this.parseAttachments(event.attach);
     if (attachments) metadata.attachments = attachments;
 
-    if (event.start && event.start.tz) metadata.timezone = event.start.tz;
+    if (event.start && typeof event.start === 'object' && 'tz' in event.start) {
+      metadata.timezone = (event.start as any).tz;
+    }
 
-    const startDate = event.start ? new Date(event.start) : new Date();
-    const endDate = event.end ? new Date(event.end) : null;
+    const startDate = event.start instanceof Date ? event.start : 
+                     event.start ? new Date(String(event.start)) : new Date();
+    const endDate = event.end instanceof Date ? event.end :
+                   event.end ? new Date(String(event.end)) : null;
     const duration = this.calculateDuration(startDate, endDate);
     if (duration) metadata.duration = duration;
 

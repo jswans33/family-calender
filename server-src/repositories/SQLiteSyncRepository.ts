@@ -11,6 +11,8 @@ interface DatabaseEventRow {
   title: string;
   date: string;
   time: string;
+  start?: string;
+  end?: string;
   description?: string;
   location?: string;
   organizer?: string;
@@ -273,6 +275,8 @@ export class SQLiteSyncRepository extends SQLiteBaseRepository {
       title: row.title,
       date: row.date,
       time: row.time,
+      start: row.start || row.date,
+      end: row.end || row.dtend || row.date,
     };
 
     if (row.description) event.description = row.description;

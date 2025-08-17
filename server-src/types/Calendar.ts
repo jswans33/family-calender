@@ -3,6 +3,8 @@ export interface CalendarEvent {
   title: string;
   date: string;
   time: string;
+  start: string;
+  end: string;
   description?: string;
   location?: string;
   organizer?: string;
