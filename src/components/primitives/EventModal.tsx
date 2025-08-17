@@ -35,20 +35,33 @@ export const EventModal: React.FC<EventModalProps> = ({
   const existingEvent = initialData?.event;
 
   const [calendars, setCalendars] = useState<Array<{name: string; displayName: string; count: number}>>([]);
-  const [formData, setFormData] = useState({
-    title: existingEvent?.title || '',
-    description: existingEvent?.description || '',
-    location: existingEvent?.location || '',
-    time: existingEvent?.time || initialData?.time || '',
-    duration: existingEvent?.duration
-      ? existingEvent.duration
-          .replace('PT', '')
-          .replace('M', '')
-          .replace('H', '')
-      : EVENT_CONFIG.DEFAULT_DURATION,
-    url: existingEvent?.url || '',
-    categories: existingEvent?.categories?.join(', ') || '',
-    calendar: selectedCalendar,
+  const [formData, setFormData] = useState(() => {
+    // Calculate end date from dtend if available
+    let endDate = existingEvent?.date || initialData?.date || '';
+    if (existingEvent?.dtend) {
+      const dtendDate = new Date(existingEvent.dtend);
+      endDate = dtendDate.toISOString().split('T')[0];
+    }
+
+    return {
+      title: existingEvent?.title || '',
+      description: existingEvent?.description || '',
+      location: existingEvent?.location || '',
+      startDate: existingEvent?.date || initialData?.date || '',
+      endDate,
+      time: existingEvent?.time || initialData?.time || '',
+      duration: existingEvent?.duration
+        ? existingEvent.duration
+            .replace('PT', '')
+            .replace('M', '')
+            .replace('H', '')
+        : EVENT_CONFIG.DEFAULT_DURATION,
+      url: existingEvent?.url || '',
+      categories: existingEvent?.categories?.join(', ') || '',
+      calendar: existingEvent?.calendar_name || selectedCalendar,
+      isVacation: existingEvent?.isVacation || false,
+      isAllDay: !existingEvent?.time || existingEvent?.time === '',
+    };
   });
 
   useEffect(() => {
@@ -72,13 +85,17 @@ export const EventModal: React.FC<EventModalProps> = ({
 
     if (!formData.title.trim()) return;
 
-    // Calculate end time if duration is provided
+    // Calculate end time if duration is provided and not all-day
     let dtend: string | undefined;
-    if (formData.time && formData.duration) {
-      const startDate = new Date(`${initialData?.date}T${formData.time}:00`);
+    if (!formData.isAllDay && formData.time && formData.duration) {
+      const startDate = new Date(`${formData.startDate}T${formData.time}:00`);
       const endDate = new Date(
         startDate.getTime() + parseInt(formData.duration) * 60000
       );
+      dtend = endDate.toISOString();
+    } else if (formData.isAllDay && formData.endDate && formData.endDate !== formData.startDate) {
+      // For multi-day all-day events, set dtend to end of end date
+      const endDate = new Date(`${formData.endDate}T23:59:59`);
       dtend = endDate.toISOString();
     }
 
@@ -87,8 +104,8 @@ export const EventModal: React.FC<EventModalProps> = ({
         ? { id: existingEvent.id }
         : { id: `temp-${Date.now()}` }),
       title: formData.title.trim(),
-      date: initialData?.date || '',
-      time: formData.time || '',
+      date: formData.startDate,
+      time: formData.isAllDay ? '' : (formData.time || ''),
       calendar_name: formData.calendar,
       ...(formData.description.trim() && { description: formData.description.trim() }),
       ...(formData.location.trim() && { location: formData.location.trim() }),
@@ -97,6 +114,7 @@ export const EventModal: React.FC<EventModalProps> = ({
       ...(formData.duration && { duration: `PT${formData.duration}M` }),
       ...(formData.categories.trim() && { categories: formData.categories.split(',').map(c => c.trim()) }),
       status: 'CONFIRMED',
+      isVacation: formData.isVacation,
       ...(isEditing && existingEvent
         ? {
             created: existingEvent.created || new Date().toISOString(),
@@ -119,11 +137,15 @@ export const EventModal: React.FC<EventModalProps> = ({
       title: '',
       description: '',
       location: '',
+      startDate: initialData?.date || '',
+      endDate: initialData?.date || '',
       time: initialData?.time || '',
       duration: EVENT_CONFIG.DEFAULT_DURATION,
       url: '',
       categories: '',
       calendar: selectedCalendar,
+      isVacation: false,
+      isAllDay: false,
     });
     onClose();
   };
@@ -183,23 +205,74 @@ export const EventModal: React.FC<EventModalProps> = ({
             />
           </div>
 
-          {/* Date and Time */}
+          {/* All Day Checkbox */}
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="isAllDay"
+              checked={formData.isAllDay}
+              onChange={e =>
+                setFormData({ ...formData, isAllDay: e.target.checked, time: e.target.checked ? '' : formData.time })
+              }
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label
+              htmlFor="isAllDay"
+              className="ml-2 block text-sm text-gray-700"
+            >
+              All day event
+            </label>
+          </div>
+
+          {/* Start and End Date */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label
-                htmlFor="date"
+                htmlFor="startDate"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                Date
+                Start Date *
               </label>
               <input
                 type="date"
-                id="date"
-                value={initialData?.date || ''}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-600"
-                disabled
+                id="startDate"
+                required
+                value={formData.startDate}
+                onChange={e => {
+                  const newStartDate = e.target.value;
+                  setFormData({ 
+                    ...formData, 
+                    startDate: newStartDate,
+                    // Auto-adjust end date if it's before start date
+                    endDate: formData.endDate < newStartDate ? newStartDate : formData.endDate
+                  });
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
+            <div>
+              <label
+                htmlFor="endDate"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                End Date *
+              </label>
+              <input
+                type="date"
+                id="endDate"
+                required
+                value={formData.endDate}
+                min={formData.startDate}
+                onChange={e =>
+                  setFormData({ ...formData, endDate: e.target.value })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
+
+          {/* Time - Only show if not all day */}
+          {!formData.isAllDay && (
             <div>
               <label
                 htmlFor="time"
@@ -217,31 +290,33 @@ export const EventModal: React.FC<EventModalProps> = ({
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
-          </div>
+          )}
 
-          {/* Duration */}
-          <div>
-            <label
-              htmlFor="duration"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Duration (minutes)
-            </label>
-            <select
-              id="duration"
-              value={formData.duration}
-              onChange={e =>
-                setFormData({ ...formData, duration: e.target.value })
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              {EVENT_CONFIG.DURATION_OPTIONS.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Duration - Only show if not all day and single day */}
+          {!formData.isAllDay && formData.startDate === formData.endDate && (
+            <div>
+              <label
+                htmlFor="duration"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Duration (minutes)
+              </label>
+              <select
+                id="duration"
+                value={formData.duration}
+                onChange={e =>
+                  setFormData({ ...formData, duration: e.target.value })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                {EVENT_CONFIG.DURATION_OPTIONS.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Calendar Selection */}
           <div>
@@ -267,6 +342,27 @@ export const EventModal: React.FC<EventModalProps> = ({
               ))}
             </select>
           </div>
+
+          {/* Vacation Checkbox - Only for work calendar */}
+          {formData.calendar === 'work' && (
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="isVacation"
+                checked={formData.isVacation}
+                onChange={e =>
+                  setFormData({ ...formData, isVacation: e.target.checked })
+                }
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label
+                htmlFor="isVacation"
+                className="ml-2 block text-sm text-gray-700"
+              >
+                This is a vacation day (deducts 8 hours from vacation balance)
+              </label>
+            </div>
+          )}
 
           {/* Location */}
           <div>

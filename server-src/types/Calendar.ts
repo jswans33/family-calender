@@ -22,6 +22,8 @@ export interface CalendarEvent {
   transparency?: 'OPAQUE' | 'TRANSPARENT';
   attachments?: string[];
   timezone?: string;
+  isVacation?: boolean;
+  calendar_name?: string;
 }
 
 export interface CalendarConfig {

@@ -308,6 +308,28 @@ class CalendarService {
     console.log('Connecting to Apple Calendar via TypeScript server...');
     return true;
   }
+
+  /**
+   * VACATION TRACKING METHODS (modular)
+   * Frontend interface to vacation API endpoints
+   */
+
+  /**
+   * Fetches vacation balances for all users
+   * @returns Promise<Array<{user_name: string, balance_hours: number, last_updated: string}>>
+   */
+  async fetchVacationBalances(): Promise<Array<{user_name: string, balance_hours: number, last_updated: string}>> {
+    try {
+      const response = await fetch('http://localhost:3001/vacation-balances');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch vacation balances: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching vacation balances:', error);
+      return [];
+    }
+  }
 }
 
 export default CalendarService;

@@ -31,6 +31,9 @@ export interface CalendarEvent {
   calendar_name?: string;
   calendar_path?: string;
   caldav_filename?: string;
+  
+  // Vacation tracking
+  isVacation?: boolean;
 }
 
 export type CalendarView = 'month' | 'week' | 'day';

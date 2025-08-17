@@ -5,6 +5,7 @@ import { CalendarEvent, CalendarView } from './types/shared';
 import { EventModal } from './components/primitives/EventModal';
 import { ColorProvider } from './contexts/ColorContext';
 import EventAccordion from './components/primitives/EventAccordion';
+import VacationPanel from './components/VacationPanel';
 import './App.css';
 
 const App: React.FC = () => {
@@ -302,8 +303,8 @@ const App: React.FC = () => {
 
         {/* Main Content */}
         <div className="flex-1 flex">
-          {/* Left Panel - Event Details */}
-          <div className="w-1/4 bg-white border-r border-gray-200 p-4">
+          {/* Left Panel - Event Details & Vacation */}
+          <div className="w-1/4 bg-white border-r border-gray-200 p-4 flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">
                 Event Details
@@ -412,6 +413,11 @@ const App: React.FC = () => {
                 <p>Click on an event to view details</p>
               </div>
             )}
+            
+            {/* Vacation Panel - Bottom Left */}
+            <div className="mt-4">
+              <VacationPanel />
+            </div>
           </div>
 
           {/* Center Panel - Calendar */}

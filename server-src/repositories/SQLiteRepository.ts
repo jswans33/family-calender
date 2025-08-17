@@ -54,7 +54,8 @@ export class SQLiteRepository {
         calendar_path TEXT,
         calendar_name TEXT,
         sync_status TEXT DEFAULT 'synced',
-        local_modified DATETIME
+        local_modified DATETIME,
+        is_vacation BOOLEAN DEFAULT 0
       )
     `;
 
@@ -66,8 +67,16 @@ export class SQLiteRepository {
       )
     `;
 
+      const createVacationBalancesTableSQL = `
+      CREATE TABLE IF NOT EXISTS vacation_balances (
+        user_name TEXT PRIMARY KEY,
+        balance_hours REAL NOT NULL DEFAULT 40.0,
+        last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
       let completedTasks = 0;
-      const totalTasks = 2; // events table + deleted_events table
+      const totalTasks = 3; // events table + deleted_events table + vacation_balances table
 
       const checkCompletion = () => {
         completedTasks++;
@@ -110,6 +119,34 @@ export class SQLiteRepository {
           return;
         }
         console.log('Deleted events tracking table initialized');
+        checkCompletion();
+      });
+
+      this.db.run(createVacationBalancesTableSQL, err => {
+        if (err) {
+          console.error('Failed to create vacation_balances table:', err);
+          reject(err);
+          return;
+        }
+        console.log('Vacation balances table initialized');
+        
+        // Initialize default balances for James and Morgan
+        this.db.run(
+          `INSERT OR IGNORE INTO vacation_balances (user_name, balance_hours) VALUES (?, ?)`,
+          ['james', 40.0],
+          err => {
+            if (err) console.error('Failed to initialize James vacation balance:', err);
+          }
+        );
+        
+        this.db.run(
+          `INSERT OR IGNORE INTO vacation_balances (user_name, balance_hours) VALUES (?, ?)`,
+          ['morgan', 40.0],
+          err => {
+            if (err) console.error('Failed to initialize Morgan vacation balance:', err);
+          }
+        );
+        
         checkCompletion();
       });
     });
@@ -245,8 +282,8 @@ export class SQLiteRepository {
           id, title, date, time, description, location, organizer,
           attendees, categories, priority, status, visibility, dtend,
           duration, rrule, created, last_modified, sequence, url,
-          geo_lat, geo_lon, transparency, attachments, timezone, caldav_filename, calendar_path, calendar_name, sync_status, local_modified, synced_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT synced_at FROM events WHERE id = ?), CURRENT_TIMESTAMP))
+          geo_lat, geo_lon, transparency, attachments, timezone, caldav_filename, calendar_path, calendar_name, sync_status, local_modified, synced_at, is_vacation
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT synced_at FROM events WHERE id = ?), CURRENT_TIMESTAMP), ?)
         ON CONFLICT(id) DO UPDATE SET
           title = excluded.title,
           date = excluded.date,
@@ -271,15 +308,15 @@ export class SQLiteRepository {
           transparency = excluded.transparency,
           attachments = excluded.attachments,
           timezone = excluded.timezone
-          -- Note: synced_at and caldav_etag are preserved
+          -- Note: synced_at, caldav_etag, and is_vacation are preserved during CalDAV sync
       `
         : `
         INSERT OR REPLACE INTO events (
           id, title, date, time, description, location, organizer,
           attendees, categories, priority, status, visibility, dtend,
           duration, rrule, created, last_modified, sequence, url,
-          geo_lat, geo_lon, transparency, attachments, timezone, caldav_filename, calendar_path, calendar_name, sync_status, local_modified, synced_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+          geo_lat, geo_lon, transparency, attachments, timezone, caldav_filename, calendar_path, calendar_name, sync_status, local_modified, synced_at, is_vacation
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)
       `;
 
       // Handle empty events array
@@ -334,6 +371,9 @@ export class SQLiteRepository {
               (event as any).sync_status || 'synced', // Add sync_status
               (event as any).local_modified || null, // Add local_modified
             ];
+
+            // Add is_vacation parameter for both SQL cases
+            params.push((event as any).isVacation ? 1 : 0);
 
             // Add extra parameter for preserveMetadata case
             if (preserveMetadata) {
@@ -477,6 +517,7 @@ export class SQLiteRepository {
     if (row.transparency) event.transparency = row.transparency;
     if (row.attachments) event.attachments = JSON.parse(row.attachments);
     if (row.timezone) event.timezone = row.timezone;
+    if (row.is_vacation !== undefined) event.isVacation = Boolean(row.is_vacation);
 
     return event;
   }
@@ -731,6 +772,67 @@ export class SQLiteRepository {
         }));
         resolve(events);
       });
+    });
+  }
+
+  /**
+   * VACATION TRACKING METHODS
+   * Modular data access methods for vacation balance management
+   */
+
+  /**
+   * Get vacation balances for all users
+   */
+  async getVacationBalances(): Promise<Array<{user_name: string, balance_hours: number, last_updated: string}>> {
+    await this.ready();
+    return new Promise((resolve, reject) => {
+      this.db.all(
+        'SELECT user_name, balance_hours, last_updated FROM vacation_balances',
+        (err, rows: any[]) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          resolve(rows);
+        }
+      );
+    });
+  }
+
+  /**
+   * Update vacation balance for a specific user
+   */
+  async updateVacationBalance(userName: string, newBalance: number): Promise<void> {
+    await this.ready();
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        'UPDATE vacation_balances SET balance_hours = ?, last_updated = CURRENT_TIMESTAMP WHERE user_name = ?',
+        [newBalance, userName],
+        err => {
+          if (err) reject(err);
+          else resolve();
+        }
+      );
+    });
+  }
+
+  /**
+   * Get vacation balance for a specific user
+   */
+  async getVacationBalance(userName: string): Promise<number> {
+    await this.ready();
+    return new Promise((resolve, reject) => {
+      this.db.get(
+        'SELECT balance_hours FROM vacation_balances WHERE user_name = ?',
+        [userName],
+        (err, row: any) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          resolve(row ? row.balance_hours : 0);
+        }
+      );
     });
   }
 }
