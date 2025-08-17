@@ -59,16 +59,19 @@ app.delete('/events/:id', async (req, res) => {
     // Get the event before deletion for vacation processing
     const events = await calendarService.getEventsWithMetadata();
     const eventToDelete = events.find(e => e.id === req.params.id);
-    
+
     // Delete the event through the controller
     await calendarController.deleteEvent(req, res);
-    
+
     // If deletion was successful and it was a vacation event, restore vacation hours
     if (res.statusCode === 200 && eventToDelete?.isVacation) {
       try {
         await vacationService.processVacationEventDeletion(eventToDelete);
       } catch (vacationError) {
-        console.error('Vacation restoration failed (event still deleted):', vacationError);
+        console.error(
+          'Vacation restoration failed (event still deleted):',
+          vacationError
+        );
         // Don't fail the response since the event was deleted successfully
       }
     }
@@ -86,7 +89,7 @@ app.post('/events', async (req, res) => {
       if (!validation.isValid) {
         res.status(400).json({
           error: 'Invalid vacation event',
-          errors: validation.errors
+          errors: validation.errors,
         });
         return;
       }
@@ -100,7 +103,10 @@ app.post('/events', async (req, res) => {
       try {
         await vacationService.processVacationEventCreation(req.body);
       } catch (vacationError) {
-        console.error('Vacation processing failed (event still created):', vacationError);
+        console.error(
+          'Vacation processing failed (event still created):',
+          vacationError
+        );
         // Don't fail the response since the event was created successfully
       }
     }

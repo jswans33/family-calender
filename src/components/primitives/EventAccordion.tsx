@@ -3,7 +3,6 @@ import { useColors } from '../../contexts/ColorContext';
 import { CalendarEvent } from '../../types/shared';
 import CalendarService from '../../services/CalendarService';
 
-
 interface EventGroup {
   calendarName: string;
   events: CalendarEvent[];
@@ -38,7 +37,7 @@ const EventAccordion: React.FC<EventAccordionProps> = ({
   const getCalendarLabel = (name: string) => {
     const labels: Record<string, string> = {
       home: 'Home',
-      work: 'Work', 
+      work: 'Work',
       shared: 'Shared',
       meals: 'Meals',
     };
@@ -52,18 +51,22 @@ const EventAccordion: React.FC<EventAccordionProps> = ({
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     eventDate.setHours(0, 0, 0, 0);
-    
-    const daysDiff = Math.ceil((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    
+
+    const daysDiff = Math.ceil(
+      (eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
     let dateLabel = '';
     if (daysDiff === 0) dateLabel = 'Today';
     else if (daysDiff === 1) dateLabel = 'Tomorrow';
     else if (daysDiff === -1) dateLabel = 'Yesterday';
     else dateLabel = CalendarService.parseLocal(datePart).toLocaleDateString();
-    
+
     return {
       dateLabel,
-      time: event.time ? CalendarService.formatTimeTo12h(event.time) || event.time : 'All day'
+      time: event.time
+        ? CalendarService.formatTimeTo12h(event.time) || event.time
+        : 'All day',
     };
   };
 
@@ -72,20 +75,23 @@ const EventAccordion: React.FC<EventAccordionProps> = ({
       <h2 className="text-lg font-semibold text-gray-900 mb-4">
         Upcoming Events
       </h2>
-      
+
       {eventGroups.map(group => {
         const calendarColor = getCalendarColor(group.calendarName);
         const isExpanded = expandedCalendars.has(group.calendarName);
-        
+
         return (
-          <div key={group.calendarName} className="border border-gray-200 rounded-lg overflow-hidden">
+          <div
+            key={group.calendarName}
+            className="border border-gray-200 rounded-lg overflow-hidden"
+          >
             {/* Calendar Header */}
             <button
               onClick={() => toggleCalendar(group.calendarName)}
               className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 flex items-center justify-between transition-colors"
             >
               <div className="flex items-center gap-3">
-                <div 
+                <div
                   className="w-4 h-4 rounded-full"
                   style={{ backgroundColor: calendarColor }}
                 />
@@ -96,16 +102,21 @@ const EventAccordion: React.FC<EventAccordionProps> = ({
                   ({group.events.length})
                 </span>
               </div>
-              <svg 
+              <svg
                 className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                fill="none" 
-                stroke="currentColor" 
+                fill="none"
+                stroke="currentColor"
                 viewBox="0 0 24 24"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
               </svg>
             </button>
-            
+
             {/* Events List */}
             {isExpanded && (
               <div className="divide-y divide-gray-100">
@@ -117,7 +128,7 @@ const EventAccordion: React.FC<EventAccordionProps> = ({
                   group.events.map(event => {
                     const { dateLabel, time } = formatEventTime(event);
                     const isSelected = selectedEvent?.id === event.id;
-                    
+
                     return (
                       <div
                         key={event.id}

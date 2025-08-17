@@ -46,7 +46,11 @@ export const ColorProvider: React.FC<{
   };
 
   const getCalendarColor = (calendarName: string): string => {
-    return colors[calendarName] || DEFAULT_COLORS[calendarName] || CALENDAR_CONFIG.FALLBACK_COLOR;
+    return (
+      colors[calendarName] ||
+      DEFAULT_COLORS[calendarName] ||
+      CALENDAR_CONFIG.FALLBACK_COLOR
+    );
   };
 
   return (

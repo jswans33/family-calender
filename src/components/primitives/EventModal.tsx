@@ -6,11 +6,13 @@ export interface EventModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (event: Partial<CalendarEvent> & { calendar_name?: string }) => void;
-  initialData?: {
-    date: string;
-    time?: string;
-    event?: CalendarEvent;
-  } | undefined;
+  initialData?:
+    | {
+        date: string;
+        time?: string;
+        event?: CalendarEvent;
+      }
+    | undefined;
   isEditing?: boolean;
   selectedCalendar?: string;
 }
@@ -34,7 +36,9 @@ export const EventModal: React.FC<EventModalProps> = ({
 }) => {
   const existingEvent = initialData?.event;
 
-  const [calendars, setCalendars] = useState<Array<{name: string; displayName: string; count: number}>>([]);
+  const [calendars, setCalendars] = useState<
+    Array<{ name: string; displayName: string; count: number }>
+  >([]);
   const [formData, setFormData] = useState(() => {
     // Calculate end date from dtend if available
     let endDate = existingEvent?.date || initialData?.date || '';
@@ -67,14 +71,16 @@ export const EventModal: React.FC<EventModalProps> = ({
   useEffect(() => {
     const fetchCalendars = async () => {
       try {
-        const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.CALENDARS}`);
+        const response = await fetch(
+          `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.CALENDARS}`
+        );
         const calendarsData = await response.json();
         setCalendars(calendarsData);
       } catch (error) {
         console.error('Failed to fetch calendars:', error);
       }
     };
-    
+
     if (isOpen) {
       fetchCalendars();
     }
@@ -93,7 +99,11 @@ export const EventModal: React.FC<EventModalProps> = ({
         startDate.getTime() + parseInt(formData.duration) * 60000
       );
       dtend = endDate.toISOString();
-    } else if (formData.isAllDay && formData.endDate && formData.endDate !== formData.startDate) {
+    } else if (
+      formData.isAllDay &&
+      formData.endDate &&
+      formData.endDate !== formData.startDate
+    ) {
       // For multi-day all-day events, set dtend to end of end date
       const endDate = new Date(`${formData.endDate}T23:59:59`);
       dtend = endDate.toISOString();
@@ -105,14 +115,18 @@ export const EventModal: React.FC<EventModalProps> = ({
         : { id: `temp-${Date.now()}` }),
       title: formData.title.trim(),
       date: formData.startDate,
-      time: formData.isAllDay ? '' : (formData.time || ''),
+      time: formData.isAllDay ? '' : formData.time || '',
       calendar_name: formData.calendar,
-      ...(formData.description.trim() && { description: formData.description.trim() }),
+      ...(formData.description.trim() && {
+        description: formData.description.trim(),
+      }),
       ...(formData.location.trim() && { location: formData.location.trim() }),
       ...(formData.url.trim() && { url: formData.url.trim() }),
       ...(dtend && { dtend }),
       ...(formData.duration && { duration: `PT${formData.duration}M` }),
-      ...(formData.categories.trim() && { categories: formData.categories.split(',').map(c => c.trim()) }),
+      ...(formData.categories.trim() && {
+        categories: formData.categories.split(',').map(c => c.trim()),
+      }),
       status: 'CONFIRMED',
       isVacation: formData.isVacation,
       ...(isEditing && existingEvent
@@ -211,16 +225,24 @@ export const EventModal: React.FC<EventModalProps> = ({
               type="checkbox"
               id="isAllDay"
               checked={formData.isAllDay}
+              disabled={formData.startDate !== formData.endDate}
               onChange={e =>
-                setFormData({ ...formData, isAllDay: e.target.checked, time: e.target.checked ? '' : formData.time })
+                setFormData({
+                  ...formData,
+                  isAllDay: e.target.checked,
+                  time: e.target.checked ? '' : formData.time,
+                })
               }
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50"
             />
             <label
               htmlFor="isAllDay"
-              className="ml-2 block text-sm text-gray-700"
+              className={`ml-2 block text-sm ${formData.startDate !== formData.endDate ? 'text-gray-400' : 'text-gray-700'}`}
             >
-              All day event
+              All day event{' '}
+              {formData.startDate !== formData.endDate
+                ? '(required for multi-day)'
+                : ''}
             </label>
           </div>
 
@@ -240,11 +262,20 @@ export const EventModal: React.FC<EventModalProps> = ({
                 value={formData.startDate}
                 onChange={e => {
                   const newStartDate = e.target.value;
-                  setFormData({ 
-                    ...formData, 
+                  const newEndDate =
+                    formData.endDate < newStartDate
+                      ? newStartDate
+                      : formData.endDate;
+                  const isMultiDay = newStartDate !== newEndDate;
+
+                  setFormData({
+                    ...formData,
                     startDate: newStartDate,
-                    // Auto-adjust end date if it's before start date
-                    endDate: formData.endDate < newStartDate ? newStartDate : formData.endDate
+                    endDate: newEndDate,
+                    // Auto-set all-day for multi-day events
+                    isAllDay: isMultiDay || formData.isAllDay,
+                    // Clear time for multi-day events
+                    time: isMultiDay ? '' : formData.time,
                   });
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -263,9 +294,19 @@ export const EventModal: React.FC<EventModalProps> = ({
                 required
                 value={formData.endDate}
                 min={formData.startDate}
-                onChange={e =>
-                  setFormData({ ...formData, endDate: e.target.value })
-                }
+                onChange={e => {
+                  const newEndDate = e.target.value;
+                  const isMultiDay = formData.startDate !== newEndDate;
+
+                  setFormData({
+                    ...formData,
+                    endDate: newEndDate,
+                    // Auto-set all-day for multi-day events
+                    isAllDay: isMultiDay || formData.isAllDay,
+                    // Clear time for multi-day events
+                    time: isMultiDay ? '' : formData.time,
+                  });
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>

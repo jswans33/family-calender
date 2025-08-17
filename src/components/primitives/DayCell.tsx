@@ -104,8 +104,10 @@ export const DayCell: React.FC<DayCellProps> = ({
       <div className={dayNumberClasses}>{day}</div>
 
       {/* Events Container - positioned based on view type */}
-      <div className={`flex-1 space-y-1 overflow-hidden ${view === 'month' ? 'mt-12' : ''}`}>
-        <EventList 
+      <div
+        className={`flex-1 space-y-1 overflow-hidden ${view === 'month' ? 'mt-12' : ''}`}
+      >
+        <EventList
           events={shownEvents}
           isPast={isPast}
           isToday={isToday}
@@ -131,20 +133,21 @@ const EventList: React.FC<{
   onEventClick?: (event: CalendarEvent) => void;
 }> = ({ events, isPast, isToday, onEventClick }) => {
   const { getCalendarColor } = useColors();
-  
+
   return (
     <>
       {events.map(event => {
         const calendarName = event.calendar_name || 'home';
         const calendarColor = getCalendarColor(calendarName);
         const colorShades = getColorShades(calendarColor);
-        
+
         return (
           <div
             key={event.id}
             className="text-xs px-2 py-1 rounded truncate transition-colors border-l-4 cursor-pointer"
             style={{
-              backgroundColor: isPast && !isToday ? '#f3f4f6' : colorShades.lightBg,
+              backgroundColor:
+                isPast && !isToday ? '#f3f4f6' : colorShades.lightBg,
               color: isPast && !isToday ? '#6b7280' : colorShades.textColor,
               borderLeftColor: isPast && !isToday ? '#9ca3af' : calendarColor,
             }}
@@ -164,7 +167,11 @@ const EventList: React.FC<{
             }}
             title={`${event.time ? (CalendarService.formatTimeTo12h(event.time) || event.time) + ' ' : ''}${event.title}${event.calendar_name ? ` (${event.calendar_name})` : ''}`}
           >
-            {event.time && <span className="font-medium">{CalendarService.formatTimeTo12h(event.time) || event.time} </span>}
+            {event.time && (
+              <span className="font-medium">
+                {CalendarService.formatTimeTo12h(event.time) || event.time}{' '}
+              </span>
+            )}
             <span>{event.title}</span>
           </div>
         );

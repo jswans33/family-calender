@@ -129,24 +129,32 @@ export class SQLiteRepository {
           return;
         }
         console.log('Vacation balances table initialized');
-        
+
         // Initialize default balances for James and Morgan
         this.db.run(
           `INSERT OR IGNORE INTO vacation_balances (user_name, balance_hours) VALUES (?, ?)`,
           ['james', 40.0],
           err => {
-            if (err) console.error('Failed to initialize James vacation balance:', err);
+            if (err)
+              console.error(
+                'Failed to initialize James vacation balance:',
+                err
+              );
           }
         );
-        
+
         this.db.run(
           `INSERT OR IGNORE INTO vacation_balances (user_name, balance_hours) VALUES (?, ?)`,
           ['morgan', 40.0],
           err => {
-            if (err) console.error('Failed to initialize Morgan vacation balance:', err);
+            if (err)
+              console.error(
+                'Failed to initialize Morgan vacation balance:',
+                err
+              );
           }
         );
-        
+
         checkCompletion();
       });
     });
@@ -424,7 +432,11 @@ export class SQLiteRepository {
     }); // Close Promise
   } // Close function
 
-  async getEvents(startDate?: Date, endDate?: Date, calendar?: string): Promise<CalendarEvent[]> {
+  async getEvents(
+    startDate?: Date,
+    endDate?: Date,
+    calendar?: string
+  ): Promise<CalendarEvent[]> {
     return new Promise((resolve, reject) => {
       let query = 'SELECT * FROM events';
       const params: any[] = [];
@@ -517,7 +529,8 @@ export class SQLiteRepository {
     if (row.transparency) event.transparency = row.transparency;
     if (row.attachments) event.attachments = JSON.parse(row.attachments);
     if (row.timezone) event.timezone = row.timezone;
-    if (row.is_vacation !== undefined) event.isVacation = Boolean(row.is_vacation);
+    if (row.is_vacation !== undefined)
+      event.isVacation = Boolean(row.is_vacation);
 
     return event;
   }
@@ -727,7 +740,7 @@ export class SQLiteRepository {
   /**
    * Get calendar statistics
    */
-  async getCalendarStats(): Promise<Array<{name: string, count: number}>> {
+  async getCalendarStats(): Promise<Array<{ name: string; count: number }>> {
     return new Promise((resolve, reject) => {
       this.db.all(
         'SELECT calendar_name as name, COUNT(*) as count FROM events WHERE calendar_name IS NOT NULL GROUP BY calendar_name ORDER BY count DESC',
@@ -746,7 +759,15 @@ export class SQLiteRepository {
   /**
    * Get events with metadata for a specific calendar
    */
-  async getEventsWithMetadata(calendar?: string): Promise<Array<CalendarEvent & {calendar_path?: string, calendar_name?: string, caldav_filename?: string}>> {
+  async getEventsWithMetadata(calendar?: string): Promise<
+    Array<
+      CalendarEvent & {
+        calendar_path?: string;
+        calendar_name?: string;
+        caldav_filename?: string;
+      }
+    >
+  > {
     return new Promise((resolve, reject) => {
       let query = 'SELECT * FROM events';
       const params: any[] = [];
@@ -768,7 +789,7 @@ export class SQLiteRepository {
           ...this.rowToEvent(row),
           calendar_path: row.calendar_path,
           calendar_name: row.calendar_name,
-          caldav_filename: row.caldav_filename
+          caldav_filename: row.caldav_filename,
         }));
         resolve(events);
       });
@@ -783,7 +804,9 @@ export class SQLiteRepository {
   /**
    * Get vacation balances for all users
    */
-  async getVacationBalances(): Promise<Array<{user_name: string, balance_hours: number, last_updated: string}>> {
+  async getVacationBalances(): Promise<
+    Array<{ user_name: string; balance_hours: number; last_updated: string }>
+  > {
     await this.ready();
     return new Promise((resolve, reject) => {
       this.db.all(
@@ -802,7 +825,10 @@ export class SQLiteRepository {
   /**
    * Update vacation balance for a specific user
    */
-  async updateVacationBalance(userName: string, newBalance: number): Promise<void> {
+  async updateVacationBalance(
+    userName: string,
+    newBalance: number
+  ): Promise<void> {
     await this.ready();
     return new Promise((resolve, reject) => {
       this.db.run(

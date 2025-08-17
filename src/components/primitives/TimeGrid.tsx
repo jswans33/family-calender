@@ -5,7 +5,6 @@ import { getColorShades } from '../../utils/colorUtils';
 import { TIME_GRID_CONFIG } from '../../config/constants';
 import CalendarService from '../../services/CalendarService';
 
-
 export interface TimeSlot {
   hour: number;
   label: string;
@@ -33,7 +32,11 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
 }) => {
   // Generate time slots from 6 AM to 11 PM
   const timeSlots: TimeSlot[] = [];
-  for (let hour = TIME_GRID_CONFIG.START_HOUR; hour <= TIME_GRID_CONFIG.END_HOUR; hour++) {
+  for (
+    let hour = TIME_GRID_CONFIG.START_HOUR;
+    hour <= TIME_GRID_CONFIG.END_HOUR;
+    hour++
+  ) {
     const hour12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
     const period = hour < 12 ? 'AM' : 'PM';
     const time24 = `${hour.toString().padStart(2, '0')}:00`;
@@ -120,7 +123,13 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
     const startMinutes = TIME_GRID_CONFIG.START_HOUR * 60;
     const position = (totalMinutes - startMinutes) / 60;
 
-    return Math.max(0, Math.min(TIME_GRID_CONFIG.END_HOUR - TIME_GRID_CONFIG.START_HOUR, position));
+    return Math.max(
+      0,
+      Math.min(
+        TIME_GRID_CONFIG.END_HOUR - TIME_GRID_CONFIG.START_HOUR,
+        position
+      )
+    );
   };
 
   const isToday = (date: Date) => {
@@ -153,11 +162,15 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
               {dates.map((date, dateIndex) => {
                 const dateKey = formatDate(date);
                 const dayMultiEvents = multiDayEvents.filter(event => {
-                  const startDate = CalendarService.parseLocal(event.date.split('T')[0]);
-                  const endDate = event.dtend ? CalendarService.parseLocal(event.dtend.split('T')[0]) : startDate;
+                  const startDate = CalendarService.parseLocal(
+                    event.date.split('T')[0]
+                  );
+                  const endDate = event.dtend
+                    ? CalendarService.parseLocal(event.dtend.split('T')[0])
+                    : startDate;
                   return date >= startDate && date <= endDate;
                 });
-                
+
                 return (
                   <div key={dateIndex} className="min-h-[32px] space-y-1">
                     {dayMultiEvents.map(event => (
@@ -176,10 +189,13 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
             </div>
           </div>
         )}
-        
+
         <div
           className={`grid ${view === 'week' ? 'grid-cols-7' : 'grid-cols-1'} gap-px bg-gray-200 h-full`}
-          style={{ paddingTop: view === 'week' && multiDayEvents.length > 0 ? '60px' : '0' }}
+          style={{
+            paddingTop:
+              view === 'week' && multiDayEvents.length > 0 ? '60px' : '0',
+          }}
         >
           {dates.map((date, dateIndex) => {
             const dateKey = formatDate(date);
@@ -245,7 +261,6 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
   );
 };
 
-
 // Separate component for events to use hooks
 const TimeGridEvents: React.FC<{
   events: CalendarEvent[];
@@ -253,47 +268,72 @@ const TimeGridEvents: React.FC<{
   onEventClick?: (event: CalendarEvent) => void;
 }> = ({ events, getTimePosition, onEventClick }) => {
   const { getCalendarColor } = useColors();
-  
+
+  // Group events by time to handle overlapping
+  const eventsByTime = new Map<string, CalendarEvent[]>();
+  events.forEach(event => {
+    const timeKey = event.time || 'all-day';
+    if (!eventsByTime.has(timeKey)) {
+      eventsByTime.set(timeKey, []);
+    }
+    eventsByTime.get(timeKey)!.push(event);
+  });
+
   return (
     <div className="absolute inset-0">
-      {events.map((event, eventIndex) => {
-        const position = getTimePosition(event.time);
-        const isAllDay = !event.time;
-        const calendarName = event.calendar_name || 'home';
-        const calendarColor = getCalendarColor(calendarName);
-        const colorShades = getColorShades(calendarColor);
+      {Array.from(eventsByTime.entries()).flatMap(([timeKey, timeEvents]) =>
+        timeEvents.map((event, indexInTimeSlot) => {
+          const position = getTimePosition(event.time);
+          const isAllDay = !event.time;
+          const calendarName = event.calendar_name || 'home';
+          const calendarColor = getCalendarColor(calendarName);
+          const colorShades = getColorShades(calendarColor);
 
-        return (
-          <div
-            key={event.id}
-            className={`absolute left-1 right-1 px-2 py-1 text-xs rounded cursor-pointer transition-colors border-l-4 ${
-              isAllDay ? 'h-6' : 'h-12'
-            }`}
-            style={{
-              backgroundColor: colorShades.lightBg,
-              color: colorShades.textColor,
-              borderLeftColor: calendarColor,
-              top: isAllDay ? '4px' : `${position * TIME_GRID_CONFIG.HOUR_HEIGHT + 4}px`,
-              zIndex: 10 + eventIndex,
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.backgroundColor = colorShades.hoverBg;
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.backgroundColor = colorShades.lightBg;
-            }}
-            onClick={() => onEventClick?.(event)}
-            title={`${event.time || 'All day'} - ${event.title}${event.calendar_name ? ` (${event.calendar_name})` : ''}`}
-          >
-            <div className="font-medium truncate">
-              {event.time && (
-                <span className="text-xs">{event.time} </span>
-              )}
-              {event.title}
+          // Calculate horizontal positioning for overlapping events
+          const totalEventsAtTime = timeEvents.length;
+          const eventWidth =
+            totalEventsAtTime > 1
+              ? `${95 / totalEventsAtTime}%`
+              : 'calc(100% - 8px)';
+          const leftOffset =
+            totalEventsAtTime > 1
+              ? `${(indexInTimeSlot * 95) / totalEventsAtTime}%`
+              : '4px';
+
+          return (
+            <div
+              key={event.id}
+              className={`absolute px-2 py-1 text-xs rounded cursor-pointer transition-colors border-l-4 ${
+                isAllDay ? 'h-6' : 'h-12'
+              }`}
+              style={{
+                backgroundColor: colorShades.lightBg,
+                color: colorShades.textColor,
+                borderLeftColor: calendarColor,
+                top: isAllDay
+                  ? '4px'
+                  : `${position * TIME_GRID_CONFIG.HOUR_HEIGHT + 4}px`,
+                left: leftOffset,
+                width: eventWidth,
+                zIndex: 10 + indexInTimeSlot,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = colorShades.hoverBg;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = colorShades.lightBg;
+              }}
+              onClick={() => onEventClick?.(event)}
+              title={`${event.time || 'All day'} - ${event.title}${event.calendar_name ? ` (${event.calendar_name})` : ''}`}
+            >
+              <div className="font-medium truncate">
+                {event.time && <span className="text-xs">{event.time} </span>}
+                {event.title}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })
+      )}
     </div>
   );
 };

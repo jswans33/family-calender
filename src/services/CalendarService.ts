@@ -15,7 +15,9 @@ class CalendarService {
   async fetchEvents(calendar?: string): Promise<CalendarEvent[]> {
     try {
       // Make HTTP request to our TypeScript server endpoint
-      const url = calendar ? `http://localhost:3001/events?calendar=${encodeURIComponent(calendar)}` : 'http://localhost:3001/events';
+      const url = calendar
+        ? `http://localhost:3001/events?calendar=${encodeURIComponent(calendar)}`
+        : 'http://localhost:3001/events';
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`Failed to fetch events: ${response.status}`);
@@ -120,17 +122,18 @@ class CalendarService {
    */
   static formatTimeTo12h(time24h?: string): string | undefined {
     if (!time24h) return undefined;
-    
+
     try {
       const [hours, minutes] = time24h.split(':').map(Number);
       if (isNaN(hours) || isNaN(minutes)) return undefined;
-      
+
       const period = hours >= 12 ? 'PM' : 'AM';
       let displayHours = hours;
-      
-      if (hours === 0) displayHours = 12; // 00:xx -> 12:xx AM
+
+      if (hours === 0)
+        displayHours = 12; // 00:xx -> 12:xx AM
       else if (hours > 12) displayHours = hours - 12; // 13:xx -> 1:xx PM
-      
+
       return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
     } catch {
       return undefined;
@@ -168,7 +171,9 @@ class CalendarService {
    * @param event Event data with optional calendar_name
    * @returns Promise<boolean> Success status
    */
-  async createEvent(event: Partial<CalendarEvent> & { calendar_name?: string }): Promise<boolean> {
+  async createEvent(
+    event: Partial<CalendarEvent> & { calendar_name?: string }
+  ): Promise<boolean> {
     try {
       const response = await fetch('http://localhost:3001/events', {
         method: 'POST',
@@ -281,7 +286,7 @@ class CalendarService {
    * Fetches available calendars with event counts
    * @returns Promise<Array<{name: string, count: number}>> Array of calendars
    */
-  async fetchCalendars(): Promise<Array<{name: string, count: number}>> {
+  async fetchCalendars(): Promise<Array<{ name: string; count: number }>> {
     try {
       const response = await fetch('http://localhost:3001/calendars');
       if (!response.ok) {
@@ -294,7 +299,7 @@ class CalendarService {
         { name: 'home', count: 0 },
         { name: 'work', count: 0 },
         { name: 'shared', count: 0 },
-        { name: 'meals', count: 0 }
+        { name: 'meals', count: 0 },
       ];
     }
   }
@@ -318,11 +323,15 @@ class CalendarService {
    * Fetches vacation balances for all users
    * @returns Promise<Array<{user_name: string, balance_hours: number, last_updated: string}>>
    */
-  async fetchVacationBalances(): Promise<Array<{user_name: string, balance_hours: number, last_updated: string}>> {
+  async fetchVacationBalances(): Promise<
+    Array<{ user_name: string; balance_hours: number; last_updated: string }>
+  > {
     try {
       const response = await fetch('http://localhost:3001/vacation-balances');
       if (!response.ok) {
-        throw new Error(`Failed to fetch vacation balances: ${response.status}`);
+        throw new Error(
+          `Failed to fetch vacation balances: ${response.status}`
+        );
       }
       return await response.json();
     } catch (error) {

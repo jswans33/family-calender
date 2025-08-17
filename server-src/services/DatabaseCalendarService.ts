@@ -36,9 +36,17 @@ export class DatabaseCalendarService implements ICalendarService {
     }
   }
 
-  async getEvents(startDate?: Date, endDate?: Date, calendar?: string): Promise<CalendarEvent[]> {
+  async getEvents(
+    startDate?: Date,
+    endDate?: Date,
+    calendar?: string
+  ): Promise<CalendarEvent[]> {
     try {
-      const events = await this.sqliteRepository.getEvents(startDate, endDate, calendar);
+      const events = await this.sqliteRepository.getEvents(
+        startDate,
+        endDate,
+        calendar
+      );
 
       this.checkAndSync().catch(error => {
         console.error('Background sync failed:', error);
@@ -62,14 +70,17 @@ export class DatabaseCalendarService implements ICalendarService {
   }
 
   async forceSync(): Promise<void> {
-    console.log('Force syncing events from all CalDAV calendars to database...');
+    console.log(
+      'Force syncing events from all CalDAV calendars to database...'
+    );
 
     try {
       // First, sync deletions to CalDAV
       await this.syncDeletionsToCalDAV();
 
       // Fetch events from all calendars using multi-calendar repository
-      const allEvents = await this.multiCalendarRepository.getAllEventsFromAllCalendars();
+      const allEvents =
+        await this.multiCalendarRepository.getAllEventsFromAllCalendars();
       console.log(`Fetched ${allEvents.length} events from all calendars`);
 
       // Transform events to include calendar metadata
@@ -77,7 +88,7 @@ export class DatabaseCalendarService implements ICalendarService {
         ...event,
         caldav_filename: event.caldav_filename,
         calendar_path: event.calendar_path,
-        calendar_name: event.calendar_name
+        calendar_name: event.calendar_name,
       }));
 
       // Use smart sync that filters out locally deleted events
@@ -276,9 +287,10 @@ export class DatabaseCalendarService implements ICalendarService {
       console.log(`Deleting event ${eventId}...`);
 
       // First, get the event details from database to extract calendar metadata
-      const eventsWithMetadata = await this.sqliteRepository.getEventsWithMetadata();
+      const eventsWithMetadata =
+        await this.sqliteRepository.getEventsWithMetadata();
       const eventToDelete = eventsWithMetadata.find(e => e.id === eventId);
-      
+
       if (!eventToDelete) {
         console.log(`Event ${eventId} not found in database`);
         return false;
@@ -290,20 +302,26 @@ export class DatabaseCalendarService implements ICalendarService {
         console.log(`Failed to delete event ${eventId} from database`);
         return false;
       }
-      
+
       // Delete from CalDAV using correct calendar path and filename
       try {
         if (eventToDelete.calendar_path && eventToDelete.caldav_filename) {
-          console.log(`Deleting from CalDAV: ${eventToDelete.calendar_path}${eventToDelete.caldav_filename}`);
+          console.log(
+            `Deleting from CalDAV: ${eventToDelete.calendar_path}${eventToDelete.caldav_filename}`
+          );
           await this.multiCalendarRepository.deleteEvent(
-            eventId, 
+            eventId,
             eventToDelete.calendar_path,
             eventToDelete.caldav_filename
           );
           console.log(`Event ${eventId} deleted from CalDAV successfully`);
         } else {
-          console.log(`Event ${eventId} missing CalDAV metadata - skipping CalDAV deletion`);
-          console.log(`calendar_path: ${eventToDelete.calendar_path}, caldav_filename: ${eventToDelete.caldav_filename}`);
+          console.log(
+            `Event ${eventId} missing CalDAV metadata - skipping CalDAV deletion`
+          );
+          console.log(
+            `calendar_path: ${eventToDelete.calendar_path}, caldav_filename: ${eventToDelete.caldav_filename}`
+          );
         }
       } catch (caldavError) {
         console.error(
@@ -312,7 +330,7 @@ export class DatabaseCalendarService implements ICalendarService {
         );
         // Don't fail the whole operation if CalDAV delete fails
       }
-      
+
       return true;
     } catch (error) {
       console.error('Failed to delete event:', error);
@@ -367,7 +385,7 @@ export class DatabaseCalendarService implements ICalendarService {
   /**
    * Get available calendars with event counts
    */
-  async getCalendars(): Promise<Array<{name: string, count: number}>> {
+  async getCalendars(): Promise<Array<{ name: string; count: number }>> {
     try {
       return await this.sqliteRepository.getCalendarStats();
     } catch (error) {
@@ -385,7 +403,15 @@ export class DatabaseCalendarService implements ICalendarService {
   /**
    * Get events with calendar metadata
    */
-  async getEventsWithMetadata(calendar?: string): Promise<Array<CalendarEvent & {calendar_path?: string, calendar_name?: string, caldav_filename?: string}>> {
+  async getEventsWithMetadata(calendar?: string): Promise<
+    Array<
+      CalendarEvent & {
+        calendar_path?: string;
+        calendar_name?: string;
+        caldav_filename?: string;
+      }
+    >
+  > {
     try {
       return await this.sqliteRepository.getEventsWithMetadata(calendar);
     } catch (error) {
@@ -397,13 +423,21 @@ export class DatabaseCalendarService implements ICalendarService {
   /**
    * Create event in specific calendar
    */
-  async createEventInCalendar(event: CalendarEvent, calendarName: string): Promise<boolean> {
+  async createEventInCalendar(
+    event: CalendarEvent,
+    calendarName: string
+  ): Promise<boolean> {
     try {
-      console.log(`Creating event ${event.id} in ${calendarName} calendar via multi-calendar repository...`);
-      
+      console.log(
+        `Creating event ${event.id} in ${calendarName} calendar via multi-calendar repository...`
+      );
+
       // Use the multi-calendar repository to create in specific calendar
-      const success = await this.multiCalendarRepository.createEventInCalendar(event, calendarName);
-      
+      const success = await this.multiCalendarRepository.createEventInCalendar(
+        event,
+        calendarName
+      );
+
       if (success) {
         // Also save to database with calendar metadata
         const eventWithMetadata = {
@@ -412,14 +446,18 @@ export class DatabaseCalendarService implements ICalendarService {
           calendar_path: this.getCalendarPath(calendarName),
           caldav_filename: `${event.id}.ics`,
           sync_status: 'synced',
-          local_modified: new Date().toISOString()
+          local_modified: new Date().toISOString(),
         };
-        
+
         await this.sqliteRepository.saveEvents([eventWithMetadata], false);
-        console.log(`Event ${event.id} created in ${calendarName} and saved to database`);
+        console.log(
+          `Event ${event.id} created in ${calendarName} and saved to database`
+        );
         return true;
       } else {
-        console.error(`Failed to create event ${event.id} in ${calendarName} calendar`);
+        console.error(
+          `Failed to create event ${event.id} in ${calendarName} calendar`
+        );
         return false;
       }
     } catch (error) {
@@ -433,8 +471,12 @@ export class DatabaseCalendarService implements ICalendarService {
       home: '/home/',
       work: '/work/',
       shared: '/2D7581FA-3A83-42D8-B6F4-8BCD8186AA6E/',
-      meals: '/1fa1e4097e27af6d41607163c20c088e70cf8e9db9d71b1a62611ec364123914/'
+      meals:
+        '/1fa1e4097e27af6d41607163c20c088e70cf8e9db9d71b1a62611ec364123914/',
     };
-    return paths[calendarName as keyof typeof paths] || '/2D7581FA-3A83-42D8-B6F4-8BCD8186AA6E/';
+    return (
+      paths[calendarName as keyof typeof paths] ||
+      '/2D7581FA-3A83-42D8-B6F4-8BCD8186AA6E/'
+    );
   }
 }

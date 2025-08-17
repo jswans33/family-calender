@@ -35,10 +35,9 @@ export const MultiDayEventBar: React.FC<MultiDayEventBarProps> = ({
   // This locks the element to the actual grid cells regardless of zoom
   const gridColumn = `${startCol + 1} / span ${colSpan}`; // CSS Grid is 1-indexed
   const gridRow = `${row + 1}`; // CSS Grid is 1-indexed
-  
+
   // Calculate top margin based on band level - each band takes ~24px
   const bandOffset = band * 24; // 24px per band (event height + margin)
-
 
   return (
     <div

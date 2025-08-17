@@ -16,16 +16,18 @@ program
   .action(async () => {
     console.log('🔍 SYNC VERIFICATION');
     console.log('='.repeat(50));
-    
+
     let totalDiscrepancies = 0;
-    
+
     for (const calendar of CALENDARS) {
       try {
         // Get API count
-        const apiResponse = await fetch(`${API_BASE}/events?calendar=${calendar}`);
+        const apiResponse = await fetch(
+          `${API_BASE}/events?calendar=${calendar}`
+        );
         const apiEvents = await apiResponse.json();
         const apiCount = apiEvents.length;
-        
+
         // Get CalDAV count (using calendar CLI)
         const { execSync } = await import('child_process');
         const caldavOutput = execSync(
@@ -34,22 +36,23 @@ program
         );
         const caldavMatch = caldavOutput.match(/Found (\d+) events/);
         const caldavCount = caldavMatch ? parseInt(caldavMatch[1]) : 0;
-        
+
         const diff = caldavCount - apiCount;
         const status = diff === 0 ? '✅' : '❌';
-        
-        console.log(`${status} ${calendar.toUpperCase()}: API=${apiCount}, CalDAV=${caldavCount}, diff=${diff > 0 ? '+' : ''}${diff}`);
-        
+
+        console.log(
+          `${status} ${calendar.toUpperCase()}: API=${apiCount}, CalDAV=${caldavCount}, diff=${diff > 0 ? '+' : ''}${diff}`
+        );
+
         if (diff !== 0) {
           totalDiscrepancies += Math.abs(diff);
         }
-        
       } catch (error) {
         console.log(`❌ ${calendar.toUpperCase()}: ERROR - ${error}`);
         totalDiscrepancies++;
       }
     }
-    
+
     console.log('='.repeat(50));
     if (totalDiscrepancies === 0) {
       console.log('✅ ALL CALENDARS IN SYNC');
@@ -65,8 +68,10 @@ program
   .action(async () => {
     console.log('🧹 CLEANUP ORPHANED CALDAV EVENTS');
     console.log('='.repeat(50));
-    
-    console.log('WARNING: This will delete CalDAV events not found in API database');
+
+    console.log(
+      'WARNING: This will delete CalDAV events not found in API database'
+    );
     console.log('Make sure to backup your calendar first!');
     console.log('');
     console.log('This is a manual process:');

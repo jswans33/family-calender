@@ -17,8 +17,11 @@ export class CalendarController {
       const endDate = end ? new Date(end as string) : undefined;
       const calendarFilter = calendar as string | undefined;
 
-      const events = await this.calendarService.getEventsWithMetadata(calendarFilter);
-      console.log(`Found ${events.length} events${calendarFilter ? ` in ${calendarFilter} calendar` : ''}`);
+      const events =
+        await this.calendarService.getEventsWithMetadata(calendarFilter);
+      console.log(
+        `Found ${events.length} events${calendarFilter ? ` in ${calendarFilter} calendar` : ''}`
+      );
       res.json(events);
     } catch (error) {
       console.error('Error in CalendarController.getEvents:', error);
@@ -196,19 +199,25 @@ export class CalendarController {
         eventData.id = `local-${Date.now()}-${Math.random().toString(36).substring(7)}`;
       }
 
-      console.log(`Creating event ${eventData.id} in ${calendarName} calendar...`);
+      console.log(
+        `Creating event ${eventData.id} in ${calendarName} calendar...`
+      );
 
       // Type check for DatabaseCalendarService
       const service = this.calendarService as any;
       if (typeof service.createEventInCalendar !== 'function') {
         res.status(501).json({
           error: 'Multi-calendar event creation not supported',
-          message: 'This service does not support creating events in specific calendars',
+          message:
+            'This service does not support creating events in specific calendars',
         });
         return;
       }
 
-      const success = await service.createEventInCalendar(eventData, calendarName);
+      const success = await service.createEventInCalendar(
+        eventData,
+        calendarName
+      );
 
       if (success) {
         console.log(`Event ${eventData.id} created successfully`);

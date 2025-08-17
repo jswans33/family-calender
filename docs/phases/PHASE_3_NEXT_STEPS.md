@@ -1,6 +1,7 @@
 # PHASE 3: NEXT STEPS - FRONTEND INTEGRATION & ADVANCED FEATURES
 
 ## CURRENT STATUS
+
 ✅ **Phase 1**: Multi-calendar CalDAV repository (COMPLETE)  
 ✅ **Phase 2**: Backend integration with API endpoints (COMPLETE)  
 🔄 **Phase 3**: Frontend integration and advanced features (NEXT)
@@ -10,6 +11,7 @@
 ## PHASE 3 OBJECTIVES
 
 ### 🎯 **PRIMARY GOALS**
+
 1. **Frontend Calendar Selection** - Add calendar dropdown to React UI
 2. **Multi-Calendar Display** - Show events from all calendars with visual distinction
 3. **Calendar-Aware Event Creation** - Select calendar when creating events
@@ -23,6 +25,7 @@
 ### 📅 **WEEK 1: Frontend Calendar Infrastructure**
 
 #### **Day 1-2: Calendar Context & State Management**
+
 ```typescript
 // Add to src/contexts/CalendarContext.tsx
 interface CalendarContextType {
@@ -38,7 +41,7 @@ class CalendarService {
     const response = await fetch('/calendars');
     return response.json();
   }
-  
+
   async getEvents(calendar?: string): Promise<CalendarEvent[]> {
     const url = calendar ? `/events?calendar=${calendar}` : '/events';
     const response = await fetch(url);
@@ -48,6 +51,7 @@ class CalendarService {
 ```
 
 #### **Day 3-4: Calendar Selector Component**
+
 ```typescript
 // src/components/CalendarSelector.tsx
 interface CalendarSelectorProps {
@@ -60,7 +64,7 @@ const CalendarSelector: React.FC<CalendarSelectorProps> = ({
   onCalendarChange
 }) => {
   const { calendars } = useCalendarContext();
-  
+
   return (
     <select
       value={selectedCalendar || 'all'}
@@ -78,18 +82,19 @@ const CalendarSelector: React.FC<CalendarSelectorProps> = ({
 ```
 
 #### **Day 5: Calendar Visual Distinction**
+
 ```typescript
 // Add calendar colors and visual indicators
 const calendarColors = {
   home: '#4CAF50',    // Green
-  work: '#2196F3',    // Blue  
+  work: '#2196F3',    // Blue
   shared: '#FF9800',  // Orange
   meals: '#9C27B0'    // Purple
 };
 
 // Update event components to show calendar context
 const EventComponent = ({ event }) => (
-  <div 
+  <div
     className="event"
     style={{ borderLeft: `4px solid ${calendarColors[event.calendar_name]}` }}
   >
@@ -103,12 +108,13 @@ const EventComponent = ({ event }) => (
 ### 📅 **WEEK 2: Enhanced Event Management**
 
 #### **Day 1-2: Calendar-Aware Event Creation**
+
 ```typescript
 // Update src/components/EventForm.tsx
 const EventForm = ({ onSubmit, onCancel }) => {
   const [selectedCalendar, setSelectedCalendar] = useState('home');
   const { calendars } = useCalendarContext();
-  
+
   const handleSubmit = async (eventData) => {
     const response = await fetch(`/events?calendar=${selectedCalendar}`, {
       method: 'POST',
@@ -117,10 +123,10 @@ const EventForm = ({ onSubmit, onCancel }) => {
     });
     // ... handle response
   };
-  
+
   return (
     <form onSubmit={handleSubmit}>
-      <CalendarSelector 
+      <CalendarSelector
         selectedCalendar={selectedCalendar}
         onCalendarChange={setSelectedCalendar}
         label="Save to Calendar:"
@@ -132,12 +138,13 @@ const EventForm = ({ onSubmit, onCancel }) => {
 ```
 
 #### **Day 3-4: Multi-Calendar Event Display**
+
 ```typescript
 // Update src/components/Calendar.tsx
 const Calendar = () => {
   const { selectedCalendar, getEvents } = useCalendarContext();
   const [events, setEvents] = useState([]);
-  
+
   useEffect(() => {
     const loadEvents = async () => {
       const eventData = await getEvents(selectedCalendar);
@@ -145,7 +152,7 @@ const Calendar = () => {
     };
     loadEvents();
   }, [selectedCalendar]);
-  
+
   return (
     <div className="calendar-container">
       <CalendarHeader>
@@ -155,7 +162,7 @@ const Calendar = () => {
           {selectedCalendar && ` in ${selectedCalendar}`}
         </span>
       </CalendarHeader>
-      
+
       <CalendarGrid events={events} />
     </div>
   );
@@ -163,23 +170,27 @@ const Calendar = () => {
 ```
 
 #### **Day 5: Performance Optimization**
+
 ```typescript
 // Implement caching and efficient updates
 const useCalendarData = () => {
   const [cache, setCache] = useState(new Map());
-  
-  const getEvents = useCallback(async (calendar?: string) => {
-    const cacheKey = calendar || 'all';
-    
-    if (cache.has(cacheKey)) {
-      return cache.get(cacheKey);
-    }
-    
-    const events = await calendarService.getEvents(calendar);
-    setCache(prev => new Map(prev).set(cacheKey, events));
-    return events;
-  }, [cache]);
-  
+
+  const getEvents = useCallback(
+    async (calendar?: string) => {
+      const cacheKey = calendar || 'all';
+
+      if (cache.has(cacheKey)) {
+        return cache.get(cacheKey);
+      }
+
+      const events = await calendarService.getEvents(calendar);
+      setCache(prev => new Map(prev).set(cacheKey, events));
+      return events;
+    },
+    [cache]
+  );
+
   return { getEvents, clearCache: () => setCache(new Map()) };
 };
 ```
@@ -187,17 +198,18 @@ const useCalendarData = () => {
 ### 📅 **WEEK 3: Advanced Features**
 
 #### **Day 1-2: Calendar Statistics Dashboard**
+
 ```typescript
 // src/components/CalendarStats.tsx
 const CalendarStats = () => {
   const { calendars } = useCalendarContext();
-  
+
   return (
     <div className="calendar-stats">
       <h3>Calendar Overview</h3>
       {calendars.map(cal => (
         <div key={cal.name} className="stat-item">
-          <span 
+          <span
             className="calendar-indicator"
             style={{ backgroundColor: calendarColors[cal.name] }}
           />
@@ -211,10 +223,14 @@ const CalendarStats = () => {
 ```
 
 #### **Day 3-4: Bulk Operations**
+
 ```typescript
 // Bulk calendar operations
 const useBulkOperations = () => {
-  const moveEventsToCalendar = async (eventIds: string[], targetCalendar: string) => {
+  const moveEventsToCalendar = async (
+    eventIds: string[],
+    targetCalendar: string
+  ) => {
     // Move multiple events between calendars
     for (const eventId of eventIds) {
       await fetch(`/events/${eventId}?calendar=${targetCalendar}`, {
@@ -223,19 +239,20 @@ const useBulkOperations = () => {
       });
     }
   };
-  
+
   const bulkDeleteEvents = async (eventIds: string[]) => {
     // Delete multiple events
     await Promise.all(
       eventIds.map(id => fetch(`/events/${id}`, { method: 'DELETE' }))
     );
   };
-  
+
   return { moveEventsToCalendar, bulkDeleteEvents };
 };
 ```
 
 #### **Day 5: Calendar Import/Export**
+
 ```typescript
 // Calendar data export/import functionality
 const useCalendarExport = () => {
@@ -244,20 +261,20 @@ const useCalendarExport = () => {
     const exportData = {
       calendar: calendarName,
       exportDate: new Date().toISOString(),
-      events
+      events,
     };
-    
+
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-      type: 'application/json'
+      type: 'application/json',
     });
-    
+
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `${calendarName}-calendar-export.json`;
     a.click();
   };
-  
+
   return { exportCalendar };
 };
 ```
@@ -265,6 +282,7 @@ const useCalendarExport = () => {
 ### 📅 **WEEK 4: Polish & Testing**
 
 #### **Day 1-2: Mobile Responsiveness**
+
 ```css
 /* src/styles/calendar-responsive.css */
 @media (max-width: 768px) {
@@ -272,12 +290,12 @@ const useCalendarExport = () => {
     width: 100%;
     margin-bottom: 1rem;
   }
-  
+
   .event-component {
     font-size: 0.9rem;
     padding: 0.5rem;
   }
-  
+
   .calendar-stats {
     display: flex;
     overflow-x: auto;
@@ -286,12 +304,13 @@ const useCalendarExport = () => {
 ```
 
 #### **Day 3-4: Error Handling & Loading States**
+
 ```typescript
 // Enhanced error handling
 const CalendarProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  
+
   const getEvents = async (calendar?: string) => {
     try {
       setLoading(true);
@@ -305,7 +324,7 @@ const CalendarProvider = ({ children }) => {
       setLoading(false);
     }
   };
-  
+
   return (
     <CalendarContext.Provider value={{ loading, error, getEvents }}>
       {children}
@@ -315,6 +334,7 @@ const CalendarProvider = ({ children }) => {
 ```
 
 #### **Day 5: Final Testing & Documentation**
+
 ```typescript
 // Component testing
 // tests/CalendarSelector.test.tsx
@@ -324,13 +344,13 @@ describe('CalendarSelector', () => {
       { name: 'home', count: 274 },
       { name: 'work', count: 43 }
     ];
-    
+
     render(<CalendarSelector calendars={calendars} />);
-    
+
     expect(screen.getByText('home (274 events)')).toBeInTheDocument();
     expect(screen.getByText('work (43 events)')).toBeInTheDocument();
   });
-  
+
   test('filters events when calendar selected', () => {
     // ... test calendar filtering functionality
   });
@@ -342,6 +362,7 @@ describe('CalendarSelector', () => {
 ## PHASE 3 SUCCESS CRITERIA
 
 ### ✅ **Frontend Integration Goals**
+
 - [ ] Calendar selector component implemented
 - [ ] Multi-calendar event display with visual distinction
 - [ ] Calendar-aware event creation forms
@@ -349,6 +370,7 @@ describe('CalendarSelector', () => {
 - [ ] Performance optimized for multiple calendars
 
 ### ✅ **User Experience Goals**
+
 - [ ] Intuitive calendar switching
 - [ ] Visual calendar distinction (colors/badges)
 - [ ] Mobile-responsive design
@@ -356,6 +378,7 @@ describe('CalendarSelector', () => {
 - [ ] Calendar statistics dashboard
 
 ### ✅ **Technical Goals**
+
 - [ ] TypeScript-compliant components
 - [ ] Efficient API usage with caching
 - [ ] Component testing coverage
@@ -366,6 +389,7 @@ describe('CalendarSelector', () => {
 ## POTENTIAL FUTURE PHASES
 
 ### 🚀 **PHASE 4: Advanced Features**
+
 - **Calendar Sync Management**: Manual/automatic sync controls
 - **Event Templates**: Pre-defined event templates per calendar
 - **Calendar Sharing**: Share calendar views with others
@@ -373,6 +397,7 @@ describe('CalendarSelector', () => {
 - **Calendar Analytics**: Usage statistics and insights
 
 ### 🎨 **PHASE 5: UI/UX Enhancements**
+
 - **Drag & Drop**: Move events between calendars
 - **Dark Mode**: Theme support with calendar colors
 - **Keyboard Shortcuts**: Power user functionality
@@ -380,6 +405,7 @@ describe('CalendarSelector', () => {
 - **Calendar Layouts**: Different view modes (list, grid, timeline)
 
 ### 🔧 **PHASE 6: Integration & Automation**
+
 - **External Calendar Import**: Google Calendar, Outlook sync
 - **Webhook Integration**: Real-time updates
 - **API Rate Limiting**: Efficient CalDAV usage
@@ -391,6 +417,7 @@ describe('CalendarSelector', () => {
 ## IMMEDIATE NEXT STEPS
 
 ### 🎯 **Start Phase 3 This Week:**
+
 1. **Setup Calendar Context** in React app
 2. **Implement Calendar Selector** component
 3. **Update CalendarService** for multi-calendar API calls
@@ -398,6 +425,7 @@ describe('CalendarSelector', () => {
 5. **Test Calendar Filtering** functionality
 
 ### 📋 **Preparation Checklist:**
+
 - [ ] Review current React component structure
 - [ ] Plan calendar color scheme and visual design
 - [ ] Design calendar selector UI/UX
@@ -412,4 +440,4 @@ The backend foundation is solid and verified. Now we can build an intuitive mult
 
 ---
 
-*Phase 3 planning completed - August 16, 2025*
+_Phase 3 planning completed - August 16, 2025_

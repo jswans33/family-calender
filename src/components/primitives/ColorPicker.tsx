@@ -23,7 +23,9 @@ const PRESET_COLORS = [
 
 const ColorPicker: React.FC<ColorPickerProps> = ({ calendarName, onClose }) => {
   const { getCalendarColor, updateColor } = useColors();
-  const [selectedColor, setSelectedColor] = useState(getCalendarColor(calendarName));
+  const [selectedColor, setSelectedColor] = useState(
+    getCalendarColor(calendarName)
+  );
 
   const handleColorSelect = (color: string) => {
     setSelectedColor(color);
@@ -41,8 +43,18 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ calendarName, onClose }) => {
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -67,7 +79,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ calendarName, onClose }) => {
           <input
             type="color"
             value={selectedColor}
-            onChange={(e) => handleColorSelect(e.target.value)}
+            onChange={e => handleColorSelect(e.target.value)}
             className="w-full h-10 border border-gray-300 rounded cursor-pointer"
           />
         </div>
@@ -77,7 +89,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ calendarName, onClose }) => {
             Preset Colors
           </label>
           <div className="grid grid-cols-6 gap-2">
-            {PRESET_COLORS.map((color) => (
+            {PRESET_COLORS.map(color => (
               <button
                 key={color}
                 onClick={() => handleColorSelect(color)}

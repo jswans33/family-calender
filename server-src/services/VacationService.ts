@@ -3,7 +3,7 @@ import { CalendarEvent } from '../types/Calendar.js';
 
 /**
  * VacationService - Handles vacation business logic (MODULAR)
- * 
+ *
  * Follows clean architecture principles:
  * - One responsibility: vacation hours calculation and management
  * - No data access logic (delegates to repository)
@@ -37,7 +37,7 @@ export class VacationService {
   isWorkDay(dateString: string): boolean {
     const date = new Date(dateString);
     const dayOfWeek = date.getDay();
-    
+
     // 0 = Sunday, 6 = Saturday
     if (dayOfWeek === 0 || dayOfWeek === 6) {
       return false;
@@ -54,7 +54,7 @@ export class VacationService {
    */
   async processVacationEventCreation(event: CalendarEvent): Promise<void> {
     const hoursToDeduct = this.calculateVacationHours(event);
-    
+
     if (hoursToDeduct === 0) {
       return; // No vacation processing needed
     }
@@ -67,12 +67,15 @@ export class VacationService {
     }
 
     // Get current balance and deduct hours
-    const currentBalance = await this.sqliteRepository.getVacationBalance(userName);
+    const currentBalance =
+      await this.sqliteRepository.getVacationBalance(userName);
     const newBalance = Math.max(0, currentBalance - hoursToDeduct);
-    
+
     await this.sqliteRepository.updateVacationBalance(userName, newBalance);
-    
-    console.log(`Vacation processed: ${userName} used ${hoursToDeduct} hours, new balance: ${newBalance}`);
+
+    console.log(
+      `Vacation processed: ${userName} used ${hoursToDeduct} hours, new balance: ${newBalance}`
+    );
   }
 
   /**
@@ -81,30 +84,38 @@ export class VacationService {
    */
   async processVacationEventDeletion(event: CalendarEvent): Promise<void> {
     const hoursToRestore = this.calculateVacationHours(event);
-    
+
     if (hoursToRestore === 0) {
       return; // No vacation processing needed
     }
 
     const userName = this.determineUserFromEvent(event);
     if (!userName) {
-      console.warn('Could not determine user for vacation event deletion:', event.id);
+      console.warn(
+        'Could not determine user for vacation event deletion:',
+        event.id
+      );
       return;
     }
 
     // Get current balance and restore hours
-    const currentBalance = await this.sqliteRepository.getVacationBalance(userName);
+    const currentBalance =
+      await this.sqliteRepository.getVacationBalance(userName);
     const newBalance = currentBalance + hoursToRestore;
-    
+
     await this.sqliteRepository.updateVacationBalance(userName, newBalance);
-    
-    console.log(`Vacation restored: ${userName} restored ${hoursToRestore} hours, new balance: ${newBalance}`);
+
+    console.log(
+      `Vacation restored: ${userName} restored ${hoursToRestore} hours, new balance: ${newBalance}`
+    );
   }
 
   /**
    * Get vacation balances for all users
    */
-  async getVacationBalances(): Promise<Array<{user_name: string, balance_hours: number, last_updated: string}>> {
+  async getVacationBalances(): Promise<
+    Array<{ user_name: string; balance_hours: number; last_updated: string }>
+  > {
     return await this.sqliteRepository.getVacationBalances();
   }
 
@@ -119,7 +130,7 @@ export class VacationService {
     if (event.calendar_name === 'work') {
       return 'james';
     }
-    
+
     // Could add logic to determine user from event title, description, etc.
     return null;
   }
@@ -128,7 +139,10 @@ export class VacationService {
    * Validate vacation event
    * Business rules for vacation event validation
    */
-  validateVacationEvent(event: CalendarEvent): { isValid: boolean; errors: string[] } {
+  validateVacationEvent(event: CalendarEvent): {
+    isValid: boolean;
+    errors: string[];
+  } {
     const errors: string[] = [];
 
     if (event.isVacation && event.calendar_name !== 'work') {
@@ -141,7 +155,7 @@ export class VacationService {
 
     return {
       isValid: errors.length === 0,
-      errors
+      errors,
     };
   }
 }

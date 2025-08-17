@@ -11,7 +11,11 @@ export class iCalendarGenerator {
   static generateVCalendar(event: CalendarEvent): string {
     const now =
       new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    const isAllDay = event.time === 'All Day' || event.time === 'all day';
+    const isAllDay =
+      event.time === 'All Day' ||
+      event.time === 'all day' ||
+      !event.time ||
+      event.time === '';
 
     return `BEGIN:VCALENDAR
 VERSION:2.0
@@ -20,7 +24,7 @@ BEGIN:VEVENT
 UID:${event.id}
 DTSTAMP:${now}
 DTSTART${isAllDay ? ';VALUE=DATE' : ''}:${this.formatDateTime(event.date, event.time, event.timezone)}
-DTEND${isAllDay ? ';VALUE=DATE' : ''}:${this.formatDateTime(event.dtend || this.calculateEndTime(event.date, event.time), isAllDay ? undefined : this.calculateEndTimeString(event.time), event.timezone)}
+DTEND${isAllDay ? ';VALUE=DATE' : ''}:${this.formatDateTime(event.dtend || this.calculateEndTime(event.date, event.time), isAllDay ? undefined : event.time ? this.calculateEndTimeString(event.time) : undefined, event.timezone)}
 SUMMARY:${this.escapeText(event.title)}
 ${event.description ? `DESCRIPTION:${this.escapeText(event.description)}` : ''}
 ${event.location ? `LOCATION:${this.escapeText(event.location)}` : ''}

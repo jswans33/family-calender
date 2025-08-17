@@ -14,7 +14,9 @@ const App: React.FC = () => {
   // Loading state to show spinner while fetching events
   const [loading, setLoading] = useState<boolean>(true);
   // Multi-calendar state
-  const [calendars, setCalendars] = useState<Array<{name: string, count: number}>>([]);
+  const [calendars, setCalendars] = useState<
+    Array<{ name: string; count: number }>
+  >([]);
   const [selectedCalendar, setSelectedCalendar] = useState<string | null>(null);
   const [isLoadingCalendars, setIsLoadingCalendars] = useState<boolean>(true);
   // Selected event for details panel
@@ -61,7 +63,9 @@ const App: React.FC = () => {
       // Connect to Apple Calendar via CalDAV
       await calendarService.connectToAppleCalendar();
       // Fetch events from selected calendar or all calendars
-      const fetchedEvents = await calendarService.fetchEvents(selectedCalendar || undefined);
+      const fetchedEvents = await calendarService.fetchEvents(
+        selectedCalendar || undefined
+      );
       // Update state with fetched events
       setEvents(fetchedEvents);
       setLoading(false);
@@ -71,7 +75,9 @@ const App: React.FC = () => {
   }, [selectedCalendar]); // Reload when calendar selection changes
 
   // Handle event creation
-  const handleCreateEvent = async (newEvent: Partial<CalendarEvent> & { calendar_name?: string }) => {
+  const handleCreateEvent = async (
+    newEvent: Partial<CalendarEvent> & { calendar_name?: string }
+  ) => {
     try {
       const calendarService = new CalendarService();
       const success = await calendarService.createEvent(newEvent);
@@ -80,11 +86,13 @@ const App: React.FC = () => {
         // Add to local state
         setEvents(prevEvents => [...prevEvents, newEvent as CalendarEvent]);
         console.log('Event created successfully:', newEvent);
-        
+
         // Reload events to get fresh data from server
-        const fetchedEvents = await calendarService.fetchEvents(selectedCalendar || undefined);
+        const fetchedEvents = await calendarService.fetchEvents(
+          selectedCalendar || undefined
+        );
         setEvents(fetchedEvents);
-        
+
         // Reload calendars to update counts
         const fetchedCalendars = await calendarService.fetchCalendars();
         setCalendars(fetchedCalendars);
@@ -154,7 +162,9 @@ const App: React.FC = () => {
         console.log('Sync completed successfully');
         // Reload events after sync
         setLoading(true);
-        const fetchedEvents = await calendarService.fetchEvents(selectedCalendar || undefined);
+        const fetchedEvents = await calendarService.fetchEvents(
+          selectedCalendar || undefined
+        );
         setEvents(fetchedEvents);
         setLoading(false);
         // Reload calendars to update counts
@@ -231,7 +241,7 @@ const App: React.FC = () => {
 
     // Group events by calendar
     const groups = new Map<string, CalendarEvent[]>();
-    
+
     upcomingEvents.forEach(event => {
       const calendarName = event.calendar_name || 'home';
       if (!groups.has(calendarName)) {
@@ -243,7 +253,7 @@ const App: React.FC = () => {
     // Convert to array and limit events per calendar
     return Array.from(groups.entries()).map(([calendarName, events]) => ({
       calendarName,
-      events: events.slice(0, 6) // Limit to 6 events per calendar
+      events: events.slice(0, 6), // Limit to 6 events per calendar
     }));
   }, [events, todayStr]);
 
@@ -258,8 +268,10 @@ const App: React.FC = () => {
         {/* Header */}
         <div className="bg-white border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">Family Calendar</h1>
-            
+            <h1 className="text-2xl font-bold text-gray-900">
+              Family Calendar
+            </h1>
+
             <div className="flex items-center gap-6">
               {/* View Switcher */}
               <div className="flex items-center gap-2">
@@ -283,7 +295,9 @@ const App: React.FC = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
-                    const today = new Date().toISOString().split('T')[0] || new Date().toISOString();
+                    const today =
+                      new Date().toISOString().split('T')[0] ||
+                      new Date().toISOString();
                     handleTimeSlotClick(today, '');
                   }}
                   className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
@@ -315,8 +329,18 @@ const App: React.FC = () => {
                   className="text-gray-400 hover:text-gray-600 transition-colors"
                   aria-label="Close details"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               )}
@@ -332,32 +356,60 @@ const App: React.FC = () => {
                   {/* Basic Info */}
                   <div className="space-y-3 text-sm">
                     <div className="flex items-center text-gray-600">
-                      <svg className="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      <svg
+                        className="w-4 h-4 mr-2 flex-shrink-0"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
                       </svg>
                       <span>
-                        {new Date(selectedEvent.date).toLocaleDateString('en-US', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                        })}
+                        {new Date(selectedEvent.date).toLocaleDateString(
+                          'en-US',
+                          {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                          }
+                        )}
                       </span>
                     </div>
 
                     <div className="flex items-center text-gray-600">
-                      <svg className="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <svg
+                        className="w-4 h-4 mr-2 flex-shrink-0"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
                       </svg>
                       <span>
                         {selectedEvent.time || 'All day'}
                         {selectedEvent.dtend && selectedEvent.time && (
                           <span className="text-gray-500">
-                            {' '} - {new Date(selectedEvent.dtend).toLocaleTimeString('en-US', {
-                              hour: 'numeric',
-                              minute: '2-digit',
-                              hour12: true,
-                            })}
+                            {' '}
+                            -{' '}
+                            {new Date(selectedEvent.dtend).toLocaleTimeString(
+                              'en-US',
+                              {
+                                hour: 'numeric',
+                                minute: '2-digit',
+                                hour12: true,
+                              }
+                            )}
                           </span>
                         )}
                       </span>
@@ -366,9 +418,24 @@ const App: React.FC = () => {
                     {/* Location */}
                     {selectedEvent.location && (
                       <div className="flex items-start text-gray-600">
-                        <svg className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <svg
+                          className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
                         </svg>
                         <span>{selectedEvent.location}</span>
                       </div>
@@ -377,8 +444,18 @@ const App: React.FC = () => {
                     {/* Description */}
                     {selectedEvent.description && (
                       <div className="flex items-start text-gray-600">
-                        <svg className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+                        <svg
+                          className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 6h16M4 12h16M4 18h7"
+                          />
                         </svg>
                         <span className="text-xs leading-relaxed">
                           {selectedEvent.description}
@@ -407,13 +484,23 @@ const App: React.FC = () => {
               </div>
             ) : (
               <div className="text-center text-gray-500 text-sm">
-                <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                <svg
+                  className="w-12 h-12 mx-auto mb-3 text-gray-300"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1}
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
                 </svg>
                 <p>Click on an event to view details</p>
               </div>
             )}
-            
+
             {/* Vacation Panel - Bottom Left */}
             <div className="mt-4">
               <VacationPanel />
@@ -422,24 +509,24 @@ const App: React.FC = () => {
 
           {/* Center Panel - Calendar */}
           <div className="flex-1 p-4">
-          <Calendar
-            events={events}
-            calendars={calendars}
-            selectedCalendar={selectedCalendar}
-            onCalendarChange={handleCalendarChange}
-            isLoadingCalendars={isLoadingCalendars}
-            view={currentView}
-            selectedDate={selectedDate}
-            onEventClick={setSelectedEvent}
-            onDayClick={dateStr => {
-              // Set the selected date and switch to day view
-              setSelectedDate(dateStr);
-              setCurrentView('day');
-            }}
-            onTimeSlotClick={handleTimeSlotClick}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-          />
+            <Calendar
+              events={events}
+              calendars={calendars}
+              selectedCalendar={selectedCalendar}
+              onCalendarChange={handleCalendarChange}
+              isLoadingCalendars={isLoadingCalendars}
+              view={currentView}
+              selectedDate={selectedDate}
+              onEventClick={setSelectedEvent}
+              onDayClick={dateStr => {
+                // Set the selected date and switch to day view
+                setSelectedDate(dateStr);
+                setCurrentView('day');
+              }}
+              onTimeSlotClick={handleTimeSlotClick}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+            />
           </div>
 
           {/* Right Panel - Upcoming Events Accordion */}
