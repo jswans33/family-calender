@@ -103,8 +103,8 @@ export const DayCell: React.FC<DayCellProps> = ({
       {/* Day Number */}
       <div className={dayNumberClasses}>{day}</div>
 
-      {/* Events Container */}
-      <div className="flex-1 space-y-1 overflow-hidden">
+      {/* Events Container - positioned in middle to avoid multi-day events at top */}
+      <div className="flex-1 space-y-1 overflow-hidden mt-12">
         <EventList 
           events={shownEvents}
           isPast={isPast}

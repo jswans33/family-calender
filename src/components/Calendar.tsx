@@ -454,58 +454,87 @@ const Calendar: React.FC<CalendarProps> = ({
               {/* Multi-day events overlay layer - same grid template */}
               <div className="absolute inset-0 pointer-events-none">
                 <div className="grid grid-cols-7 grid-rows-6 gap-px h-full w-full">
-                  {/* Multi-day Event Overlays - positioned using CSS Grid */}
-                  {multiDayEvents.map(multiEvent => {
-                    const { event, startDate, endDate } = multiEvent;
-
-                    // Calculate grid position for spanning
-                    const startIndex = dates.findIndex(
-                      date => dateKey(date) === dateKey(startDate)
-                    );
-                    const endIndex = dates.findIndex(date => {
-                      return dateKey(date) === dateKey(endDate);
-                    });
-
-                    if (startIndex === -1) return null; // Event starts outside visible range
-
-                    const actualEndIndex =
-                      endIndex === -1 ? dates.length - 1 : endIndex;
-                    const startRow = Math.floor(startIndex / 7);
-                    const endRow = Math.floor(actualEndIndex / 7);
-
-                    // For events spanning multiple weeks, create separate bars for each week
-                    const eventBars = [];
-                    for (let row = startRow; row <= endRow; row++) {
-                      const rowStartIndex = row * 7;
-                      const rowEndIndex = Math.min(
-                        rowStartIndex + 6,
-                        dates.length - 1
-                      );
-
-                      const barStartIndex = Math.max(startIndex, rowStartIndex);
-                      const barEndIndex = Math.min(actualEndIndex, rowEndIndex);
-
-                      if (barStartIndex <= barEndIndex) {
-                        const startCol = barStartIndex % 7;
-                        const endCol = barEndIndex % 7;
-                        const colSpan = endCol - startCol + 1;
-
-                        eventBars.push(
-                          <MultiDayEventBar
-                            key={`${event.id}-row-${row}`}
-                            event={event}
-                            startCol={startCol}
-                            colSpan={colSpan}
-                            row={row}
-                            isFirstSegment={row === startRow}
-                            onClick={onEventClick}
-                          />
+                  {/* Multi-day Event Overlays - positioned using CSS Grid with band stacking */}
+                  {(() => {
+                    // Calculate band assignments for multi-day events to prevent overlapping
+                    const eventBands: Array<{ event: any, startDate: Date, endDate: Date, band: number }> = [];
+                    
+                    multiDayEvents.forEach(multiEvent => {
+                      const { event, startDate, endDate } = multiEvent;
+                      
+                      // Find the lowest available band for this event
+                      let band = 0;
+                      let bandAvailable = false;
+                      
+                      while (!bandAvailable) {
+                        // Check if this band conflicts with existing events
+                        const conflicts = eventBands.filter(existing => 
+                          existing.band === band &&
+                          // Check for date overlap
+                          !(endDate < existing.startDate || startDate > existing.endDate)
                         );
+                        
+                        if (conflicts.length === 0) {
+                          bandAvailable = true;
+                        } else {
+                          band++;
+                        }
                       }
-                    }
+                      
+                      eventBands.push({ event, startDate, endDate, band });
+                    });
+                    
+                    return eventBands.map(({ event, startDate, endDate, band }) => {
+                      // Calculate grid position for spanning
+                      const startIndex = dates.findIndex(
+                        date => dateKey(date) === dateKey(startDate)
+                      );
+                      const endIndex = dates.findIndex(date => {
+                        return dateKey(date) === dateKey(endDate);
+                      });
 
-                    return eventBars;
-                  })}
+                      if (startIndex === -1) return null; // Event starts outside visible range
+
+                      const actualEndIndex =
+                        endIndex === -1 ? dates.length - 1 : endIndex;
+                      const startRow = Math.floor(startIndex / 7);
+                      const endRow = Math.floor(actualEndIndex / 7);
+
+                      // For events spanning multiple weeks, create separate bars for each week
+                      const eventBars = [];
+                      for (let row = startRow; row <= endRow; row++) {
+                        const rowStartIndex = row * 7;
+                        const rowEndIndex = Math.min(
+                          rowStartIndex + 6,
+                          dates.length - 1
+                        );
+
+                        const barStartIndex = Math.max(startIndex, rowStartIndex);
+                        const barEndIndex = Math.min(actualEndIndex, rowEndIndex);
+
+                        if (barStartIndex <= barEndIndex) {
+                          const startCol = barStartIndex % 7;
+                          const endCol = barEndIndex % 7;
+                          const colSpan = endCol - startCol + 1;
+
+                          eventBars.push(
+                            <MultiDayEventBar
+                              key={`${event.id}-row-${row}-band-${band}`}
+                              event={event}
+                              startCol={startCol}
+                              colSpan={colSpan}
+                              row={row}
+                              band={band}
+                              isFirstSegment={row === startRow}
+                              onClick={onEventClick}
+                            />
+                          );
+                        }
+                      }
+
+                      return eventBars;
+                    });
+                  })()}
                 </div>
               </div>
             </div>

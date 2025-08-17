@@ -6,6 +6,7 @@ export interface MultiDayEventBarProps {
   startCol: number; // 0-6 for day of week
   colSpan: number; // Number of days to span
   row: number; // Week row in calendar
+  band: number; // Band level for stacking (0 = top band)
   isFirstSegment: boolean; // True if this is the first segment of the event
   onClick?: ((event: CalendarEvent) => void) | undefined;
 }
@@ -21,6 +22,7 @@ export const MultiDayEventBar: React.FC<MultiDayEventBarProps> = ({
   startCol,
   colSpan,
   row,
+  band,
   isFirstSegment,
   onClick,
 }) => {
@@ -29,18 +31,22 @@ export const MultiDayEventBar: React.FC<MultiDayEventBarProps> = ({
     onClick?.(event);
   };
 
-  // Use CSS Grid positioning instead of absolute positioning
+  // Use CSS Grid positioning with band-based vertical stacking
   // This locks the element to the actual grid cells regardless of zoom
   const gridColumn = `${startCol + 1} / span ${colSpan}`; // CSS Grid is 1-indexed
   const gridRow = `${row + 1}`; // CSS Grid is 1-indexed
+  
+  // Calculate top margin based on band level - each band takes ~24px
+  const bandOffset = band * 24; // 24px per band (event height + margin)
 
 
   return (
     <div
-      className="bg-indigo-500 text-white text-xs px-2 py-1 rounded-md font-medium truncate cursor-pointer hover:bg-indigo-600 transition-colors z-20 shadow-md pointer-events-auto self-start mt-8"
+      className="bg-indigo-500 text-white text-xs px-2 py-1 rounded-md font-medium truncate cursor-pointer hover:bg-indigo-600 transition-colors z-10 shadow-md pointer-events-auto self-start"
       style={{
         gridColumn,
         gridRow,
+        marginTop: `${34 + bandOffset}px`, // Clear date numbers + band stacking
       }}
       onClick={handleClick}
       title={`${event.title} (${event.date} - ${event.dtend})`}
