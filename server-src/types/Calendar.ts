@@ -44,7 +44,7 @@ export interface CalDAVCredentials {
 }
 
 export interface ICalendarService {
-  getEvents(startDate?: Date, endDate?: Date): Promise<CalendarEvent[]>;
+  getEvents(startDate?: Date, endDate?: Date, calendar?: string): Promise<CalendarEvent[]>;
   getTodaysEvents(): Promise<CalendarEvent[]>;
   getThisWeeksEvents(): Promise<CalendarEvent[]>;
   getThisMonthsEvents(): Promise<CalendarEvent[]>;
@@ -54,4 +54,5 @@ export interface ICalendarService {
   updateEvent?(event: CalendarEvent): Promise<boolean>;
   createEvent?(event: CalendarEvent): Promise<boolean>;
   deleteEvent?(eventId: string): Promise<boolean>;
+  getCalendars?(): Promise<Array<{name: string, count: number}>>;
 }

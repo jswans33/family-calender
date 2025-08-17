@@ -1,5 +1,37 @@
 import React from 'react';
 
+// Calendar color utility function
+const getCalendarColor = (calendarName?: string) => {
+  const colors = {
+    home: {
+      bg: 'bg-blue-100',
+      text: 'text-blue-800',
+      hover: 'hover:bg-blue-200'
+    },
+    work: {
+      bg: 'bg-red-100',
+      text: 'text-red-800',
+      hover: 'hover:bg-red-200'
+    },
+    shared: {
+      bg: 'bg-green-100',
+      text: 'text-green-800',
+      hover: 'hover:bg-green-200'
+    },
+    meals: {
+      bg: 'bg-yellow-100',
+      text: 'text-yellow-800',
+      hover: 'hover:bg-yellow-200'
+    }
+  };
+  
+  return colors[calendarName as keyof typeof colors] || {
+    bg: 'bg-gray-100',
+    text: 'text-gray-800',
+    hover: 'hover:bg-gray-200'
+  };
+};
+
 export interface CalendarEvent {
   id: string;
   title: string;
@@ -29,6 +61,10 @@ export interface CalendarEvent {
   transparency?: string;
   attachments?: string[];
   timezone?: string;
+  // Calendar metadata for multi-calendar support
+  calendar_name?: string;
+  calendar_path?: string;
+  caldav_filename?: string;
 }
 
 export type CalendarView = 'month' | 'week' | 'day';
@@ -142,24 +178,27 @@ export const DayCell: React.FC<DayCellProps> = ({
 
       {/* Events Container */}
       <div className="flex-1 space-y-1 overflow-hidden">
-        {shownEvents.map(event => (
-          <div
-            key={event.id}
-            className={`text-xs px-2 py-1 rounded truncate transition-colors ${
-              isPast && !isToday
-                ? 'bg-gray-200 text-gray-600'
-                : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
-            }`}
-            onClick={e => {
-              e.stopPropagation();
-              onEventClick?.(event);
-            }}
-            title={`${event.time ? event.time + ' ' : ''}${event.title}`}
-          >
-            {event.time && <span className="font-medium">{event.time} </span>}
-            <span>{event.title}</span>
-          </div>
-        ))}
+        {shownEvents.map(event => {
+          const calendarColor = getCalendarColor(event.calendar_name);
+          return (
+            <div
+              key={event.id}
+              className={`text-xs px-2 py-1 rounded truncate transition-colors ${
+                isPast && !isToday
+                  ? 'bg-gray-200 text-gray-600'
+                  : `${calendarColor.bg} ${calendarColor.text} ${calendarColor.hover}`
+              }`}
+              onClick={e => {
+                e.stopPropagation();
+                onEventClick?.(event);
+              }}
+              title={`${event.time ? event.time + ' ' : ''}${event.title}${event.calendar_name ? ` (${event.calendar_name})` : ''}`}
+            >
+              {event.time && <span className="font-medium">{event.time} </span>}
+              <span>{event.title}</span>
+            </div>
+          );
+        })}
 
         {/* Overflow Indicator */}
         {overflowCount > 0 && (

@@ -9,12 +9,14 @@ class CalendarService {
   /**
    * Fetches events from the backend server
    * Server handles CalDAV communication with Apple Calendar
+   * @param calendar Optional calendar filter (home, work, shared, meals)
    * @returns Promise<CalendarEvent[]> Array of calendar events
    */
-  async fetchEvents(): Promise<CalendarEvent[]> {
+  async fetchEvents(calendar?: string): Promise<CalendarEvent[]> {
     try {
       // Make HTTP request to our TypeScript server endpoint
-      const response = await fetch('http://localhost:3001/events');
+      const url = calendar ? `http://localhost:3001/events?calendar=${encodeURIComponent(calendar)}` : 'http://localhost:3001/events';
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`Failed to fetch events: ${response.status}`);
       }
@@ -47,6 +49,10 @@ class CalendarService {
         transparency: event.transparency,
         attachments: event.attachments,
         timezone: event.timezone,
+        // Calendar metadata
+        calendar_name: event.calendar_name,
+        calendar_path: event.calendar_path,
+        caldav_filename: event.caldav_filename,
       }));
 
       return events;
@@ -119,6 +125,33 @@ class CalendarService {
       return `${String(hours).padStart(2, '0')}:${minutes}`;
     } catch {
       return undefined;
+    }
+  }
+
+  /**
+   * Creates a new calendar event
+   * @param event Event data with optional calendar_name
+   * @returns Promise<boolean> Success status
+   */
+  async createEvent(event: Partial<CalendarEvent> & { calendar_name?: string }): Promise<boolean> {
+    try {
+      const response = await fetch('http://localhost:3001/events', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(event),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create event: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result.success === true;
+    } catch (error) {
+      console.error('Error creating calendar event:', error);
+      return false;
     }
   }
 
@@ -206,6 +239,28 @@ class CalendarService {
     } catch (error) {
       console.error('Error syncing calendar:', error);
       return false;
+    }
+  }
+
+  /**
+   * Fetches available calendars with event counts
+   * @returns Promise<Array<{name: string, count: number}>> Array of calendars
+   */
+  async fetchCalendars(): Promise<Array<{name: string, count: number}>> {
+    try {
+      const response = await fetch('http://localhost:3001/calendars');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch calendars: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching calendars:', error);
+      return [
+        { name: 'home', count: 0 },
+        { name: 'work', count: 0 },
+        { name: 'shared', count: 0 },
+        { name: 'meals', count: 0 }
+      ];
     }
   }
 

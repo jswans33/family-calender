@@ -51,6 +51,8 @@ export class SQLiteRepository {
         synced_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         caldav_etag TEXT,
         caldav_filename TEXT,
+        calendar_path TEXT,
+        calendar_name TEXT,
         sync_status TEXT DEFAULT 'synced',
         local_modified DATETIME
       )
@@ -243,8 +245,8 @@ export class SQLiteRepository {
           id, title, date, time, description, location, organizer,
           attendees, categories, priority, status, visibility, dtend,
           duration, rrule, created, last_modified, sequence, url,
-          geo_lat, geo_lon, transparency, attachments, timezone, sync_status, local_modified, synced_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT synced_at FROM events WHERE id = ?), CURRENT_TIMESTAMP))
+          geo_lat, geo_lon, transparency, attachments, timezone, caldav_filename, calendar_path, calendar_name, sync_status, local_modified, synced_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT synced_at FROM events WHERE id = ?), CURRENT_TIMESTAMP))
         ON CONFLICT(id) DO UPDATE SET
           title = excluded.title,
           date = excluded.date,
@@ -276,8 +278,8 @@ export class SQLiteRepository {
           id, title, date, time, description, location, organizer,
           attendees, categories, priority, status, visibility, dtend,
           duration, rrule, created, last_modified, sequence, url,
-          geo_lat, geo_lon, transparency, attachments, timezone, sync_status, local_modified, synced_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+          geo_lat, geo_lon, transparency, attachments, timezone, caldav_filename, calendar_path, calendar_name, sync_status, local_modified, synced_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
       `;
 
       // Handle empty events array
@@ -326,6 +328,9 @@ export class SQLiteRepository {
               event.transparency,
               JSON.stringify(event.attachments || []),
               event.timezone,
+              (event as any).caldav_filename || null, // Add caldav_filename
+              (event as any).calendar_path || null, // Add calendar_path
+              (event as any).calendar_name || null, // Add calendar_name
               (event as any).sync_status || 'synced', // Add sync_status
               (event as any).local_modified || null, // Add local_modified
             ];
@@ -379,20 +384,30 @@ export class SQLiteRepository {
     }); // Close Promise
   } // Close function
 
-  async getEvents(startDate?: Date, endDate?: Date): Promise<CalendarEvent[]> {
+  async getEvents(startDate?: Date, endDate?: Date, calendar?: string): Promise<CalendarEvent[]> {
     return new Promise((resolve, reject) => {
       let query = 'SELECT * FROM events';
       const params: any[] = [];
+      const whereConditions: string[] = [];
 
       if (startDate && endDate) {
-        query += ' WHERE date >= ? AND date <= ?';
+        whereConditions.push('date >= ? AND date <= ?');
         params.push(startDate.toISOString(), endDate.toISOString());
       } else if (startDate) {
-        query += ' WHERE date >= ?';
+        whereConditions.push('date >= ?');
         params.push(startDate.toISOString());
       } else if (endDate) {
-        query += ' WHERE date <= ?';
+        whereConditions.push('date <= ?');
         params.push(endDate.toISOString());
+      }
+
+      if (calendar) {
+        whereConditions.push('calendar_name = ?');
+        params.push(calendar);
+      }
+
+      if (whereConditions.length > 0) {
+        query += ' WHERE ' + whereConditions.join(' AND ');
       }
 
       query += ' ORDER BY date ASC';
@@ -665,6 +680,57 @@ export class SQLiteRepository {
           else resolve();
         }
       );
+    });
+  }
+
+  /**
+   * Get calendar statistics
+   */
+  async getCalendarStats(): Promise<Array<{name: string, count: number}>> {
+    return new Promise((resolve, reject) => {
+      this.db.all(
+        'SELECT calendar_name as name, COUNT(*) as count FROM events WHERE calendar_name IS NOT NULL GROUP BY calendar_name ORDER BY count DESC',
+        [],
+        (err, rows: any[]) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          resolve(rows);
+        }
+      );
+    });
+  }
+
+  /**
+   * Get events with metadata for a specific calendar
+   */
+  async getEventsWithMetadata(calendar?: string): Promise<Array<CalendarEvent & {calendar_path?: string, calendar_name?: string, caldav_filename?: string}>> {
+    return new Promise((resolve, reject) => {
+      let query = 'SELECT * FROM events';
+      const params: any[] = [];
+
+      if (calendar) {
+        query += ' WHERE calendar_name = ?';
+        params.push(calendar);
+      }
+
+      query += ' ORDER BY date ASC';
+
+      this.db.all(query, params, (err, rows: any[]) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        const events = rows.map(row => ({
+          ...this.rowToEvent(row),
+          calendar_path: row.calendar_path,
+          calendar_name: row.calendar_name,
+          caldav_filename: row.caldav_filename
+        }));
+        resolve(events);
+      });
     });
   }
 }

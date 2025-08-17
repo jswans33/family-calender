@@ -5,6 +5,7 @@ import fs from 'fs';
 import { CalendarController } from './controllers/CalendarController.js';
 import { DatabaseCalendarService } from './services/DatabaseCalendarService.js';
 import { CalDAVRepository } from './repositories/CalDAVRepository.js';
+import { CalDAVMultiCalendarRepository } from './repositories/CalDAVMultiCalendarRepository.js';
 import { SQLiteRepository } from './repositories/SQLiteRepository.js';
 import { CalDAVConfig } from './config/CalDAVConfig.js';
 import { DatabaseConfigProvider } from './config/DatabaseConfig.js';
@@ -28,9 +29,11 @@ if (!fs.existsSync(dbDir)) {
 // Initialize repositories and service with SQLite caching
 const credentials = CalDAVConfig.getFallbackCredentials();
 const calDAVRepository = new CalDAVRepository(credentials);
+const multiCalendarRepository = new CalDAVMultiCalendarRepository(credentials);
 const sqliteRepository = new SQLiteRepository(dbConfig.path);
 const calendarService = new DatabaseCalendarService(
   calDAVRepository,
+  multiCalendarRepository,
   sqliteRepository,
   dbConfig.syncIntervalMinutes
 );
@@ -52,6 +55,22 @@ app.delete('/events/:id', (req, res) =>
   calendarController.deleteEvent(req, res)
 );
 app.post('/events', (req, res) => calendarController.createEvent(req, res)); // Create events
+
+// Calendar discovery endpoint
+app.get('/calendars', async (req, res) => {
+  try {
+    const calendars = await calendarService.getCalendars();
+    res.json(calendars);
+  } catch (error) {
+    console.error('Error getting calendars:', error);
+    res.status(500).json({ error: 'Failed to get calendars' });
+  }
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
 // Admin routes for database management
 app.post('/admin/sync', async (req, res) => {

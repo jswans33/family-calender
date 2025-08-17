@@ -1,6 +1,38 @@
 import React from 'react';
 import { CalendarEvent } from './DayCell';
 
+// Calendar color utility function for TimeGrid
+const getCalendarColor = (calendarName?: string) => {
+  const colors = {
+    home: {
+      bg: 'bg-blue-100',
+      text: 'text-blue-800',
+      hover: 'hover:bg-blue-200'
+    },
+    work: {
+      bg: 'bg-red-100',
+      text: 'text-red-800',
+      hover: 'hover:bg-red-200'
+    },
+    shared: {
+      bg: 'bg-green-100',
+      text: 'text-green-800',
+      hover: 'hover:bg-green-200'
+    },
+    meals: {
+      bg: 'bg-yellow-100',
+      text: 'text-yellow-800',
+      hover: 'hover:bg-yellow-200'
+    }
+  };
+  
+  return colors[calendarName as keyof typeof colors] || {
+    bg: 'bg-gray-100',
+    text: 'text-gray-800',
+    hover: 'hover:bg-gray-200'
+  };
+};
+
 export interface TimeSlot {
   hour: number;
   label: string;
@@ -186,21 +218,22 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
                     {dayEvents.map((event, eventIndex) => {
                       const position = getTimePosition(event.time);
                       const isAllDay = !event.time;
+                      const calendarColor = getCalendarColor(event.calendar_name);
 
                       return (
                         <div
                           key={event.id}
                           className={`absolute left-1 right-1 px-2 py-1 text-xs rounded cursor-pointer transition-colors ${
                             isAllDay
-                              ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 h-6 top-1'
-                              : 'bg-blue-100 text-blue-800 hover:bg-blue-200 h-12'
+                              ? `${calendarColor.bg} ${calendarColor.text} ${calendarColor.hover} h-6 top-1`
+                              : `${calendarColor.bg} ${calendarColor.text} ${calendarColor.hover} h-12`
                           }`}
                           style={{
                             top: isAllDay ? '4px' : `${position * 64 + 4}px`, // 64px = height of each hour slot
                             zIndex: 10 + eventIndex,
                           }}
                           onClick={() => onEventClick?.(event)}
-                          title={`${event.time || 'All day'} - ${event.title}`}
+                          title={`${event.time || 'All day'} - ${event.title}${event.calendar_name ? ` (${event.calendar_name})` : ''}`}
                         >
                           <div className="font-medium truncate">
                             {event.time && (

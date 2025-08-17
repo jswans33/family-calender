@@ -1,16 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CalendarEvent } from './DayCell';
 
 export interface EventModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (event: Partial<CalendarEvent>) => void;
+  onSave: (event: Partial<CalendarEvent> & { calendar_name?: string }) => void;
   initialData?: {
     date: string;
     time?: string;
     event?: CalendarEvent;
   } | undefined;
   isEditing?: boolean;
+  selectedCalendar?: string;
 }
 
 /**
@@ -28,9 +29,11 @@ export const EventModal: React.FC<EventModalProps> = ({
   onSave,
   initialData,
   isEditing = false,
+  selectedCalendar = 'home',
 }) => {
   const existingEvent = initialData?.event;
 
+  const [calendars, setCalendars] = useState<Array<{name: string; displayName: string; count: number}>>([]);
   const [formData, setFormData] = useState({
     title: existingEvent?.title || '',
     description: existingEvent?.description || '',
@@ -44,7 +47,24 @@ export const EventModal: React.FC<EventModalProps> = ({
       : '60',
     url: existingEvent?.url || '',
     categories: existingEvent?.categories?.join(', ') || '',
+    calendar: selectedCalendar,
   });
+
+  useEffect(() => {
+    const fetchCalendars = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/calendars');
+        const calendarsData = await response.json();
+        setCalendars(calendarsData);
+      } catch (error) {
+        console.error('Failed to fetch calendars:', error);
+      }
+    };
+    
+    if (isOpen) {
+      fetchCalendars();
+    }
+  }, [isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,13 +81,14 @@ export const EventModal: React.FC<EventModalProps> = ({
       dtend = endDate.toISOString();
     }
 
-    const newEvent: Partial<CalendarEvent> = {
+    const newEvent: Partial<CalendarEvent> & { calendar_name?: string } = {
       ...(isEditing && existingEvent
         ? { id: existingEvent.id }
         : { id: `temp-${Date.now()}` }),
       title: formData.title.trim(),
       date: initialData?.date || '',
       time: formData.time || '',
+      calendar_name: formData.calendar,
       ...(formData.description.trim() && { description: formData.description.trim() }),
       ...(formData.location.trim() && { location: formData.location.trim() }),
       ...(formData.url.trim() && { url: formData.url.trim() }),
@@ -101,6 +122,7 @@ export const EventModal: React.FC<EventModalProps> = ({
       duration: '60',
       url: '',
       categories: '',
+      calendar: selectedCalendar,
     });
     onClose();
   };
@@ -218,6 +240,31 @@ export const EventModal: React.FC<EventModalProps> = ({
               <option value="90">1.5 hours</option>
               <option value="120">2 hours</option>
               <option value="">All day</option>
+            </select>
+          </div>
+
+          {/* Calendar Selection */}
+          <div>
+            <label
+              htmlFor="calendar"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Calendar *
+            </label>
+            <select
+              id="calendar"
+              value={formData.calendar}
+              onChange={e =>
+                setFormData({ ...formData, calendar: e.target.value })
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              required
+            >
+              {calendars.map(cal => (
+                <option key={cal.name} value={cal.name}>
+                  {cal.displayName} ({cal.count} events)
+                </option>
+              ))}
             </select>
           </div>
 

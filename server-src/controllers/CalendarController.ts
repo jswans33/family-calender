@@ -12,12 +12,13 @@ export class CalendarController {
     try {
       console.log('Fetching events from Apple Calendar...');
 
-      const { start, end } = req.query;
+      const { start, end, calendar } = req.query;
       const startDate = start ? new Date(start as string) : undefined;
       const endDate = end ? new Date(end as string) : undefined;
+      const calendarFilter = calendar as string | undefined;
 
-      const events = await this.calendarService.getEvents(startDate, endDate);
-      console.log(`Found ${events.length} events`);
+      const events = await this.calendarService.getEvents(startDate, endDate, calendarFilter);
+      console.log(`Found ${events.length} events${calendarFilter ? ` in ${calendarFilter} calendar` : ''}`);
       res.json(events);
     } catch (error) {
       console.error('Error in CalendarController.getEvents:', error);
@@ -188,25 +189,26 @@ export class CalendarController {
   async createEvent(req: Request, res: Response): Promise<void> {
     try {
       const eventData = req.body;
+      const calendarName = eventData.calendar_name || 'shared'; // Default to shared calendar
 
       // Generate ID if not provided
       if (!eventData.id) {
         eventData.id = `local-${Date.now()}-${Math.random().toString(36).substring(7)}`;
       }
 
-      console.log(`Creating event ${eventData.id}...`);
+      console.log(`Creating event ${eventData.id} in ${calendarName} calendar...`);
 
       // Type check for DatabaseCalendarService
       const service = this.calendarService as any;
-      if (typeof service.createEvent !== 'function') {
+      if (typeof service.createEventInCalendar !== 'function') {
         res.status(501).json({
-          error: 'Event creation not supported',
-          message: 'This service does not support event creation',
+          error: 'Multi-calendar event creation not supported',
+          message: 'This service does not support creating events in specific calendars',
         });
         return;
       }
 
-      const success = await service.createEvent(eventData);
+      const success = await service.createEventInCalendar(eventData, calendarName);
 
       if (success) {
         console.log(`Event ${eventData.id} created successfully`);

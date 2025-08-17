@@ -9,9 +9,14 @@ import { WeekdayHeader } from './primitives/CalendarGrid';
 import { DayCell, CalendarEvent, CalendarView } from './primitives/DayCell';
 import { TimeGrid } from './primitives/TimeGrid';
 import { MultiDayEventBar } from './primitives/MultiDayEventBar';
+import CalendarSelector from './primitives/CalendarSelector';
 
 interface CalendarProps {
   events: CalendarEvent[];
+  calendars: Array<{name: string, count: number}>;
+  selectedCalendar: string | null;
+  onCalendarChange: (calendar: string | null) => void;
+  isLoadingCalendars?: boolean;
   year?: number; // default = now
   month?: number; // 0-11, default = now
   startOfWeek?: 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0=Sun, default=1
@@ -20,6 +25,8 @@ interface CalendarProps {
   onDayClick?: (dateISO: string) => void;
   onEventClick?: (event: CalendarEvent) => void;
   onTimeSlotClick?: (date: string, time: string) => void;
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
 }
 
 const MONTHS = [
@@ -83,6 +90,10 @@ function monthGridDates(
 
 const Calendar: React.FC<CalendarProps> = ({
   events,
+  calendars,
+  selectedCalendar,
+  onCalendarChange,
+  isLoadingCalendars = false,
   year,
   month,
   startOfWeek = 1,
@@ -91,6 +102,8 @@ const Calendar: React.FC<CalendarProps> = ({
   onDayClick,
   onEventClick,
   onTimeSlotClick,
+  searchQuery = '',
+  onSearchChange,
 }) => {
   const [currentYear, setCurrentYear] = useState(
     year ?? new Date().getFullYear()
@@ -132,6 +145,19 @@ const Calendar: React.FC<CalendarProps> = ({
     }
   }, [currentYear, currentMonth, currentDate, currentView, startOfWeek]);
 
+  // Filter events based on search query
+  const filteredEvents = useMemo(() => {
+    if (!searchQuery.trim()) return events;
+    
+    const query = searchQuery.toLowerCase().trim();
+    return events.filter(event => 
+      event.title.toLowerCase().includes(query) ||
+      event.description?.toLowerCase().includes(query) ||
+      event.location?.toLowerCase().includes(query) ||
+      event.categories?.some(cat => cat.toLowerCase().includes(query))
+    );
+  }, [events, searchQuery]);
+
   // Event bucketing - separates single-day and multi-day events
   const { singleDayBuckets, multiDayEvents } = useMemo(() => {
     const singleDayMap = new Map<string, CalendarEvent[]>();
@@ -141,7 +167,7 @@ const Calendar: React.FC<CalendarProps> = ({
       endDate: Date;
     }> = [];
 
-    for (const e of events) {
+    for (const e of filteredEvents) {
       // For all-day events, don't pass time to parseLocal
       const isAllDay =
         e.time === 'All Day' ||
@@ -184,7 +210,7 @@ const Calendar: React.FC<CalendarProps> = ({
     }
 
     return { singleDayBuckets: singleDayMap, multiDayEvents };
-  }, [events]);
+  }, [filteredEvents]);
 
   // Generate appropriate title based on view
   const getViewTitle = () => {
@@ -306,6 +332,60 @@ const Calendar: React.FC<CalendarProps> = ({
         onNext={handleNext}
         onToday={handleToday}
       />
+      
+      <CalendarSelector
+        calendars={calendars}
+        selectedCalendar={selectedCalendar}
+        onCalendarChange={onCalendarChange}
+        isLoading={isLoadingCalendars}
+      />
+      
+      {onSearchChange && (
+        <div className="mb-4 px-4">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search events..."
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            <svg
+              className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+            {searchQuery && (
+              <button
+                onClick={() => onSearchChange('')}
+                className="absolute right-3 top-2.5 h-5 w-5 text-gray-400 hover:text-gray-600"
+              >
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            )}
+          </div>
+          {searchQuery && (
+            <div className="mt-2 text-sm text-gray-600">
+              Showing {filteredEvents.length} of {events.length} events
+            </div>
+          )}
+        </div>
+      )}
 
       <CalendarContent>
         {/* Month View - Traditional Grid */}
@@ -412,7 +492,7 @@ const Calendar: React.FC<CalendarProps> = ({
         {(currentView === 'week' || currentView === 'day') && (
           <TimeGrid
             dates={dates}
-            events={events}
+            events={filteredEvents}
             view={currentView}
             {...(onEventClick && { onEventClick })}
             {...(onTimeSlotClick && { onTimeSlotClick })}

@@ -10,6 +10,10 @@ const App: React.FC = () => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   // Loading state to show spinner while fetching events
   const [loading, setLoading] = useState<boolean>(true);
+  // Multi-calendar state
+  const [calendars, setCalendars] = useState<Array<{name: string, count: number}>>([]);
+  const [selectedCalendar, setSelectedCalendar] = useState<string | null>(null);
+  const [isLoadingCalendars, setIsLoadingCalendars] = useState<boolean>(true);
   // Selected event for details panel
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
     null
@@ -25,7 +29,27 @@ const App: React.FC = () => {
     time?: string;
     event?: CalendarEvent;
   } | null>(null);
+  // Search functionality
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
+  // Load calendars on mount
+  useEffect(() => {
+    const loadCalendars = async (): Promise<void> => {
+      setIsLoadingCalendars(true);
+      const calendarService = new CalendarService();
+      try {
+        const fetchedCalendars = await calendarService.fetchCalendars();
+        setCalendars(fetchedCalendars);
+      } catch (error) {
+        console.error('Failed to load calendars:', error);
+      }
+      setIsLoadingCalendars(false);
+    };
+
+    loadCalendars();
+  }, []);
+
+  // Load events when calendar selection changes
   useEffect(() => {
     const loadEvents = async (): Promise<void> => {
       setLoading(true);
@@ -33,23 +57,41 @@ const App: React.FC = () => {
       const calendarService = new CalendarService();
       // Connect to Apple Calendar via CalDAV
       await calendarService.connectToAppleCalendar();
-      // Fetch all events from the server endpoint
-      const fetchedEvents = await calendarService.fetchEvents();
+      // Fetch events from selected calendar or all calendars
+      const fetchedEvents = await calendarService.fetchEvents(selectedCalendar || undefined);
       // Update state with fetched events
       setEvents(fetchedEvents);
       setLoading(false);
     };
 
     loadEvents();
-  }, []); // Empty dependency array - only run on component mount
+  }, [selectedCalendar]); // Reload when calendar selection changes
 
   // Handle event creation
-  const handleCreateEvent = (newEvent: Partial<CalendarEvent>) => {
-    // Add to local state immediately (optimistic update)
-    setEvents(prevEvents => [...prevEvents, newEvent as CalendarEvent]);
+  const handleCreateEvent = async (newEvent: Partial<CalendarEvent> & { calendar_name?: string }) => {
+    try {
+      const calendarService = new CalendarService();
+      const success = await calendarService.createEvent(newEvent);
 
-    // TODO: Send to backend/CalDAV service
-    console.log('Creating event:', newEvent);
+      if (success) {
+        // Add to local state
+        setEvents(prevEvents => [...prevEvents, newEvent as CalendarEvent]);
+        console.log('Event created successfully:', newEvent);
+        
+        // Reload events to get fresh data from server
+        const fetchedEvents = await calendarService.fetchEvents(selectedCalendar || undefined);
+        setEvents(fetchedEvents);
+        
+        // Reload calendars to update counts
+        const fetchedCalendars = await calendarService.fetchCalendars();
+        setCalendars(fetchedCalendars);
+      } else {
+        alert('Failed to create event');
+      }
+    } catch (error) {
+      console.error('Error creating event:', error);
+      alert('Error creating event');
+    }
   };
 
   // Handle event editing
@@ -93,6 +135,11 @@ const App: React.FC = () => {
     }
   };
 
+  // Handle calendar selection change
+  const handleCalendarChange = (calendar: string | null) => {
+    setSelectedCalendar(calendar);
+  };
+
   // Handle manual sync
   const handleSync = async () => {
     try {
@@ -104,9 +151,12 @@ const App: React.FC = () => {
         console.log('Sync completed successfully');
         // Reload events after sync
         setLoading(true);
-        const fetchedEvents = await calendarService.fetchEvents();
+        const fetchedEvents = await calendarService.fetchEvents(selectedCalendar || undefined);
         setEvents(fetchedEvents);
         setLoading(false);
+        // Reload calendars to update counts
+        const fetchedCalendars = await calendarService.fetchCalendars();
+        setCalendars(fetchedCalendars);
         alert('Calendar synced successfully!');
       } else {
         alert('Failed to sync calendar');
@@ -240,8 +290,13 @@ const App: React.FC = () => {
             Calendar Stats
           </h3>
           <div className="text-sm text-gray-600 space-y-1">
-            <div>Total Events: {events.length}</div>
+            <div>Displayed Events: {events.length}</div>
             <div>Upcoming: {upcomingEvents.length}</div>
+            {selectedCalendar ? (
+              <div>Calendar: {selectedCalendar}</div>
+            ) : (
+              <div>All Calendars</div>
+            )}
           </div>
         </div>
       </div>
@@ -254,6 +309,10 @@ const App: React.FC = () => {
         <div className="flex-1 p-4">
           <Calendar
             events={events}
+            calendars={calendars}
+            selectedCalendar={selectedCalendar}
+            onCalendarChange={handleCalendarChange}
+            isLoadingCalendars={isLoadingCalendars}
             view={currentView}
             onEventClick={setSelectedEvent}
             onDayClick={dateStr => {
@@ -262,6 +321,8 @@ const App: React.FC = () => {
               setCurrentView('day');
             }}
             onTimeSlotClick={handleTimeSlotClick}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
           />
         </div>
       </div>
@@ -627,6 +688,7 @@ const App: React.FC = () => {
         onSave={eventModalData?.event ? handleUpdateEvent : handleCreateEvent}
         initialData={eventModalData || undefined}
         isEditing={!!eventModalData?.event}
+        selectedCalendar={selectedCalendar || 'home'}
       />
     </div>
   );

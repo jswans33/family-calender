@@ -64,3 +64,112 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+  /* Main layout changes for mobile */
+  .min-h-screen.flex {
+    flex-direction: column !important;
+  }
+  
+  /* Hide left sidebar on mobile */
+  .min-h-screen.flex > .w-1\/5:first-child {
+    display: none;
+  }
+  
+  /* Hide right sidebar on mobile */
+  .min-h-screen.flex > .w-1\/5:last-child {
+    display: none;
+  }
+  
+  /* Make center panel full width on mobile */
+  .min-h-screen.flex > .w-3\/5 {
+    width: 100% !important;
+  }
+  
+  /* Calendar grid adjustments for mobile */
+  .calendar-grid {
+    gap: 0;
+    font-size: 14px;
+  }
+  
+  .calendar-day {
+    min-height: 80px;
+    padding: 3px;
+  }
+  
+  .day-header {
+    padding: 8px 4px;
+    font-size: 12px;
+  }
+  
+  .event {
+    font-size: 10px;
+    padding: 1px 3px;
+    margin: 1px 0;
+  }
+  
+  /* Mobile event modal adjustments */
+  .fixed.inset-0 .max-w-md {
+    max-width: 90vw !important;
+    margin: 0 auto;
+  }
+  
+  /* Calendar selector adjustments */
+  .calendar-selector {
+    margin-bottom: 1rem;
+  }
+  
+  /* Compact time grid for mobile */
+  .time-grid {
+    font-size: 12px;
+  }
+  
+  /* Mobile calendar header */
+  .calendar-header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .calendar-header button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Extra small mobile devices */
+  .calendar-day {
+    min-height: 60px;
+    padding: 2px;
+  }
+  
+  .day-header {
+    padding: 6px 2px;
+    font-size: 11px;
+  }
+  
+  .event {
+    font-size: 9px;
+    padding: 1px 2px;
+  }
+  
+  /* Hide event text on very small screens, show only color indicators */
+  .event-mobile-indicator {
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    margin: 1px 0;
+    display: block;
+  }
+  
+  /* Very compact calendar header */
+  .calendar-header h1 {
+    font-size: 1.2rem;
+  }
+  
+  .calendar-header button {
+    padding: 0.25rem;
+    font-size: 0.8rem;
+  }
+}
