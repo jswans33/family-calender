@@ -1,18 +1,21 @@
-import { Buffer } from 'buffer';
 import { Request, Response } from 'express';
 import { ICalendarService } from '../types/Calendar.js';
+import { VacationService } from '../services/VacationService.js';
+import { ValidationService } from '../services/ValidationService.js';
 
 export class CalendarController {
   private calendarService: ICalendarService;
+  private vacationService: VacationService | null;
 
-  constructor(calendarService: ICalendarService) {
+  constructor(calendarService: ICalendarService, vacationService?: VacationService) {
     this.calendarService = calendarService;
+    this.vacationService = vacationService || null;
   }
 
   async getEvents(req: Request, res: Response): Promise<void> {
     try {
       const { calendar } = req.query;
-      const calendarFilter = calendar as string | undefined;
+      const calendarFilter = ValidationService.validateCalendarFilter(calendar);
 
       const events =
         await this.calendarService.getEventsWithMetadata(calendarFilter);
@@ -67,22 +70,12 @@ export class CalendarController {
 
   async updateEvent(req: Request, res: Response): Promise<void> {
     try {
-      // CODE_SMELL: Rule #1 One Thing Per File - Business logic in controller
-      // Fix: Create URLEncodingService.decodeEventId() for reuse across endpoints
-      // Decode Base64-encoded event ID to handle special characters safely
       const encodedId = req.params.id;
       if (!encodedId) {
         res.status(400).json({ error: 'Event ID is required' });
         return;
       }
-      // Convert URL-safe Base64 back to standard Base64
-      const base64Id = encodedId.replace(/[-_]/g, match => {
-        return { '-': '+', _: '/' }[match] || match;
-      });
-      // Add padding if needed
-      const paddedBase64 =
-        base64Id + '='.repeat((4 - (base64Id.length % 4)) % 4);
-      const eventId = Buffer.from(paddedBase64, 'base64').toString('utf-8');
+      const eventId = ValidationService.decodeEventId(encodedId);
       const eventData = req.body;
 
       // CODE_SMELL: Rule #1 One Thing Per File - Validation logic in controller
@@ -128,9 +121,6 @@ export class CalendarController {
 
   async deleteEvent(req: Request, res: Response): Promise<void> {
     try {
-      // CODE_SMELL: Rule #5 No Clever Code - Duplicate Base64 decoding logic
-      // Fix: Extract to URLEncodingService.decodeEventId(req.params.id)
-      // Decode Base64-encoded event ID
       const encodedId = req.params.id;
       if (!encodedId) {
         res.status(400).json({
@@ -140,12 +130,7 @@ export class CalendarController {
         return;
       }
 
-      const base64Id = encodedId.replace(/[-_]/g, match => {
-        return { '-': '+', _: '/' }[match] || match;
-      });
-      const paddedBase64 =
-        base64Id + '='.repeat((4 - (base64Id.length % 4)) % 4);
-      const eventId = Buffer.from(paddedBase64, 'base64').toString('utf-8');
+      const eventId = ValidationService.decodeEventId(encodedId);
 
       // Type check for DatabaseCalendarService
       if (typeof this.calendarService.deleteEvent !== 'function') {
@@ -156,9 +141,27 @@ export class CalendarController {
         return;
       }
 
+      // Get event before deletion for vacation processing
+      let eventToDelete: any = null;
+      if (this.vacationService) {
+        const events = await this.calendarService.getEventsWithMetadata();
+        eventToDelete = events.find(e => e.id === eventId) || null;
+      }
+
       const success = await this.calendarService.deleteEvent(eventId);
 
       if (success) {
+        // Process vacation restoration if applicable
+        if (this.vacationService && eventToDelete?.isVacation) {
+          try {
+            await this.vacationService.processVacationEventDeletion(eventToDelete);
+          } catch (vacationError) {
+            console.error(
+              'Vacation restoration failed (event still deleted):',
+              vacationError
+            );
+          }
+        }
         res.json({ success: true, message: 'Event deleted successfully' });
       } else {
         res.status(404).json({
@@ -178,6 +181,7 @@ export class CalendarController {
   async createEvent(req: Request, res: Response): Promise<void> {
     try {
       const eventData = req.body;
+      ValidationService.validateEventData(eventData);
       const calendarName = eventData.calendar_name || 'shared'; // Default to shared calendar
 
       // Generate ID if not provided

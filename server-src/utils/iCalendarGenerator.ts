@@ -8,42 +8,91 @@ export class iCalendarGenerator {
   /**
    * Generates a complete VCALENDAR with VEVENT for CalDAV PUT operations
    */
-  // CODE_SMELL: Rule #4 Complexity Budget - Method exceeds 30 lines with string concatenation
-  // Fix: Split into generateHeader(), generateEventFields(), generateFooter()
   static generateVCalendar(event: CalendarEvent): string {
-    const now =
-      new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    const isAllDay =
-      event.time === 'All Day' ||
-      event.time === 'all day' ||
-      !event.time ||
-      event.time === '';
+    const lines = [
+      ...this.generateHeader(),
+      ...this.generateEventFields(event),
+      ...this.generateFooter()
+    ];
+    
+    return lines
+      .filter(line => line.length > 0)
+      .join('\n');
+  }
 
-    return `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//Swanson Light Calendar//EN
-BEGIN:VEVENT
-UID:${event.id}
-DTSTAMP:${now}
-DTSTART${isAllDay ? ';VALUE=DATE' : ''}:${this.formatDateTime(event.date, event.time, event.timezone)}
-DTEND${isAllDay ? ';VALUE=DATE' : ''}:${this.formatDateTime(event.dtend || this.calculateEndTime(event.date, event.time), isAllDay ? undefined : event.time ? this.calculateEndTimeString(event.time) : undefined, event.timezone)}
-SUMMARY:${this.escapeText(event.title)}
-${event.description ? `DESCRIPTION:${this.escapeText(event.description)}` : ''}
-${event.location ? `LOCATION:${this.escapeText(event.location)}` : ''}
-${event.organizer ? `ORGANIZER:${event.organizer}` : ''}
-${event.attendees ? event.attendees.map(a => `ATTENDEE:${a}`).join('\n') : ''}
-${event.categories ? `CATEGORIES:${event.categories.join(',')}` : ''}
-${event.status ? `STATUS:${event.status}` : ''}
-${event.priority ? `PRIORITY:${event.priority}` : ''}
-${event.url ? `URL:${event.url}` : ''}
-${event.transparency ? `TRANSP:${event.transparency}` : ''}
-${event.sequence ? `SEQUENCE:${event.sequence}` : 'SEQUENCE:0'}
-${event.created ? `CREATED:${this.formatDateTime(event.created)}` : ''}
-${event.lastModified ? `LAST-MODIFIED:${now}` : `LAST-MODIFIED:${now}`}
-END:VEVENT
-END:VCALENDAR`
-      .replace(/\n\n+/g, '\n')
-      .replace(/^\n+|\n+$/g, '');
+  /**
+   * Generates VCALENDAR header section
+   */
+  private static generateHeader(): string[] {
+    return [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Swanson Light Calendar//EN',
+      'BEGIN:VEVENT'
+    ];
+  }
+
+  /**
+   * Generates VEVENT fields for the calendar event
+   */
+  private static generateEventFields(event: CalendarEvent): string[] {
+    const now = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const isAllDay = this.isAllDayEvent(event);
+    
+    const fields = [
+      `UID:${event.id}`,
+      `DTSTAMP:${now}`,
+      `DTSTART${isAllDay ? ';VALUE=DATE' : ''}:${this.formatDateTime(event.date, event.time, event.timezone)}`,
+      `DTEND${isAllDay ? ';VALUE=DATE' : ''}:${this.formatDateTime(
+        event.dtend || this.calculateEndTime(event.date, event.time),
+        isAllDay ? undefined : event.time ? this.calculateEndTimeString(event.time) : undefined,
+        event.timezone
+      )}`,
+      `SUMMARY:${this.escapeText(event.title)}`
+    ];
+
+    this.addOptionalFields(fields, event);
+    fields.push(`LAST-MODIFIED:${now}`);
+    
+    return fields;
+  }
+
+  /**
+   * Generates VCALENDAR footer section
+   */
+  private static generateFooter(): string[] {
+    return [
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ];
+  }
+
+  /**
+   * Determines if event is all-day
+   */
+  private static isAllDayEvent(event: CalendarEvent): boolean {
+    return event.time === 'All Day' ||
+           event.time === 'all day' ||
+           !event.time ||
+           event.time === '';
+  }
+
+  /**
+   * Adds optional fields to the event fields array
+   */
+  private static addOptionalFields(fields: string[], event: CalendarEvent): void {
+    if (event.description) fields.push(`DESCRIPTION:${this.escapeText(event.description)}`);
+    if (event.location) fields.push(`LOCATION:${this.escapeText(event.location)}`);
+    if (event.organizer) fields.push(`ORGANIZER:${event.organizer}`);
+    if (event.attendees) fields.push(...event.attendees.map(a => `ATTENDEE:${a}`));
+    if (event.categories) fields.push(`CATEGORIES:${event.categories.join(',')}`);
+    if (event.status) fields.push(`STATUS:${event.status}`);
+    if (event.priority) fields.push(`PRIORITY:${event.priority}`);
+    if (event.url) fields.push(`URL:${event.url}`);
+    if (event.transparency) fields.push(`TRANSP:${event.transparency}`);
+    if (event.sequence) fields.push(`SEQUENCE:${event.sequence}`);
+    else fields.push('SEQUENCE:0');
+    if (event.created) fields.push(`CREATED:${this.formatDateTime(event.created)}`);
   }
 
   /**

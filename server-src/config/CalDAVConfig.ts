@@ -23,14 +23,4 @@ export class CalDAVConfig {
     };
   }
 
-  // CODE_SMELL: Rule #5 No Clever Code - Hard-coded credentials in source code
-  // Fix: Move to environment variables or secure credential store
-  static getFallbackCredentials(): CalDAVCredentials {
-    return {
-      username: 'jswans33@gmail.com',
-      password: 'qrdq-tahw-xski-ogbf',
-      hostname: 'p36-caldav.icloud.com',
-      path: '/1110188709/calendars/2D7581FA-3A83-42D8-B6F4-8BCD8186AA6E/',
-    };
-  }
 }

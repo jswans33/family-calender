@@ -1,15 +1,17 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
 import { CalendarController } from './controllers/CalendarController.js';
-import { DatabaseCalendarService } from './services/DatabaseCalendarService.js';
+import { CalendarFacadeService } from './services/CalendarFacadeService.js';
 import { CalDAVRepository } from './repositories/CalDAVRepository.js';
 import { CalDAVMultiCalendarRepository } from './repositories/CalDAVMultiCalendarRepository.js';
-import { SQLiteRepository } from './repositories/SQLiteRepository.js';
+import { SQLiteCompositeRepository } from './repositories/SQLiteCompositeRepository.js';
 import { CalDAVConfig } from './config/CalDAVConfig.js';
 import { DatabaseConfigProvider } from './config/DatabaseConfig.js';
 import { VacationService } from './services/VacationService.js';
+import { VacationDataService } from './services/VacationDataService.js';
 
 const app = express();
 const port = 3001;
@@ -28,18 +30,19 @@ if (!fs.existsSync(dbDir)) {
 }
 
 // Initialize repositories and service with SQLite caching
-const credentials = CalDAVConfig.getFallbackCredentials();
+const credentials = CalDAVConfig.getCredentials();
 const calDAVRepository = new CalDAVRepository(credentials);
 const multiCalendarRepository = new CalDAVMultiCalendarRepository(credentials);
-const sqliteRepository = new SQLiteRepository(dbConfig.path);
-const calendarService = new DatabaseCalendarService(
+const sqliteRepository = new SQLiteCompositeRepository(dbConfig.path);
+const calendarService = new CalendarFacadeService(
   calDAVRepository,
   multiCalendarRepository,
   sqliteRepository,
   dbConfig.syncIntervalMinutes
 );
-const vacationService = new VacationService(sqliteRepository);
-const calendarController = new CalendarController(calendarService);
+const vacationDataService = new VacationDataService(sqliteRepository);
+const vacationService = new VacationService(vacationDataService);
+const calendarController = new CalendarController(calendarService, vacationService);
 
 // Routes
 app.get('/events', (req, res) => calendarController.getEvents(req, res));
@@ -53,35 +56,7 @@ app.get('/events/month', (req, res) =>
   calendarController.getThisMonthsEvents(req, res)
 );
 app.put('/events/:id', (req, res) => calendarController.updateEvent(req, res));
-// CODE_SMELL: Rule #1 One Thing Per File - Business logic in server.ts
-// Fix: Move vacation processing to CalendarController or middleware
-// Enhanced event deletion with vacation processing (modular)
-app.delete('/events/:id', async (req, res) => {
-  try {
-    // Get the event before deletion for vacation processing
-    const events = await calendarService.getEventsWithMetadata();
-    const eventToDelete = events.find(e => e.id === req.params.id);
-
-    // Delete the event through the controller
-    await calendarController.deleteEvent(req, res);
-
-    // If deletion was successful and it was a vacation event, restore vacation hours
-    if (res.statusCode === 200 && eventToDelete?.isVacation) {
-      try {
-        await vacationService.processVacationEventDeletion(eventToDelete);
-      } catch (vacationError) {
-        console.error(
-          'Vacation restoration failed (event still deleted):',
-          vacationError
-        );
-        // Don't fail the response since the event was deleted successfully
-      }
-    }
-  } catch {
-    // Fallback to controller if our enhancement fails
-    await calendarController.deleteEvent(req, res);
-  }
-});
+app.delete('/events/:id', (req, res) => calendarController.deleteEvent(req, res));
 // CODE_SMELL: Rule #1 One Thing Per File - Business logic in server.ts
 // Fix: Move vacation processing to CalendarController or middleware
 // Enhanced event creation with vacation processing (modular)

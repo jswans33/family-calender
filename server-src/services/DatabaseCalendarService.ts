@@ -1,20 +1,20 @@
 import { CalendarEvent, ICalendarService } from '../types/Calendar.js';
 import { CalDAVRepository } from '../repositories/CalDAVRepository.js';
 import { CalDAVMultiCalendarRepository } from '../repositories/CalDAVMultiCalendarRepository.js';
-import { SQLiteRepository } from '../repositories/SQLiteRepository.js';
+import { SQLiteCompositeRepository } from '../repositories/SQLiteCompositeRepository.js';
 
 // CODE_SMELL: Rule #4 Complexity Budget - Service has 19 public methods (exceeds 3-5 limit)
 // Fix: Split into CalendarSyncService, CalendarQueryService, and CalendarUpdateService
 export class DatabaseCalendarService implements ICalendarService {
   private calDAVRepository: CalDAVRepository;
   private multiCalendarRepository: CalDAVMultiCalendarRepository;
-  private sqliteRepository: SQLiteRepository;
+  private sqliteRepository: SQLiteCompositeRepository;
   private syncIntervalMinutes: number;
 
   constructor(
     calDAVRepository: CalDAVRepository,
     multiCalendarRepository: CalDAVMultiCalendarRepository,
-    sqliteRepository: SQLiteRepository,
+    sqliteRepository: SQLiteCompositeRepository,
     syncIntervalMinutes: number = 15
   ) {
     this.calDAVRepository = calDAVRepository;

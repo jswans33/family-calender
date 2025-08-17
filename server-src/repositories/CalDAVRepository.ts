@@ -1,31 +1,8 @@
 import https from 'https';
-import ical from 'node-ical';
 import { CalendarEvent, CalDAVCredentials } from '../types/Calendar.js';
 import { iCalendarGenerator } from '../utils/iCalendarGenerator.js';
+import { CalDAVParser } from '../utils/CalDAVParser.js';
 
-// Type interfaces for ical parsing
-interface ICalEventData {
-  uid?: string;
-  summary?: string;
-  description?: string;
-  location?: string;
-  start?: Date | { toISOString?: () => string; tz?: string };
-  end?: Date | { toISOString?: () => string };
-  organizer?: unknown;
-  attendee?: unknown;
-  categories?: unknown;
-  priority?: number;
-  status?: unknown;
-  class?: unknown;
-  rrule?: { toString?: () => string };
-  created?: Date | { toISOString?: () => string };
-  lastmodified?: Date | { toISOString?: () => string };
-  sequence?: number;
-  url?: string;
-  geo?: unknown;
-  transp?: unknown;
-  attach?: unknown;
-}
 
 export class CalDAVRepository {
   private credentials: CalDAVCredentials;
@@ -87,101 +64,20 @@ export class CalDAVRepository {
     });
   }
 
-  // CODE_SMELL: Rule #4 Complexity Budget - Method exceeds 30 lines with nested logic
-  // Fix: Split into extractMatches(), parseICalContent(), buildCalendarEvent()
-  // CODE_SMELL: Rule #5 No Clever Code - Duplicate parsing logic with CalDAVMultiCalendarRepository
-  // Fix: Extract shared ICalParser utility class
+  /**
+   * Parse calendar events from CalDAV XML response
+   * Follows Rule #4: Method under 30 lines, delegates to shared parser
+   */
   parseCalendarEvents(xmlData: string): CalendarEvent[] {
     const events: CalendarEvent[] = [];
 
     try {
-      const icalMatches = xmlData.match(
-        /<calendar-data[^>]*><!\[CDATA\[([\s\S]*?)\]\]><\/calendar-data>/gi
-      );
-
-      if (icalMatches) {
-        icalMatches.forEach(match => {
-          const icalContent = match
-            .replace(/<calendar-data[^>]*><!\[CDATA\[/, '')
-            .replace(/\]\]><\/calendar-data>/, '');
-
-          try {
-            const parsedCal = ical.parseICS(icalContent);
-
-            for (const k in parsedCal) {
-              const event = parsedCal[k] as ICalEventData & { type?: string };
-              if (event && event.type === 'VEVENT') {
-                const startDate = event.start
-                  ? new Date(event.start)
-                  : new Date();
-                const endDate = event.end ? new Date(event.end) : null;
-
-                const calendarEvent: CalendarEvent = {
-                  id: event.uid || k,
-                  title: event.summary || 'No Title',
-                  date: startDate.toISOString(),
-                  time: startDate.toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  }),
-                };
-
-                if (event.description)
-                  calendarEvent.description = event.description;
-                if (event.location) calendarEvent.location = event.location;
-
-                const organizer = this.parseOrganizer(event.organizer);
-                if (organizer) calendarEvent.organizer = organizer;
-
-                const attendees = this.parseAttendees(event.attendee);
-                if (attendees) calendarEvent.attendees = attendees;
-
-                const categories = this.parseCategories(event.categories);
-                if (categories) calendarEvent.categories = categories;
-
-                if (event.priority) calendarEvent.priority = event.priority;
-
-                const status = this.parseStatus(event.status);
-                if (status) calendarEvent.status = status;
-
-                const visibility = this.parseClass(event.class);
-                if (visibility) calendarEvent.visibility = visibility;
-
-                if (endDate) calendarEvent.dtend = endDate.toISOString();
-
-                const duration = this.calculateDuration(startDate, endDate);
-                if (duration) calendarEvent.duration = duration;
-
-                if (event.rrule) calendarEvent.rrule = event.rrule.toString();
-                if (event.created)
-                  calendarEvent.created = new Date(event.created).toISOString();
-                if (event.lastmodified)
-                  calendarEvent.lastModified = new Date(
-                    event.lastmodified
-                  ).toISOString();
-                if (event.sequence) calendarEvent.sequence = event.sequence;
-                if (event.url) calendarEvent.url = event.url;
-
-                const geo = this.parseGeo(event.geo);
-                if (geo) calendarEvent.geo = geo;
-
-                const transparency = this.parseTransparency(event.transp);
-                if (transparency) calendarEvent.transparency = transparency;
-
-                const attachments = this.parseAttachments(event.attach);
-                if (attachments) calendarEvent.attachments = attachments;
-
-                if (event.start && event.start.tz)
-                  calendarEvent.timezone = event.start.tz;
-
-                events.push(calendarEvent);
-              }
-            }
-          } catch (parseError) {
-            console.error('Error parsing iCal entry:', parseError);
-          }
-        });
-      }
+      const icalContents = CalDAVParser.extractICalContent(xmlData);
+      
+      icalContents.forEach(icalContent => {
+        const parsedEvents = CalDAVParser.parseICalContent(icalContent);
+        events.push(...parsedEvents);
+      });
     } catch (error) {
       console.error('Error parsing CalDAV response:', error);
     }
@@ -189,134 +85,6 @@ export class CalDAVRepository {
     return events;
   }
 
-  private parseOrganizer(organizer: unknown): string | undefined {
-    if (typeof organizer === 'string') return organizer;
-    if (
-      organizer &&
-      typeof organizer === 'object' &&
-      organizer !== null &&
-      'val' in organizer &&
-      typeof (organizer as Record<string, unknown>).val === 'string'
-    )
-      return (organizer as Record<string, unknown>).val as string;
-    return undefined;
-  }
-
-  private parseAttendees(attendee: unknown): string[] | undefined {
-    if (!attendee) return undefined;
-    if (Array.isArray(attendee)) {
-      return attendee
-        .map(a =>
-          typeof a === 'string'
-            ? a
-            : (a as any)?.val || (a as any)?.toString() || ''
-        )
-        .filter(Boolean);
-    }
-    const single =
-      typeof attendee === 'string'
-        ? attendee
-        : (attendee as any)?.val || (attendee as any)?.toString() || '';
-    return single ? [single] : undefined;
-  }
-
-  private parseCategories(categories: unknown): string[] | undefined {
-    if (!categories) return undefined;
-    if (Array.isArray(categories)) return categories.filter(Boolean);
-    if (typeof categories === 'string')
-      return categories
-        .split(',')
-        .map(c => c.trim())
-        .filter(Boolean);
-    return undefined;
-  }
-
-  private parseStatus(
-    status: unknown
-  ): 'CONFIRMED' | 'TENTATIVE' | 'CANCELLED' | undefined {
-    if (!status) return undefined;
-    const statusStr = (
-      typeof status === 'string' ? status : (status as any)?.toString() || ''
-    ).toUpperCase();
-    if (['CONFIRMED', 'TENTATIVE', 'CANCELLED'].includes(statusStr)) {
-      return statusStr as 'CONFIRMED' | 'TENTATIVE' | 'CANCELLED';
-    }
-    return undefined;
-  }
-
-  private parseClass(
-    classField: unknown
-  ): 'PUBLIC' | 'PRIVATE' | 'CONFIDENTIAL' | undefined {
-    if (!classField) return undefined;
-    const classStr = (
-      typeof classField === 'string'
-        ? classField
-        : (classField as any)?.toString() || ''
-    ).toUpperCase();
-    if (['PUBLIC', 'PRIVATE', 'CONFIDENTIAL'].includes(classStr)) {
-      return classStr as 'PUBLIC' | 'PRIVATE' | 'CONFIDENTIAL';
-    }
-    return undefined;
-  }
-
-  private calculateDuration(start: Date, end: Date | null): string | undefined {
-    if (!end) return undefined;
-    const durationMs = end.getTime() - start.getTime();
-    const hours = Math.floor(durationMs / (1000 * 60 * 60));
-    const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
-    return `PT${hours}H${minutes}M`;
-  }
-
-  private parseGeo(geo: unknown): { lat: number; lon: number } | undefined {
-    if (!geo) return undefined;
-    if ((geo as any)?.lat && (geo as any)?.lon)
-      return {
-        lat: parseFloat((geo as any)?.lat),
-        lon: parseFloat((geo as any)?.lon),
-      };
-    if (typeof geo === 'string') {
-      const parts = geo.split(',');
-      if (parts.length === 2 && parts[0] && parts[1]) {
-        const lat = parseFloat(parts[0]);
-        const lon = parseFloat(parts[1]);
-        if (!isNaN(lat) && !isNaN(lon)) {
-          return { lat, lon };
-        }
-      }
-    }
-    return undefined;
-  }
-
-  private parseTransparency(
-    transp: unknown
-  ): 'OPAQUE' | 'TRANSPARENT' | undefined {
-    if (!transp) return undefined;
-    const transpStr = (
-      typeof transp === 'string' ? transp : (transp as any)?.toString() || ''
-    ).toUpperCase();
-    if (['OPAQUE', 'TRANSPARENT'].includes(transpStr)) {
-      return transpStr as 'OPAQUE' | 'TRANSPARENT';
-    }
-    return undefined;
-  }
-
-  private parseAttachments(attach: unknown): string[] | undefined {
-    if (!attach) return undefined;
-    if (Array.isArray(attach)) {
-      return attach
-        .map(a =>
-          typeof a === 'string'
-            ? a
-            : (a as any)?.val || (a as any)?.toString() || ''
-        )
-        .filter(Boolean);
-    }
-    const single =
-      typeof attach === 'string'
-        ? attach
-        : (attach as any)?.val || (attach as any)?.toString() || '';
-    return single ? [single] : undefined;
-  }
 
   private buildTimeRangeFilter(startDate?: Date, endDate?: Date): string {
     if (!startDate && !endDate) return '';

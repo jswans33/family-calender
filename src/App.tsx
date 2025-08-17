@@ -535,7 +535,10 @@ const App: React.FC = () => {
         {/* Event Creation/Edit Modal */}
         <EventModal
           isOpen={isEventModalOpen}
-          onClose={() => setIsEventModalOpen(false)}
+          onClose={() => {
+            setIsEventModalOpen(false);
+            setEventModalData(null); // Clear modal data when closing
+          }}
           onSave={eventModalData?.event ? handleUpdateEvent : handleCreateEvent}
           initialData={eventModalData || undefined}
           isEditing={!!eventModalData?.event}

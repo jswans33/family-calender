@@ -1,19 +1,18 @@
-import { SQLiteRepository } from '../repositories/SQLiteRepository.js';
 import { CalendarEvent } from '../types/Calendar.js';
+import { VacationDataService } from './VacationDataService.js';
 
 /**
  * VacationService - Handles vacation business logic (MODULAR)
  *
  * Follows clean architecture principles:
  * - One responsibility: vacation hours calculation and management
- * - No data access logic (delegates to repository)
+ * - No data access logic (delegates to data service)
  * - Pure business rules and validation
  * - Simple, testable functions
+ * - Proper data flow: Service → DataService → Repository
  */
-// CODE_SMELL: Rule #3 Simple Data Flow - Service directly accessing repository
-// Fix: Service should use another service layer, not repository directly
 export class VacationService {
-  constructor(private sqliteRepository: SQLiteRepository) {}
+  constructor(private vacationDataService: VacationDataService) {}
 
   /**
    * Calculate vacation hours to deduct for an event
@@ -69,10 +68,10 @@ export class VacationService {
 
     // Get current balance and deduct hours
     const currentBalance =
-      await this.sqliteRepository.getVacationBalance(userName);
+      await this.vacationDataService.getVacationBalance(userName);
     const newBalance = Math.max(0, currentBalance - hoursToDeduct);
 
-    await this.sqliteRepository.updateVacationBalance(userName, newBalance);
+    await this.vacationDataService.updateVacationBalance(userName, newBalance);
   }
 
   /**
@@ -93,10 +92,10 @@ export class VacationService {
 
     // Get current balance and restore hours
     const currentBalance =
-      await this.sqliteRepository.getVacationBalance(userName);
+      await this.vacationDataService.getVacationBalance(userName);
     const newBalance = currentBalance + hoursToRestore;
 
-    await this.sqliteRepository.updateVacationBalance(userName, newBalance);
+    await this.vacationDataService.updateVacationBalance(userName, newBalance);
   }
 
   /**
@@ -105,7 +104,7 @@ export class VacationService {
   async getVacationBalances(): Promise<
     Array<{ user_name: string; balance_hours: number; last_updated: string }>
   > {
-    return await this.sqliteRepository.getVacationBalances();
+    return await this.vacationDataService.getVacationBalances();
   }
 
   /**
