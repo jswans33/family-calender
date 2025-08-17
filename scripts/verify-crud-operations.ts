@@ -2,6 +2,7 @@ import { CalDAVMultiCalendarRepository } from './server-src/repositories/CalDAVM
 import { CalDAVConfig } from './server-src/config/CalDAVConfig.js';
 import fs from 'fs';
 import path from 'path';
+import { process } from 'process';
 
 async function verifyCRUDOperations() {
   console.log('🔍 CRUD OPERATIONS VERIFICATION SCRIPT');

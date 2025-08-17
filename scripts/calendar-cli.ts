@@ -33,6 +33,7 @@
 
 import { Command } from 'commander';
 import { CalDAVMultiCalendarRepository } from '../server-src/repositories/CalDAVMultiCalendarRepository.js';
+import { Buffer } from 'buffer';
 import { CalDAVConfig } from '../server-src/config/CalDAVConfig.js';
 
 const program = new Command();
@@ -103,8 +104,7 @@ program
           console.log(
             `✅ SUCCESS: Event "${title}" saved to local database with ID: ${event.id}`
           );
-        } catch (error) {
-          console.error(`❌ ERROR saving to database:`, error);
+        } catch {
         }
       } else {
         // Use same HTTP API endpoint as frontend
@@ -135,8 +135,7 @@ program
           console.error(`❌ ERROR: Failed to reach server:`, fetchError);
         }
       }
-    } catch (error) {
-      console.error(`❌ ERROR creating event in ${calendar}:`, error);
+    } catch {
     }
   });
 
@@ -175,8 +174,7 @@ program
             `❌ FAILED: Could not create event in ${calendar} calendar`
           );
         }
-      } catch (error) {
-        console.error(`❌ ERROR creating in ${calendar}:`, error);
+      } catch {
       }
 
       console.log(''); // spacing
@@ -217,8 +215,7 @@ program
           `\n📊 Total events across all calendars: ${allEvents.length}`
         );
       }
-    } catch (error) {
-      console.error('❌ ERROR reading calendars:', error);
+    } catch {
     }
   });
 
@@ -261,8 +258,7 @@ program
       } else {
         console.log(`❌ FAILED: Could not update event in ${options.calendar}`);
       }
-    } catch (error) {
-      console.error(`❌ ERROR updating event:`, error);
+    } catch {
     }
   });
 
@@ -308,8 +304,7 @@ program
       } else {
         console.log(`❌ FAILED: Delete returned status ${response.status}`);
       }
-    } catch (error) {
-      console.error(`❌ ERROR deleting event:`, error);
+    } catch {
     }
   });
 
@@ -346,7 +341,7 @@ program
         console.log(
           `${success ? '✅' : '❌'} CREATE ${calendar}: ${success ? 'SUCCESS' : 'FAILED'}`
         );
-      } catch (error) {
+      } catch {
         console.log(`❌ CREATE ${calendar}: ERROR`);
       }
     }
@@ -360,7 +355,7 @@ program
       allCalendars.forEach(cal => {
         console.log(`✅ READ ${cal.name}: ${cal.count} events found`);
       });
-    } catch (error) {
+    } catch {
       console.log('❌ READ: ERROR');
     }
 
@@ -387,7 +382,7 @@ program
         console.log(
           `${success ? '✅' : '❌'} UPDATE ${calendar}: ${success ? 'SUCCESS' : 'FAILED'}`
         );
-      } catch (error) {
+      } catch {
         console.log(`❌ UPDATE ${calendar}: ERROR`);
       }
     }
@@ -416,7 +411,7 @@ program
         console.log(
           `${success ? '✅' : '❌'} DELETE ${calendar}: ${success ? 'SUCCESS' : 'FAILED'}`
         );
-      } catch (error) {
+      } catch {
         console.log(`❌ DELETE ${calendar}: ERROR`);
       }
     }
@@ -440,8 +435,7 @@ program
         console.log(`   Path: ${cal.path}`);
         console.log('');
       });
-    } catch (error) {
-      console.error('❌ ERROR listing calendars:', error);
+    } catch {
     }
   });
 

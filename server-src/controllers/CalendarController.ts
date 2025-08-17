@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { ICalendarService } from '../types/Calendar.js';
+import { Buffer } from 'buffer';
 
 export class CalendarController {
   private calendarService: ICalendarService;
@@ -10,18 +11,11 @@ export class CalendarController {
 
   async getEvents(req: Request, res: Response): Promise<void> {
     try {
-      console.log('Fetching events from Apple Calendar...');
-
-      const { start, end, calendar } = req.query;
-      const startDate = start ? new Date(start as string) : undefined;
-      const endDate = end ? new Date(end as string) : undefined;
+      const { calendar } = req.query;
       const calendarFilter = calendar as string | undefined;
 
       const events =
         await this.calendarService.getEventsWithMetadata(calendarFilter);
-      console.log(
-        `Found ${events.length} events${calendarFilter ? ` in ${calendarFilter} calendar` : ''}`
-      );
       res.json(events);
     } catch (error) {
       console.error('Error in CalendarController.getEvents:', error);
@@ -34,9 +28,7 @@ export class CalendarController {
 
   async getTodaysEvents(req: Request, res: Response): Promise<void> {
     try {
-      console.log("Fetching today's events...");
       const events = await this.calendarService.getTodaysEvents();
-      console.log(`Found ${events.length} events today`);
       res.json(events);
     } catch (error) {
       console.error('Error in CalendarController.getTodaysEvents:', error);
@@ -49,9 +41,7 @@ export class CalendarController {
 
   async getThisWeeksEvents(req: Request, res: Response): Promise<void> {
     try {
-      console.log("Fetching this week's events...");
       const events = await this.calendarService.getThisWeeksEvents();
-      console.log(`Found ${events.length} events this week`);
       res.json(events);
     } catch (error) {
       console.error('Error in CalendarController.getThisWeeksEvents:', error);
@@ -64,9 +54,7 @@ export class CalendarController {
 
   async getThisMonthsEvents(req: Request, res: Response): Promise<void> {
     try {
-      console.log("Fetching this month's events...");
       const events = await this.calendarService.getThisMonthsEvents();
-      console.log(`Found ${events.length} events this month`);
       res.json(events);
     } catch (error) {
       console.error('Error in CalendarController.getThisMonthsEvents:', error);
@@ -95,8 +83,6 @@ export class CalendarController {
       const eventId = Buffer.from(paddedBase64, 'base64').toString('utf-8');
       const eventData = req.body;
 
-      console.log(`Updating event ${eventId}...`);
-
       // Ensure the event ID matches the URL parameter
       if (eventData.id && eventData.id !== eventId) {
         res.status(400).json({
@@ -120,10 +106,8 @@ export class CalendarController {
       const success = await this.calendarService.updateEvent(eventData);
 
       if (success) {
-        console.log(`Event ${eventId} updated successfully`);
         res.json({ success: true, message: 'Event updated successfully' });
       } else {
-        console.log(`Failed to update event ${eventId}`);
         res.status(500).json({
           error: 'Failed to update event',
           message: 'CalDAV update operation failed',
@@ -157,11 +141,8 @@ export class CalendarController {
         base64Id + '='.repeat((4 - (base64Id.length % 4)) % 4);
       const eventId = Buffer.from(paddedBase64, 'base64').toString('utf-8');
 
-      console.log(`Deleting event ${eventId}...`);
-
       // Type check for DatabaseCalendarService
-      const service = this.calendarService as any;
-      if (typeof service.deleteEvent !== 'function') {
+      if (typeof this.calendarService.deleteEvent !== 'function') {
         res.status(501).json({
           error: 'Event deletion not supported',
           message: 'This service does not support event deletion',
@@ -169,10 +150,9 @@ export class CalendarController {
         return;
       }
 
-      const success = await service.deleteEvent(eventId);
+      const success = await this.calendarService.deleteEvent(eventId);
 
       if (success) {
-        console.log(`Event ${eventId} deleted successfully`);
         res.json({ success: true, message: 'Event deleted successfully' });
       } else {
         res.status(404).json({
@@ -199,13 +179,8 @@ export class CalendarController {
         eventData.id = `local-${Date.now()}-${Math.random().toString(36).substring(7)}`;
       }
 
-      console.log(
-        `Creating event ${eventData.id} in ${calendarName} calendar...`
-      );
-
       // Type check for DatabaseCalendarService
-      const service = this.calendarService as any;
-      if (typeof service.createEventInCalendar !== 'function') {
+      if (typeof this.calendarService.createEventInCalendar !== 'function') {
         res.status(501).json({
           error: 'Multi-calendar event creation not supported',
           message:
@@ -214,13 +189,12 @@ export class CalendarController {
         return;
       }
 
-      const success = await service.createEventInCalendar(
+      const success = await this.calendarService.createEventInCalendar(
         eventData,
         calendarName
       );
 
       if (success) {
-        console.log(`Event ${eventData.id} created successfully`);
         res.status(201).json({
           success: true,
           message: 'Event created successfully',

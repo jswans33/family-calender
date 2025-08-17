@@ -46,7 +46,7 @@ const EventAccordion: React.FC<EventAccordionProps> = ({
 
   const formatEventTime = (event: CalendarEvent) => {
     // Extract just the date part for safe parsing
-    const datePart = event.date.split('T')[0];
+    const datePart = event.date.split('T')[0] || event.date;
     const eventDate = CalendarService.parseLocal(datePart);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -88,7 +88,16 @@ const EventAccordion: React.FC<EventAccordionProps> = ({
             {/* Calendar Header */}
             <button
               onClick={() => toggleCalendar(group.calendarName)}
-              className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 flex items-center justify-between transition-colors"
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  toggleCalendar(group.calendarName);
+                }
+              }}
+              className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset flex items-center justify-between transition-colors"
+              aria-expanded={isExpanded}
+              aria-controls={`calendar-${group.calendarName}-events`}
+              aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${getCalendarLabel(group.calendarName)} calendar with ${group.events.length} events`}
             >
               <div className="flex items-center gap-3">
                 <div
@@ -128,16 +137,24 @@ const EventAccordion: React.FC<EventAccordionProps> = ({
                   group.events.map(event => {
                     const { dateLabel, time } = formatEventTime(event);
                     const isSelected = selectedEvent?.id === event.id;
-
                     return (
                       <div
                         key={event.id}
                         onClick={() => onEventClick(event)}
-                        className={`px-4 py-3 cursor-pointer transition-colors ${
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            onEventClick(event);
+                          }
+                        }}
+                        className={`px-4 py-3 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset ${
                           isSelected
                             ? 'bg-blue-50 border-l-4 border-blue-500'
                             : 'hover:bg-gray-50 border-l-4 border-transparent'
                         }`}
+                        tabIndex={0}
+                        role="button"
+                        aria-label={`Event: ${event.title} on ${dateLabel} at ${time}`}
                       >
                         <div className="font-medium text-gray-900 text-sm mb-1">
                           {event.title}

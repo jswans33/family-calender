@@ -37,7 +37,7 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
     hour <= TIME_GRID_CONFIG.END_HOUR;
     hour++
   ) {
-    const hour12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+    const hour12 = hour > 12 ? hour - 12 : hour;
     const period = hour < 12 ? 'AM' : 'PM';
     const time24 = `${hour.toString().padStart(2, '0')}:00`;
 
@@ -51,7 +51,6 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
   // Helper function to format date
   const formatDate = (date: Date): string => {
     if (isNaN(date.getTime())) {
-      console.warn('Invalid date passed to formatDate:', date);
       return '';
     }
     return date.toISOString().split('T')[0] || '';
@@ -70,7 +69,7 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
       !event.time;
 
     if (event.dtend) {
-      const datePart = event.date.split('T')[0];
+      const datePart = event.date.split('T')[0] || event.date;
       const startDate = CalendarService.parseLocal(datePart);
       const endDate = new Date(event.dtend);
       const daysDiff = Math.floor(
@@ -104,7 +103,7 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
       }
     } else {
       // Single day event
-      const datePart = event.date.split('T')[0];
+      const datePart = event.date.split('T')[0] || event.date;
       const startDate = CalendarService.parseLocal(datePart);
       const startKey = formatDate(startDate);
       if (!eventsByDate.has(startKey)) {
@@ -160,13 +159,15 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
           <div className="absolute top-0 left-0 right-0 z-10 p-2">
             <div className="grid grid-cols-7 gap-px">
               {dates.map((date, dateIndex) => {
-                const dateKey = formatDate(date);
+                const _dateKey = formatDate(date);
                 const dayMultiEvents = multiDayEvents.filter(event => {
                   const startDate = CalendarService.parseLocal(
-                    event.date.split('T')[0]
+                    event.date.split('T')[0] || event.date
                   );
                   const endDate = event.dtend
-                    ? CalendarService.parseLocal(event.dtend.split('T')[0])
+                    ? CalendarService.parseLocal(
+                        event.dtend.split('T')[0] || event.dtend
+                      )
                     : startDate;
                   return date >= startDate && date <= endDate;
                 });
@@ -179,6 +180,15 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
                         className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-800 truncate cursor-pointer hover:bg-blue-200"
                         title={event.title}
                         onClick={() => onEventClick?.(event)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            onEventClick?.(event);
+                          }
+                        }}
+                        tabIndex={0}
+                        role="button"
+                        aria-label={`Event: ${event.title}`}
                       >
                         {event.title}
                       </div>
@@ -230,7 +240,7 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
                   {timeSlots.map((slot, slotIndex) => (
                     <div
                       key={slot.hour}
-                      className={`h-16 border-b relative cursor-pointer transition-colors ${
+                      className={`h-16 border-b relative cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset ${
                         // Highlight 7am-7pm business hours
                         slot.hour >= 7 && slot.hour <= 19
                           ? isWeekend
@@ -241,6 +251,15 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
                             : 'border-gray-100 bg-gray-25 hover:bg-gray-50'
                       }`}
                       onClick={() => onTimeSlotClick?.(dateKey, slot.time24)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onTimeSlotClick?.(dateKey, slot.time24);
+                        }
+                      }}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Create event at ${slot.label} on ${date.toLocaleDateString()}`}
                       title={`Create event at ${slot.label}`}
                     />
                   ))}
@@ -249,7 +268,7 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
                   <TimeGridEvents
                     events={dayEvents}
                     getTimePosition={getTimePosition}
-                    onEventClick={onEventClick}
+                    {...(onEventClick && { onEventClick })}
                   />
                 </div>
               </div>
@@ -303,7 +322,7 @@ const TimeGridEvents: React.FC<{
           return (
             <div
               key={event.id}
-              className={`absolute px-2 py-1 text-xs rounded cursor-pointer transition-colors border-l-4 ${
+              className={`absolute px-2 py-1 text-xs rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset transition-colors border-l-4 ${
                 isAllDay ? 'h-6' : 'h-12'
               }`}
               style={{
@@ -324,7 +343,15 @@ const TimeGridEvents: React.FC<{
                 e.currentTarget.style.backgroundColor = colorShades.lightBg;
               }}
               onClick={() => onEventClick?.(event)}
-              title={`${event.time || 'All day'} - ${event.title}${event.calendar_name ? ` (${event.calendar_name})` : ''}`}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onEventClick?.(event);
+                }
+              }}
+              tabIndex={0}
+              role="button"
+              aria-label={`${event.time || 'All day'} - ${event.title}${event.calendar_name ? ` (${event.calendar_name})` : ''}`}
             >
               <div className="font-medium truncate">
                 {event.time && <span className="text-xs">{event.time} </span>}

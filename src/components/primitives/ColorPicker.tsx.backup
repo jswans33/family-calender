@@ -38,11 +38,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ calendarName, onClose }) => {
       role="dialog"
       aria-modal="true"
       aria-labelledby="color-picker-title"
-      onClick={e => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
+      tabIndex={-1}
       onKeyDown={e => {
         if (e.key === 'Escape') {
           onClose();
@@ -79,9 +75,9 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ calendarName, onClose }) => {
         </div>
 
         <div className="mb-4">
-          <span className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             Current Color
-          </span>
+          </label>
           <div className="flex items-center gap-3">
             <div
               className="w-8 h-8 rounded-full border-2 border-gray-300"
@@ -108,9 +104,9 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ calendarName, onClose }) => {
         </div>
 
         <div className="mb-6">
-          <span className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             Preset Colors
-          </span>
+          </label>
           <div className="grid grid-cols-6 gap-2">
             {PRESET_COLORS.map(color => (
               <button

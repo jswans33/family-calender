@@ -111,7 +111,7 @@ export const DayCell: React.FC<DayCellProps> = ({
           events={shownEvents}
           isPast={isPast}
           isToday={isToday}
-          {...(onEventClick && { onEventClick })}
+          onEventClick={onEventClick}
         />
 
         {/* Overflow Indicator */}
@@ -144,7 +144,7 @@ const EventList: React.FC<{
         return (
           <div
             key={event.id}
-            className="text-xs px-2 py-1 rounded truncate transition-colors border-l-4 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
+            className="text-xs px-2 py-1 rounded truncate transition-colors border-l-4 cursor-pointer"
             style={{
               backgroundColor:
                 isPast && !isToday ? '#f3f4f6' : colorShades.lightBg,
@@ -166,16 +166,6 @@ const EventList: React.FC<{
               onEventClick?.(event);
             }}
             title={`${event.time ? (CalendarService.formatTimeTo12h(event.time) || event.time) + ' ' : ''}${event.title}${event.calendar_name ? ` (${event.calendar_name})` : ''}`}
-            onKeyDown={e => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                e.stopPropagation();
-                onEventClick?.(event);
-              }
-            }}
-            tabIndex={0}
-            role="button"
-            aria-label={`${event.time ? (CalendarService.formatTimeTo12h(event.time) || event.time) + ' ' : ''}${event.title}${event.calendar_name ? ` (${event.calendar_name})` : ''}`}
           >
             {event.time && (
               <span className="font-medium">

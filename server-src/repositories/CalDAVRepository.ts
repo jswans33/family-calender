@@ -3,6 +3,31 @@ import ical from 'node-ical';
 import { CalendarEvent, CalDAVCredentials } from '../types/Calendar.js';
 import { iCalendarGenerator } from '../utils/iCalendarGenerator.js';
 
+// Type interfaces for ical parsing
+interface ICalEventData {
+  uid?: string;
+  summary?: string;
+  description?: string;
+  location?: string;
+  start?: Date | { toISOString?: () => string; tz?: string };
+  end?: Date | { toISOString?: () => string };
+  organizer?: unknown;
+  attendee?: unknown;
+  categories?: unknown;
+  priority?: number;
+  status?: unknown;
+  class?: unknown;
+  rrule?: { toString?: () => string };
+  created?: Date | { toISOString?: () => string };
+  lastmodified?: Date | { toISOString?: () => string };
+  sequence?: number;
+  url?: string;
+  geo?: unknown;
+  transp?: unknown;
+  attach?: unknown;
+}
+
+
 export class CalDAVRepository {
   private credentials: CalDAVCredentials;
 
@@ -81,18 +106,18 @@ export class CalDAVRepository {
             const parsedCal = ical.parseICS(icalContent);
 
             for (const k in parsedCal) {
-              const event = parsedCal[k];
+              const event = parsedCal[k] as ICalEventData & { type?: string };
               if (event && event.type === 'VEVENT') {
-                const startDate = (event as any).start
-                  ? new Date((event as any).start)
+                const startDate = event.start
+                  ? new Date(event.start)
                   : new Date();
-                const endDate = (event as any).end
-                  ? new Date((event as any).end)
+                const endDate = event.end
+                  ? new Date(event.end)
                   : null;
 
                 const calendarEvent: CalendarEvent = {
-                  id: (event as any).uid || k,
-                  title: (event as any).summary || 'No Title',
+                  id: event.uid || k,
+                  title: event.summary || 'No Title',
                   date: startDate.toISOString(),
                   time: startDate.toLocaleTimeString([], {
                     hour: '2-digit',
@@ -100,29 +125,29 @@ export class CalDAVRepository {
                   }),
                 };
 
-                if ((event as any).description)
-                  calendarEvent.description = (event as any).description;
-                if ((event as any).location)
-                  calendarEvent.location = (event as any).location;
+                if (event.description)
+                  calendarEvent.description = event.description;
+                if (event.location)
+                  calendarEvent.location = event.location;
 
-                const organizer = this.parseOrganizer((event as any).organizer);
+                const organizer = this.parseOrganizer(event.organizer);
                 if (organizer) calendarEvent.organizer = organizer;
 
-                const attendees = this.parseAttendees((event as any).attendee);
+                const attendees = this.parseAttendees(event.attendee);
                 if (attendees) calendarEvent.attendees = attendees;
 
                 const categories = this.parseCategories(
-                  (event as any).categories
+                  event.categories
                 );
                 if (categories) calendarEvent.categories = categories;
 
-                if ((event as any).priority)
-                  calendarEvent.priority = (event as any).priority;
+                if (event.priority)
+                  calendarEvent.priority = event.priority;
 
-                const status = this.parseStatus((event as any).status);
+                const status = this.parseStatus(event.status);
                 if (status) calendarEvent.status = status;
 
-                const visibility = this.parseClass((event as any).class);
+                const visibility = this.parseClass(event.class);
                 if (visibility) calendarEvent.visibility = visibility;
 
                 if (endDate) calendarEvent.dtend = endDate.toISOString();
@@ -130,35 +155,35 @@ export class CalDAVRepository {
                 const duration = this.calculateDuration(startDate, endDate);
                 if (duration) calendarEvent.duration = duration;
 
-                if ((event as any).rrule)
-                  calendarEvent.rrule = (event as any).rrule.toString();
-                if ((event as any).created)
+                if (event.rrule)
+                  calendarEvent.rrule = event.rrule.toString();
+                if (event.created)
                   calendarEvent.created = new Date(
-                    (event as any).created
+                    event.created
                   ).toISOString();
-                if ((event as any).lastmodified)
+                if (event.lastmodified)
                   calendarEvent.lastModified = new Date(
-                    (event as any).lastmodified
+                    event.lastmodified
                   ).toISOString();
-                if ((event as any).sequence)
-                  calendarEvent.sequence = (event as any).sequence;
-                if ((event as any).url) calendarEvent.url = (event as any).url;
+                if (event.sequence)
+                  calendarEvent.sequence = event.sequence;
+                if (event.url) calendarEvent.url = event.url;
 
-                const geo = this.parseGeo((event as any).geo);
+                const geo = this.parseGeo(event.geo);
                 if (geo) calendarEvent.geo = geo;
 
                 const transparency = this.parseTransparency(
-                  (event as any).transp
+                  event.transp
                 );
                 if (transparency) calendarEvent.transparency = transparency;
 
                 const attachments = this.parseAttachments(
-                  (event as any).attach
+                  event.attach
                 );
                 if (attachments) calendarEvent.attachments = attachments;
 
-                if ((event as any).start && (event as any).start.tz)
-                  calendarEvent.timezone = (event as any).start.tz;
+                if (event.start && event.start.tz)
+                  calendarEvent.timezone = event.start.tz;
 
                 events.push(calendarEvent);
               }
@@ -175,27 +200,27 @@ export class CalDAVRepository {
     return events;
   }
 
-  private parseOrganizer(organizer: any): string | undefined {
+  private parseOrganizer(organizer: unknown): string | undefined {
     if (typeof organizer === 'string') return organizer;
-    if (organizer && organizer.val) return organizer.val;
+    if (organizer && typeof organizer === "object" && organizer !== null && "val" in organizer && typeof (organizer as Record<string, unknown>).val === "string") return (organizer as Record<string, unknown>).val as string;
     return undefined;
   }
 
-  private parseAttendees(attendee: any): string[] | undefined {
+  private parseAttendees(attendee: unknown): string[] | undefined {
     if (!attendee) return undefined;
     if (Array.isArray(attendee)) {
       return attendee
-        .map(a => (typeof a === 'string' ? a : a.val || a.toString()))
+        .map(a => (typeof a === 'string' ? a : (a as any)?.val || (a as any)?.toString() || ""))
         .filter(Boolean);
     }
     const single =
       typeof attendee === 'string'
         ? attendee
-        : attendee.val || attendee.toString();
+        : (attendee as any)?.val || (attendee as any)?.toString() || "";
     return single ? [single] : undefined;
   }
 
-  private parseCategories(categories: any): string[] | undefined {
+  private parseCategories(categories: unknown): string[] | undefined {
     if (!categories) return undefined;
     if (Array.isArray(categories)) return categories.filter(Boolean);
     if (typeof categories === 'string')
@@ -207,11 +232,11 @@ export class CalDAVRepository {
   }
 
   private parseStatus(
-    status: any
+    status: unknown
   ): 'CONFIRMED' | 'TENTATIVE' | 'CANCELLED' | undefined {
     if (!status) return undefined;
     const statusStr = (
-      typeof status === 'string' ? status : status.toString()
+      typeof status === 'string' ? status : (status as any)?.toString() || ""
     ).toUpperCase();
     if (['CONFIRMED', 'TENTATIVE', 'CANCELLED'].includes(statusStr)) {
       return statusStr as 'CONFIRMED' | 'TENTATIVE' | 'CANCELLED';
@@ -220,11 +245,11 @@ export class CalDAVRepository {
   }
 
   private parseClass(
-    classField: any
+    classField: unknown
   ): 'PUBLIC' | 'PRIVATE' | 'CONFIDENTIAL' | undefined {
     if (!classField) return undefined;
     const classStr = (
-      typeof classField === 'string' ? classField : classField.toString()
+      typeof classField === 'string' ? classField : (classField as any)?.toString() || ""
     ).toUpperCase();
     if (['PUBLIC', 'PRIVATE', 'CONFIDENTIAL'].includes(classStr)) {
       return classStr as 'PUBLIC' | 'PRIVATE' | 'CONFIDENTIAL';
@@ -240,10 +265,10 @@ export class CalDAVRepository {
     return `PT${hours}H${minutes}M`;
   }
 
-  private parseGeo(geo: any): { lat: number; lon: number } | undefined {
+  private parseGeo(geo: unknown): { lat: number; lon: number } | undefined {
     if (!geo) return undefined;
-    if (geo.lat && geo.lon)
-      return { lat: parseFloat(geo.lat), lon: parseFloat(geo.lon) };
+    if ((geo as any)?.lat && (geo as any)?.lon)
+      return { lat: parseFloat((geo as any)?.lat), lon: parseFloat((geo as any)?.lon) };
     if (typeof geo === 'string') {
       const parts = geo.split(',');
       if (parts.length === 2 && parts[0] && parts[1]) {
@@ -257,10 +282,10 @@ export class CalDAVRepository {
     return undefined;
   }
 
-  private parseTransparency(transp: any): 'OPAQUE' | 'TRANSPARENT' | undefined {
+  private parseTransparency(transp: unknown): 'OPAQUE' | 'TRANSPARENT' | undefined {
     if (!transp) return undefined;
     const transpStr = (
-      typeof transp === 'string' ? transp : transp.toString()
+      typeof transp === 'string' ? transp : (transp as any)?.toString() || ""
     ).toUpperCase();
     if (['OPAQUE', 'TRANSPARENT'].includes(transpStr)) {
       return transpStr as 'OPAQUE' | 'TRANSPARENT';
@@ -268,15 +293,15 @@ export class CalDAVRepository {
     return undefined;
   }
 
-  private parseAttachments(attach: any): string[] | undefined {
+  private parseAttachments(attach: unknown): string[] | undefined {
     if (!attach) return undefined;
     if (Array.isArray(attach)) {
       return attach
-        .map(a => (typeof a === 'string' ? a : a.val || a.toString()))
+        .map(a => (typeof a === 'string' ? a : (a as any)?.val || (a as any)?.toString() || ""))
         .filter(Boolean);
     }
     const single =
-      typeof attach === 'string' ? attach : attach.val || attach.toString();
+      typeof attach === 'string' ? attach : (attach as any)?.val || (attach as any)?.toString() || "";
     return single ? [single] : undefined;
   }
 
@@ -307,15 +332,11 @@ export class CalDAVRepository {
 
       // Generate iCalendar data for the updated event
       const iCalData = iCalendarGenerator.generateVCalendar(event);
-      console.log('Generated iCalendar data:', iCalData);
 
       // Apple CalDAV event URL format: /path/event-uid.ics
       // URL-encode the event ID to handle special characters
       const encodedEventId = encodeURIComponent(event.id);
       const eventUrl = `${this.credentials.path}${encodedEventId}.ics`;
-      console.log('Raw Event ID for update:', event.id);
-      console.log('Encoded Event ID for update:', encodedEventId);
-      console.log('Attempting to update event at URL:', eventUrl);
 
       const options = {
         hostname: this.credentials.hostname,
@@ -331,34 +352,21 @@ export class CalDAVRepository {
       };
 
       // Log the full request details
-      console.log('=== CalDAV PUT Request ===');
-      console.log(
-        'URL:',
-        `https://${options.hostname}:${options.port}${options.path}`
-      );
-      console.log('Method:', options.method);
-      console.log('Headers:', options.headers);
-      console.log('Body Length:', Buffer.byteLength(iCalData));
-      console.log('=========================');
 
       const req = https.request(options, res => {
         let data = '';
 
         // Log response headers
-        console.log('Response Status:', res.statusCode, res.statusMessage);
-        console.log('Response Headers:', res.headers);
 
         res.on('data', chunk => (data += chunk));
         res.on('end', () => {
           // Log full response body
-          console.log('Response Body:', data);
 
           if (
             res.statusCode === 200 ||
             res.statusCode === 201 ||
             res.statusCode === 204
           ) {
-            console.log(`Event ${event.id} updated successfully`);
             resolve(true);
           } else {
             console.error(
@@ -395,9 +403,6 @@ export class CalDAVRepository {
       // URL-encode the event ID to handle special characters like $ ( ) + @
       const encodedEventId = encodeURIComponent(eventId);
       const eventUrl = `${this.credentials.path}${encodedEventId}.ics`;
-      console.log('Raw Event ID:', eventId);
-      console.log('Encoded Event ID:', encodedEventId);
-      console.log('Attempting to delete event at URL:', eventUrl);
 
       const options = {
         hostname: this.credentials.hostname,
@@ -410,27 +415,12 @@ export class CalDAVRepository {
         },
       };
 
-      console.log('=== CalDAV DELETE Request ===');
-      console.log(
-        'URL:',
-        `https://${options.hostname}:${options.port}${options.path}`
-      );
-      console.log('Method:', options.method);
-      console.log('=============================');
 
       const req = https.request(options, res => {
         let data = '';
 
-        console.log(
-          'Delete Response Status:',
-          res.statusCode,
-          res.statusMessage
-        );
-        console.log('Delete Response Headers:', res.headers);
-
         res.on('data', chunk => (data += chunk));
         res.on('end', () => {
-          console.log('Delete Response Body:', data);
 
           if (
             res.statusCode === 200 ||
@@ -438,9 +428,6 @@ export class CalDAVRepository {
             res.statusCode === 404
           ) {
             // 404 is OK - event might already be deleted
-            console.log(
-              `Event ${eventId} deleted successfully (or already deleted)`
-            );
             resolve(true);
           } else {
             console.error(
@@ -473,16 +460,10 @@ export class CalDAVRepository {
 
       // Generate iCalendar data for the new event
       const iCalData = iCalendarGenerator.generateVCalendar(event);
-      console.log('=== Generated iCalendar data ===');
-      console.log(iCalData);
-      console.log('=== End iCalendar data ===');
 
       // Use event UID as filename for consistent deletion
       const filename = `${encodeURIComponent(event.id)}.ics`;
       const eventUrl = `${this.credentials.path}${filename}`;
-      console.log('Raw Event ID for creation:', event.id);
-      console.log('Filename for creation:', filename);
-      console.log('Creating event at URL:', eventUrl);
 
       const options = {
         hostname: this.credentials.hostname,
@@ -498,36 +479,18 @@ export class CalDAVRepository {
         },
       };
 
-      console.log('=== CalDAV CREATE Request ===');
-      console.log(
-        'URL:',
-        `https://${options.hostname}:${options.port}${options.path}`
-      );
-      console.log('Method:', options.method);
-      console.log('=============================');
 
       const req = https.request(options, res => {
         let data = '';
 
-        console.log(
-          '=== CalDAV CREATE Response ===',
-          '\nStatus:',
-          res.statusCode,
-          res.statusMessage,
-          '\nHeaders:',
-          JSON.stringify(res.headers, null, 2)
-        );
-
         res.on('data', chunk => (data += chunk));
         res.on('end', () => {
-          console.log('Response Body:', data);
 
           if (
             res.statusCode === 200 ||
             res.statusCode === 201 ||
             res.statusCode === 204
           ) {
-            console.log(`Event ${event.id} created successfully`);
             resolve(true);
           } else {
             console.error(

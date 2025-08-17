@@ -77,7 +77,7 @@ export const EventModal: React.FC<EventModalProps> = ({
         const calendarsData = await response.json();
         setCalendars(calendarsData);
       } catch (error) {
-        // Calendar fetch failed - fallback behavior
+        console.error('Failed to fetch calendars:', error);
       }
     };
 
@@ -173,11 +173,6 @@ export const EventModal: React.FC<EventModalProps> = ({
       aria-modal="true"
       aria-labelledby="modal-title"
       tabIndex={-1}
-      onClick={e => {
-        if (e.target === e.currentTarget) {
-          handleClose();
-        }
-      }}
       onKeyDown={e => {
         if (e.key === 'Escape') {
           handleClose();

@@ -48,6 +48,15 @@ export const MultiDayEventBar: React.FC<MultiDayEventBarProps> = ({
         marginTop: `${34 + bandOffset}px`, // Clear date numbers + band stacking
       }}
       onClick={handleClick}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick?.(event);
+        }
+      }}
+      tabIndex={0}
+      role="button"
+      aria-label={`${event.title} from ${event.date} to ${event.dtend}`}
       title={`${event.title} (${event.date} - ${event.dtend})`}
     >
       <span className="flex items-center gap-1">

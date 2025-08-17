@@ -75,7 +75,7 @@ app.delete('/events/:id', async (req, res) => {
         // Don't fail the response since the event was deleted successfully
       }
     }
-  } catch (error) {
+  } catch {
     // Fallback to controller if our enhancement fails
     await calendarController.deleteEvent(req, res);
   }
@@ -162,14 +162,11 @@ app.post('/admin/sync', async (req, res) => {
 
 // Graceful shutdown
 process.on('SIGINT', () => {
-  console.log('Shutting down gracefully...');
   sqliteRepository.close();
   process.exit(0);
 });
 
 // Start the Express server
 app.listen(port, () => {
-  console.log(
-    `TypeScript CalDAV server with SQLite cache listening at http://localhost:${port}`
-  );
+  console.log(`Server is running on port ${port}`);
 });

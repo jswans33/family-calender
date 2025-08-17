@@ -1,6 +1,7 @@
 import https from 'https';
 import ical from 'node-ical';
 import fs from 'fs';
+import { Buffer } from 'buffer';
 import path from 'path';
 import { CalendarEvent, CalDAVCredentials } from '../types/Calendar.js';
 import { iCalendarGenerator } from '../utils/iCalendarGenerator.js';
@@ -17,6 +18,39 @@ interface EventWithMetadata extends CalendarEvent {
   calendar_name: string;
   caldav_filename: string;
 }
+
+// Type interfaces for ical parsing
+interface ICalEventData {
+  uid?: string;
+  summary?: string;
+  description?: string;
+  location?: string;
+  start?: Date | { toISOString?: () => string };
+  end?: Date | { toISOString?: () => string };
+  organizer?: unknown;
+  attendee?: unknown;
+  categories?: unknown;
+  priority?: number;
+  status?: unknown;
+  class?: unknown;
+  rrule?: { toString?: () => string };
+  created?: Date | { toISOString?: () => string };
+  lastmodified?: Date | { toISOString?: () => string };
+  sequence?: number;
+  url?: string;
+  geo?: unknown;
+  transp?: unknown;
+  attach?: unknown;
+  tz?: string;
+}
+
+interface ExportData {
+  exported_at: string;
+  total_events: number;
+  calendars: CalendarInfo[];
+  events: EventWithMetadata[];
+}
+
 
 export class CalDAVMultiCalendarRepository {
   private credentials: CalDAVCredentials;
@@ -58,16 +92,12 @@ export class CalDAVMultiCalendarRepository {
    * QUALITY CHECK: Discovers all available calendars and their event counts
    */
   async getAllCalendars(): Promise<CalendarInfo[]> {
-    console.log('🔍 Discovering all CalDAV calendars...');
 
     for (const calendar of this.calendars) {
       try {
         const xmlData = await this.fetchCalendarData(calendar.path);
         const events = this.parseCalendarEvents(xmlData);
         calendar.count = events.length;
-        console.log(
-          `✅ Calendar "${calendar.displayName}" (${calendar.name}): ${calendar.count} events`
-        );
       } catch (error) {
         console.error(`❌ Failed to fetch calendar "${calendar.name}":`, error);
         calendar.count = -1; // Indicates error
@@ -78,7 +108,6 @@ export class CalDAVMultiCalendarRepository {
       .filter(cal => cal.count >= 0)
       .reduce((sum, cal) => sum + cal.count, 0);
 
-    console.log(`📊 Total events across all calendars: ${totalEvents}`);
 
     return this.calendars;
   }
@@ -87,15 +116,11 @@ export class CalDAVMultiCalendarRepository {
    * QUALITY CHECK: Fetches all events from all calendars with metadata
    */
   async getAllEventsFromAllCalendars(): Promise<EventWithMetadata[]> {
-    console.log('📅 Fetching all events from all calendars...');
 
     const allEvents: EventWithMetadata[] = [];
 
     for (const calendar of this.calendars) {
       try {
-        console.log(
-          `🔄 Fetching events from ${calendar.displayName} calendar...`
-        );
         const xmlData = await this.fetchCalendarData(calendar.path);
         const eventsWithFilenames =
           this.parseCalendarEventsWithFilenames(xmlData);
@@ -110,10 +135,6 @@ export class CalDAVMultiCalendarRepository {
         );
 
         allEvents.push(...eventsWithMetadata);
-        console.log(
-          `✅ Fetched ${eventsWithMetadata.length} events from ${calendar.displayName}`
-        );
-
         // QUALITY CHECK: Save events to intermediate file
         await this.saveEventsToFile(calendar.name, eventsWithMetadata);
       } catch (error) {
@@ -124,7 +145,6 @@ export class CalDAVMultiCalendarRepository {
       }
     }
 
-    console.log(`📊 Total events fetched: ${allEvents.length}`);
 
     // QUALITY CHECK: Save all events to master file
     await this.saveAllEventsToFile(allEvents);
@@ -166,9 +186,6 @@ export class CalDAVMultiCalendarRepository {
     };
 
     fs.writeFileSync(filename, JSON.stringify(data, null, 2));
-    console.log(
-      `💾 Saved ${events.length} events from ${calendarName} to: ${filename}`
-    );
   }
 
   /**
@@ -204,9 +221,6 @@ export class CalDAVMultiCalendarRepository {
     };
 
     fs.writeFileSync(filename, JSON.stringify(data, null, 2));
-    console.log(
-      `💾 Saved ALL ${allEvents.length} events to master file: ${filename}`
-    );
 
     // QUALITY CHECK: Generate summary report
     this.generateSummaryReport(data);
@@ -215,56 +229,21 @@ export class CalDAVMultiCalendarRepository {
   /**
    * QUALITY CHECK: Generate summary report
    */
-  private generateSummaryReport(data: any): void {
-    console.log('\n📋 === CALDAV EXPORT SUMMARY REPORT ===');
-    console.log(`Export Time: ${data.exported_at}`);
-    console.log(`Total Events: ${data.total_events}`);
-    console.log('\nCalendar Breakdown:');
-
-    data.calendars.forEach((cal: any) => {
-      console.log(`  📅 ${cal.displayName}: ${cal.count} events`);
-    });
-
-    console.log('\n✅ Quality Checks:');
-
+  private generateSummaryReport(data: ExportData): void {
     // Check for missing metadata
     const eventsWithMissingData = data.events.filter(
-      (e: any) => !e.calendar_path || !e.calendar_name || !e.caldav_filename
+      (e: EventWithMetadata) => !e.calendar_path || !e.calendar_name || !e.caldav_filename
     );
 
-    if (eventsWithMissingData.length === 0) {
-      console.log(
-        '  ✅ All events have complete metadata (calendar_path, calendar_name, caldav_filename)'
-      );
-    } else {
-      console.log(
-        `  ❌ ${eventsWithMissingData.length} events missing metadata`
-      );
-    }
-
     // Check for duplicate IDs
-    const eventIds = data.events.map((e: any) => e.id);
+    const eventIds = data.events.map((e: EventWithMetadata) => e.id);
     const uniqueIds = new Set(eventIds);
 
-    if (eventIds.length === uniqueIds.size) {
-      console.log('  ✅ All event IDs are unique');
-    } else {
-      console.log(
-        `  ❌ Found ${eventIds.length - uniqueIds.size} duplicate event IDs`
-      );
-    }
-
     // Check filename patterns
-    const filenamePatterns = data.events.map((e: any) => e.caldav_filename);
+    const filenamePatterns = data.events.map((e: EventWithMetadata) => e.caldav_filename);
     const icsFiles = filenamePatterns.filter(
       (f: string) => f && f.endsWith('.ics')
     );
-
-    console.log(
-      `  📁 ${icsFiles.length}/${data.total_events} events have .ics filenames`
-    );
-
-    console.log('=== END SUMMARY REPORT ===\n');
   }
 
   /**
@@ -435,15 +414,15 @@ export class CalDAVMultiCalendarRepository {
   /**
    * Parse individual event from iCal data
    */
-  private parseEventFromIcal(event: any, k: string): CalendarEvent {
-    const startDate = (event as any).start
-      ? new Date((event as any).start)
+  private parseEventFromIcal(event: ICalEventData, k: string): CalendarEvent {
+    const startDate = event.start
+      ? new Date(event.start)
       : new Date();
-    const endDate = (event as any).end ? new Date((event as any).end) : null;
+    const endDate = event.end ? new Date(event.end) : null;
 
     const calendarEvent: CalendarEvent = {
-      id: (event as any).uid || k,
-      title: (event as any).summary || 'No Title',
+      id: event.uid || k,
+      title: event.summary || 'No Title',
       date: startDate.toISOString(),
       time: startDate.toLocaleTimeString([], {
         hour: '2-digit',
@@ -452,57 +431,57 @@ export class CalDAVMultiCalendarRepository {
     };
 
     // Add optional fields
-    if ((event as any).description)
-      calendarEvent.description = (event as any).description;
-    if ((event as any).location)
-      calendarEvent.location = (event as any).location;
+    if (event.description)
+      calendarEvent.description = event.description;
+    if (event.location)
+      calendarEvent.location = event.location;
     if (endDate) calendarEvent.dtend = endDate.toISOString();
 
     // Add all other metadata fields from original parser
-    const organizer = this.parseOrganizer((event as any).organizer);
+    const organizer = this.parseOrganizer(event.organizer);
     if (organizer) calendarEvent.organizer = organizer;
 
-    const attendees = this.parseAttendees((event as any).attendee);
+    const attendees = this.parseAttendees(event.attendee);
     if (attendees) calendarEvent.attendees = attendees;
 
-    const categories = this.parseCategories((event as any).categories);
+    const categories = this.parseCategories(event.categories);
     if (categories) calendarEvent.categories = categories;
 
-    if ((event as any).priority)
-      calendarEvent.priority = (event as any).priority;
+    if (event.priority)
+      calendarEvent.priority = event.priority;
 
-    const status = this.parseStatus((event as any).status);
+    const status = this.parseStatus(event.status);
     if (status) calendarEvent.status = status;
 
-    const visibility = this.parseClass((event as any).class);
+    const visibility = this.parseClass(event.class);
     if (visibility) calendarEvent.visibility = visibility;
 
     const duration = this.calculateDuration(startDate, endDate);
     if (duration) calendarEvent.duration = duration;
 
-    if ((event as any).rrule)
-      calendarEvent.rrule = (event as any).rrule.toString();
-    if ((event as any).created)
-      calendarEvent.created = new Date((event as any).created).toISOString();
-    if ((event as any).lastmodified)
+    if (event.rrule)
+      calendarEvent.rrule = event.rrule.toString();
+    if (event.created)
+      calendarEvent.created = new Date(event.created).toISOString();
+    if (event.lastmodified)
       calendarEvent.lastModified = new Date(
-        (event as any).lastmodified
+        event.lastmodified
       ).toISOString();
-    if ((event as any).sequence)
-      calendarEvent.sequence = (event as any).sequence;
-    if ((event as any).url) calendarEvent.url = (event as any).url;
+    if (event.sequence)
+      calendarEvent.sequence = event.sequence;
+    if (event.url) calendarEvent.url = event.url;
 
-    const geo = this.parseGeo((event as any).geo);
+    const geo = this.parseGeo(event.geo);
     if (geo) calendarEvent.geo = geo;
 
-    const transparency = this.parseTransparency((event as any).transp);
+    const transparency = this.parseTransparency(event.transp);
     if (transparency) calendarEvent.transparency = transparency;
 
-    const attachments = this.parseAttachments((event as any).attach);
+    const attachments = this.parseAttachments(event.attach);
     if (attachments) calendarEvent.attachments = attachments;
 
-    if ((event as any).start && (event as any).start.tz)
-      calendarEvent.timezone = (event as any).start.tz;
+    if (event.start && event.start.tz)
+      calendarEvent.timezone = event.start.tz;
 
     return calendarEvent;
   }
@@ -523,7 +502,6 @@ export class CalDAVMultiCalendarRepository {
       const filename = `${encodeURIComponent(event.id)}.ics`;
       const eventUrl = `${this.basePath}${calendar_path}${filename}`;
 
-      console.log(`Creating event ${event.id} in calendar ${calendar_path}`);
 
       const options = {
         hostname: this.credentials.hostname,
@@ -547,9 +525,6 @@ export class CalDAVMultiCalendarRepository {
             res.statusCode === 201 ||
             res.statusCode === 204
           ) {
-            console.log(
-              `✅ Event ${event.id} created successfully in ${calendar_path}`
-            );
             resolve(true);
           } else {
             console.error(
@@ -584,9 +559,6 @@ export class CalDAVMultiCalendarRepository {
       ).toString('base64');
 
       const eventUrl = `${this.basePath}${calendar_path}${filename}`;
-      console.log(
-        `Deleting event ${eventId} from ${calendar_path} using filename: ${filename}`
-      );
 
       const options = {
         hostname: this.credentials.hostname,
@@ -608,9 +580,6 @@ export class CalDAVMultiCalendarRepository {
             res.statusCode === 204 ||
             res.statusCode === 404
           ) {
-            console.log(
-              `✅ Event ${eventId} deleted successfully from ${calendar_path}`
-            );
             resolve(true);
           } else {
             console.error(
@@ -646,7 +615,6 @@ export class CalDAVMultiCalendarRepository {
       const encodedEventId = encodeURIComponent(event.id);
       const eventUrl = `${this.basePath}${calendar_path}${encodedEventId}.ics`;
 
-      console.log(`Updating event ${event.id} in calendar ${calendar_path}`);
 
       const options = {
         hostname: this.credentials.hostname,
@@ -670,9 +638,6 @@ export class CalDAVMultiCalendarRepository {
             res.statusCode === 201 ||
             res.statusCode === 204
           ) {
-            console.log(
-              `✅ Event ${event.id} updated successfully in ${calendar_path}`
-            );
             resolve(true);
           } else {
             console.error(
@@ -694,27 +659,27 @@ export class CalDAVMultiCalendarRepository {
   }
 
   // Helper methods (keeping existing implementations)
-  private parseOrganizer(organizer: any): string | undefined {
+  private parseOrganizer(organizer: unknown): string | undefined {
     if (typeof organizer === 'string') return organizer;
-    if (organizer && organizer.val) return organizer.val;
+    if (organizer && typeof organizer === "object" && organizer !== null && "val" in organizer && typeof (organizer as Record<string, unknown>).val === "string") return (organizer as Record<string, unknown>).val as string;
     return undefined;
   }
 
-  private parseAttendees(attendee: any): string[] | undefined {
+  private parseAttendees(attendee: unknown): string[] | undefined {
     if (!attendee) return undefined;
     if (Array.isArray(attendee)) {
       return attendee
-        .map(a => (typeof a === 'string' ? a : a.val || a.toString()))
+        .map(a => (typeof a === 'string' ? a : (a as any)?.val || (a as any)?.toString() || ""))
         .filter(Boolean);
     }
     const single =
       typeof attendee === 'string'
         ? attendee
-        : attendee.val || attendee.toString();
+        : (attendee as any)?.val || (attendee as any)?.toString() || "";
     return single ? [single] : undefined;
   }
 
-  private parseCategories(categories: any): string[] | undefined {
+  private parseCategories(categories: unknown): string[] | undefined {
     if (!categories) return undefined;
     if (Array.isArray(categories)) return categories.filter(Boolean);
     if (typeof categories === 'string')
@@ -726,11 +691,11 @@ export class CalDAVMultiCalendarRepository {
   }
 
   private parseStatus(
-    status: any
+    status: unknown
   ): 'CONFIRMED' | 'TENTATIVE' | 'CANCELLED' | undefined {
     if (!status) return undefined;
     const statusStr = (
-      typeof status === 'string' ? status : status.toString()
+      typeof status === 'string' ? status : (status as any)?.toString() || ""
     ).toUpperCase();
     if (['CONFIRMED', 'TENTATIVE', 'CANCELLED'].includes(statusStr)) {
       return statusStr as 'CONFIRMED' | 'TENTATIVE' | 'CANCELLED';
@@ -739,11 +704,11 @@ export class CalDAVMultiCalendarRepository {
   }
 
   private parseClass(
-    classField: any
+    classField: unknown
   ): 'PUBLIC' | 'PRIVATE' | 'CONFIDENTIAL' | undefined {
     if (!classField) return undefined;
     const classStr = (
-      typeof classField === 'string' ? classField : classField.toString()
+      typeof classField === 'string' ? classField : (classField as any)?.toString() || ""
     ).toUpperCase();
     if (['PUBLIC', 'PRIVATE', 'CONFIDENTIAL'].includes(classStr)) {
       return classStr as 'PUBLIC' | 'PRIVATE' | 'CONFIDENTIAL';
@@ -759,10 +724,10 @@ export class CalDAVMultiCalendarRepository {
     return `PT${hours}H${minutes}M`;
   }
 
-  private parseGeo(geo: any): { lat: number; lon: number } | undefined {
+  private parseGeo(geo: unknown): { lat: number; lon: number } | undefined {
     if (!geo) return undefined;
-    if (geo.lat && geo.lon)
-      return { lat: parseFloat(geo.lat), lon: parseFloat(geo.lon) };
+    if ((geo as any)?.lat && (geo as any)?.lon)
+      return { lat: parseFloat((geo as any)?.lat), lon: parseFloat((geo as any)?.lon) };
     if (typeof geo === 'string') {
       const parts = geo.split(',');
       if (parts.length === 2 && parts[0] && parts[1]) {
@@ -776,10 +741,10 @@ export class CalDAVMultiCalendarRepository {
     return undefined;
   }
 
-  private parseTransparency(transp: any): 'OPAQUE' | 'TRANSPARENT' | undefined {
+  private parseTransparency(transp: unknown): 'OPAQUE' | 'TRANSPARENT' | undefined {
     if (!transp) return undefined;
     const transpStr = (
-      typeof transp === 'string' ? transp : transp.toString()
+      typeof transp === 'string' ? transp : (transp as any)?.toString() || ""
     ).toUpperCase();
     if (['OPAQUE', 'TRANSPARENT'].includes(transpStr)) {
       return transpStr as 'OPAQUE' | 'TRANSPARENT';
@@ -787,15 +752,15 @@ export class CalDAVMultiCalendarRepository {
     return undefined;
   }
 
-  private parseAttachments(attach: any): string[] | undefined {
+  private parseAttachments(attach: unknown): string[] | undefined {
     if (!attach) return undefined;
     if (Array.isArray(attach)) {
       return attach
-        .map(a => (typeof a === 'string' ? a : a.val || a.toString()))
+        .map(a => (typeof a === 'string' ? a : (a as any)?.val || (a as any)?.toString() || ""))
         .filter(Boolean);
     }
     const single =
-      typeof attach === 'string' ? attach : attach.val || attach.toString();
+      typeof attach === 'string' ? attach : (attach as any)?.val || (attach as any)?.toString() || "";
     return single ? [single] : undefined;
   }
 
@@ -814,25 +779,15 @@ export class CalDAVMultiCalendarRepository {
    * Create event in specific calendar
    */
   async createEventInCalendar(
-    event: any,
+    event: CalendarEvent,
     calendarName: string
   ): Promise<boolean> {
     const calendar = this.calendars.find(cal => cal.name === calendarName);
     if (!calendar) {
-      console.error(`Calendar ${calendarName} not found`);
-      console.error(
-        `Available calendars: ${this.calendars.map(c => c.name).join(', ')}`
-      );
       return false;
     }
 
     try {
-      console.log(`Creating event ${event.id} in ${calendarName} calendar...`);
-      console.log(`Calendar path: ${calendar.path}`);
-      console.log(
-        `Full URL will be: https://${this.credentials.hostname}${this.basePath}${calendar.path}${event.id}.ics`
-      );
-
       // Generate iCalendar content
       const icalContent = this.generateICalendarContent(event);
 
@@ -844,7 +799,6 @@ export class CalDAVMultiCalendarRepository {
       );
 
       if (response.ok) {
-        console.log(`✅ Event ${event.id} created in ${calendarName} calendar`);
         return true;
       } else {
         console.error(
@@ -878,7 +832,7 @@ export class CalDAVMultiCalendarRepository {
     });
   }
 
-  private generateICalendarContent(event: any): string {
+  private generateICalendarContent(event: CalendarEvent): string {
     const now =
       new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
     const startDate =

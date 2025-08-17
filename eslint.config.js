@@ -10,7 +10,8 @@ import prettier from 'eslint-plugin-prettier';
 
 export default [
   {
-    files: ['**/*.{js,jsx,ts,tsx}'],
+    // Production Frontend Code - Strict Rules
+    files: ['src/**/*.{js,jsx,ts,tsx}'],
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
@@ -42,14 +43,14 @@ export default [
       // Prettier integration
       'prettier/prettier': 'error',
 
-      // TypeScript specific
+      // TypeScript specific - STRICT for production
       '@typescript-eslint/no-unused-vars': [
         'error',
         { argsIgnorePattern: '^_' },
       ],
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'error', // ERROR in production frontend
 
       // React specific
       'react/react-in-jsx-scope': 'off',
@@ -59,25 +60,58 @@ export default [
         { allowConstantExport: true },
       ],
 
-      // General code quality
-      'no-console': 'warn',
+      // General code quality - STRICT for production
+      'no-console': 'error', // ERROR in production frontend
       'no-debugger': 'error',
       'prefer-const': 'error',
       'no-var': 'error',
     },
   },
   {
-    // Server-side files
-    files: ['server-src/**/*.ts', 'scripts/**/*.js'],
+    // Production Backend Code - Moderate Rules
+    files: ['server-src/**/*.ts'],
     languageOptions: {
       globals: globals.node,
+      parser: tsparser,
+      parserOptions: {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+      },
+    },
+    plugins: {
+      '@typescript-eslint': tseslint,
+      prettier: prettier,
     },
     rules: {
-      'no-console': 'off', // Allow console in server code
+      ...js.configs.recommended.rules,
+      ...tseslint.configs.recommended.rules,
+
+      // Prettier integration
+      'prettier/prettier': 'error',
+
+      // TypeScript specific - MODERATE for backend
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_' },
+      ],
+      '@typescript-eslint/no-explicit-any': 'warn', // WARN in backend
+
+      // Backend allows console for logging
+      'no-console': 'off',
+      'no-debugger': 'error',
+      'prefer-const': 'error',
+      'no-var': 'error',
     },
   },
   {
-    // Ignore build outputs and dependencies
-    ignores: ['dist', 'build', 'node_modules', '*.min.js'],
+    // Ignore scripts, tools, and build outputs completely
+    ignores: [
+      'scripts/**/*',
+      'dist/**/*',
+      'build/**/*',
+      'node_modules/**/*',
+      '*.min.js',
+      'docs/**/*',
+    ],
   },
 ];

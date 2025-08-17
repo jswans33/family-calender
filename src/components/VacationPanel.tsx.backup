@@ -36,7 +36,7 @@ export const VacationPanel: React.FC = () => {
       setBalances(data);
       setError(null);
     } catch (err) {
-      // Error handled - error state set for user
+      console.error('Error fetching vacation balances:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);

@@ -64,7 +64,7 @@ class CalendarService {
 
       return events;
     } catch (error) {
-      // Error handled - fallback to mock events
+      console.error('Error fetching calendar events:', error);
       // Fallback to mock events if server is unavailable
       return this.getMockEvents();
     }
@@ -196,7 +196,7 @@ class CalendarService {
       const result = await response.json();
       return result.success === true;
     } catch (error) {
-      // Event creation failed
+      console.error('Error creating calendar event:', error);
       return false;
     }
   }
@@ -230,7 +230,7 @@ class CalendarService {
       const result = await response.json();
       return result.success === true;
     } catch (error) {
-      // Event update failed
+      console.error('Error updating calendar event:', error);
       return false;
     }
   }
@@ -261,7 +261,7 @@ class CalendarService {
       const result = await response.json();
       return result.success === true;
     } catch (error) {
-      // Event deletion failed
+      console.error('Error deleting calendar event:', error);
       return false;
     }
   }
@@ -283,7 +283,7 @@ class CalendarService {
       const result = await response.json();
       return result.success === true;
     } catch (error) {
-      // Sync failed
+      console.error('Error syncing calendar:', error);
       return false;
     }
   }
@@ -300,7 +300,7 @@ class CalendarService {
       }
       return await response.json();
     } catch (error) {
-      // Calendar fetch failed - using fallback
+      console.error('Error fetching calendars:', error);
       return [
         { name: 'home', count: 0 },
         { name: 'work', count: 0 },
@@ -340,7 +340,7 @@ class CalendarService {
       }
       return await response.json();
     } catch (error) {
-      // Vacation balance fetch failed
+      console.error('Error fetching vacation balances:', error);
       return [];
     }
   }

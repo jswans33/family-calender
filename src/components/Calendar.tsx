@@ -121,11 +121,15 @@ const Calendar: React.FC<CalendarProps> = ({
   React.useEffect(() => {
     if (selectedDate) {
       // Parse date string manually to avoid timezone issues
-      const [year, month, day] = selectedDate.split('-').map(Number);
-      const targetDate = new Date(year, month - 1, day); // month is 0-based
-      setCurrentYear(year);
-      setCurrentMonth(month - 1); // month is 0-based
-      setCurrentDate(day);
+      const parts = selectedDate.split('-').map(Number);
+      const year = parts[0];
+      const month = parts[1];
+      const day = parts[2];
+      if (year && month && day) {
+        setCurrentYear(year);
+        setCurrentMonth(month - 1); // month is 0-based
+        setCurrentDate(day);
+      }
     }
   }, [selectedDate]);
 
@@ -137,7 +141,7 @@ const Calendar: React.FC<CalendarProps> = ({
     switch (currentView) {
       case 'month':
         return monthGridDates(currentYear, currentMonth, startOfWeek);
-      case 'week':
+      case 'week': {
         // Get the week containing the current date
         const targetDate = new Date(currentYear, currentMonth, currentDate);
         const weekStart = new Date(targetDate);
@@ -152,6 +156,7 @@ const Calendar: React.FC<CalendarProps> = ({
           weekDates.push(date);
         }
         return weekDates;
+      }
       case 'day':
         // Show the specific current date
         return [new Date(currentYear, currentMonth, currentDate)];
@@ -267,20 +272,24 @@ const Calendar: React.FC<CalendarProps> = ({
     switch (currentView) {
       case 'day':
         // Move to previous day
-        const prevDay = new Date(currentYear, currentMonth, currentDate);
-        prevDay.setDate(prevDay.getDate() - 1);
-        setCurrentYear(prevDay.getFullYear());
-        setCurrentMonth(prevDay.getMonth());
-        setCurrentDate(prevDay.getDate());
+        {
+          const prevDay = new Date(currentYear, currentMonth, currentDate);
+          prevDay.setDate(prevDay.getDate() - 1);
+          setCurrentYear(prevDay.getFullYear());
+          setCurrentMonth(prevDay.getMonth());
+          setCurrentDate(prevDay.getDate());
+        }
         break;
 
       case 'week':
         // Move to previous week
-        const prevWeek = new Date(currentYear, currentMonth, currentDate);
-        prevWeek.setDate(prevWeek.getDate() - 7);
-        setCurrentYear(prevWeek.getFullYear());
-        setCurrentMonth(prevWeek.getMonth());
-        setCurrentDate(prevWeek.getDate());
+        {
+          const prevWeek = new Date(currentYear, currentMonth, currentDate);
+          prevWeek.setDate(prevWeek.getDate() - 7);
+          setCurrentYear(prevWeek.getFullYear());
+          setCurrentMonth(prevWeek.getMonth());
+          setCurrentDate(prevWeek.getDate());
+        }
         break;
 
       case 'month':
@@ -302,20 +311,24 @@ const Calendar: React.FC<CalendarProps> = ({
     switch (currentView) {
       case 'day':
         // Move to next day
-        const nextDay = new Date(currentYear, currentMonth, currentDate);
-        nextDay.setDate(nextDay.getDate() + 1);
-        setCurrentYear(nextDay.getFullYear());
-        setCurrentMonth(nextDay.getMonth());
-        setCurrentDate(nextDay.getDate());
+        {
+          const nextDay = new Date(currentYear, currentMonth, currentDate);
+          nextDay.setDate(nextDay.getDate() + 1);
+          setCurrentYear(nextDay.getFullYear());
+          setCurrentMonth(nextDay.getMonth());
+          setCurrentDate(nextDay.getDate());
+        }
         break;
 
       case 'week':
         // Move to next week
-        const nextWeek = new Date(currentYear, currentMonth, currentDate);
-        nextWeek.setDate(nextWeek.getDate() + 7);
-        setCurrentYear(nextWeek.getFullYear());
-        setCurrentMonth(nextWeek.getMonth());
-        setCurrentDate(nextWeek.getDate());
+        {
+          const nextWeek = new Date(currentYear, currentMonth, currentDate);
+          nextWeek.setDate(nextWeek.getDate() + 7);
+          setCurrentYear(nextWeek.getFullYear());
+          setCurrentMonth(nextWeek.getMonth());
+          setCurrentDate(nextWeek.getDate());
+        }
         break;
 
       case 'month':
@@ -455,7 +468,7 @@ const Calendar: React.FC<CalendarProps> = ({
                   {(() => {
                     // Calculate band assignments for multi-day events to prevent overlapping
                     const eventBands: Array<{
-                      event: any;
+                      event: CalendarEvent;
                       startDate: Date;
                       endDate: Date;
                       band: number;

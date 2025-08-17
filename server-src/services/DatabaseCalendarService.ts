@@ -70,10 +70,6 @@ export class DatabaseCalendarService implements ICalendarService {
   }
 
   async forceSync(): Promise<void> {
-    console.log(
-      'Force syncing events from all CalDAV calendars to database...'
-    );
-
     try {
       // First, sync deletions to CalDAV
       await this.syncDeletionsToCalDAV();
@@ -81,7 +77,6 @@ export class DatabaseCalendarService implements ICalendarService {
       // Fetch events from all calendars using multi-calendar repository
       const allEvents =
         await this.multiCalendarRepository.getAllEventsFromAllCalendars();
-      console.log(`Fetched ${allEvents.length} events from all calendars`);
 
       // Transform events to include calendar metadata
       const eventsWithMetadata = allEvents.map(event => ({
@@ -101,10 +96,6 @@ export class DatabaseCalendarService implements ICalendarService {
 
       // Clean up old deletion records
       await this.sqliteRepository.cleanupDeletedEvents();
-
-      console.log(
-        `Synced ${allEvents.length} events to database (after filtering deletions)`
-      );
     } catch (error) {
       console.error('Force sync failed:', error);
       throw error;
@@ -118,17 +109,12 @@ export class DatabaseCalendarService implements ICalendarService {
     try {
       const deletedEventIds =
         await this.sqliteRepository.getDeletedEventsToSync();
-      console.log(
-        `Found ${deletedEventIds.length} deleted events to sync to CalDAV`
-      );
 
       for (const eventId of deletedEventIds) {
         try {
           await this.calDAVRepository.deleteEvent(eventId);
           await this.sqliteRepository.markDeletedEventSynced(eventId);
-          console.log(`Deleted event ${eventId} from CalDAV`);
-        } catch (error) {
-          console.log(`Event ${eventId} may not exist in CalDAV:`, error);
+        } catch {
           // Mark as synced anyway to avoid retrying
           await this.sqliteRepository.markDeletedEventSynced(eventId);
         }
@@ -214,13 +200,14 @@ export class DatabaseCalendarService implements ICalendarService {
     ];
   }
 
-  validateEvent(event: any): event is CalendarEvent {
+  validateEvent(event: unknown): event is CalendarEvent {
     return (
       typeof event === 'object' &&
-      typeof event.id === 'string' &&
-      typeof event.title === 'string' &&
-      typeof event.date === 'string' &&
-      typeof event.time === 'string'
+      event !== null &&
+      typeof (event as any).id === 'string' &&
+      typeof (event as any).title === 'string' &&
+      typeof (event as any).date === 'string' &&
+      typeof (event as any).time === 'string'
     );
   }
 
@@ -238,7 +225,6 @@ export class DatabaseCalendarService implements ICalendarService {
 
       // Update in database (will replace the existing event)
       await this.sqliteRepository.saveEvents([eventWithStatus], false);
-      console.log(`Event ${event.id} updated locally, marked for sync`);
 
       // Trigger reverse sync in background
       this.syncLocalToCalDAV().catch(error => {
@@ -265,7 +251,6 @@ export class DatabaseCalendarService implements ICalendarService {
       };
 
       await this.sqliteRepository.saveEvents([eventWithStatus], false);
-      console.log(`Event ${event.id} created locally, marked for sync`);
 
       // Trigger reverse sync in background
       this.syncLocalToCalDAV().catch(error => {
@@ -284,44 +269,30 @@ export class DatabaseCalendarService implements ICalendarService {
    */
   async deleteEvent(eventId: string): Promise<boolean> {
     try {
-      console.log(`Deleting event ${eventId}...`);
-
       // First, get the event details from database to extract calendar metadata
       const eventsWithMetadata =
         await this.sqliteRepository.getEventsWithMetadata();
       const eventToDelete = eventsWithMetadata.find(e => e.id === eventId);
 
       if (!eventToDelete) {
-        console.log(`Event ${eventId} not found in database`);
         return false;
       }
 
       // Delete from local database first
       const dbSuccess = await this.sqliteRepository.deleteEvent(eventId);
       if (!dbSuccess) {
-        console.log(`Failed to delete event ${eventId} from database`);
         return false;
       }
 
       // Delete from CalDAV using correct calendar path and filename
       try {
         if (eventToDelete.calendar_path && eventToDelete.caldav_filename) {
-          console.log(
-            `Deleting from CalDAV: ${eventToDelete.calendar_path}${eventToDelete.caldav_filename}`
-          );
           await this.multiCalendarRepository.deleteEvent(
             eventId,
             eventToDelete.calendar_path,
             eventToDelete.caldav_filename
           );
-          console.log(`Event ${eventId} deleted from CalDAV successfully`);
         } else {
-          console.log(
-            `Event ${eventId} missing CalDAV metadata - skipping CalDAV deletion`
-          );
-          console.log(
-            `calendar_path: ${eventToDelete.calendar_path}, caldav_filename: ${eventToDelete.caldav_filename}`
-          );
         }
       } catch (caldavError) {
         console.error(
@@ -343,30 +314,22 @@ export class DatabaseCalendarService implements ICalendarService {
    */
   async syncLocalToCalDAV(): Promise<void> {
     try {
-      console.log('Starting reverse sync: Local → CalDAV');
-
       // Get pending events from database
       const pendingEvents = await this.sqliteRepository.getPendingEvents();
-      console.log(`Found ${pendingEvents.length} pending events to sync`);
 
       for (const event of pendingEvents) {
         try {
           // Always try delete-then-create approach for all events
           // This works for both new and existing events
-          console.log(`Syncing event ${event.id} to CalDAV`);
 
           // Try to delete if it exists (ignore errors)
-          await this.calDAVRepository.deleteEvent(event.id).catch(() => {
-            console.log(`Event ${event.id} not in CalDAV yet, will create`);
-          });
+          await this.calDAVRepository.deleteEvent(event.id).catch(() => {});
 
           // Now create/recreate the event
-          console.log(`Creating event ${event.id} in CalDAV...`);
           const success = await this.calDAVRepository.createEvent(event);
 
           if (success) {
             await this.sqliteRepository.markEventSynced(event.id);
-            console.log(`Event ${event.id} synced to CalDAV successfully`);
           } else {
             console.error(`Failed to sync event ${event.id} to CalDAV`);
           }
@@ -374,8 +337,6 @@ export class DatabaseCalendarService implements ICalendarService {
           console.error(`Error syncing event ${event.id}:`, error);
         }
       }
-
-      console.log('Reverse sync completed');
     } catch (error) {
       console.error('Reverse sync failed:', error);
       throw error;
@@ -428,10 +389,6 @@ export class DatabaseCalendarService implements ICalendarService {
     calendarName: string
   ): Promise<boolean> {
     try {
-      console.log(
-        `Creating event ${event.id} in ${calendarName} calendar via multi-calendar repository...`
-      );
-
       // Use the multi-calendar repository to create in specific calendar
       const success = await this.multiCalendarRepository.createEventInCalendar(
         event,
@@ -450,9 +407,6 @@ export class DatabaseCalendarService implements ICalendarService {
         };
 
         await this.sqliteRepository.saveEvents([eventWithMetadata], false);
-        console.log(
-          `Event ${event.id} created in ${calendarName} and saved to database`
-        );
         return true;
       } else {
         console.error(

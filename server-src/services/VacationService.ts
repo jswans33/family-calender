@@ -62,7 +62,6 @@ export class VacationService {
     // Determine user based on calendar (simple logic for now)
     const userName = this.determineUserFromEvent(event);
     if (!userName) {
-      console.warn('Could not determine user for vacation event:', event.id);
       return;
     }
 
@@ -72,10 +71,6 @@ export class VacationService {
     const newBalance = Math.max(0, currentBalance - hoursToDeduct);
 
     await this.sqliteRepository.updateVacationBalance(userName, newBalance);
-
-    console.log(
-      `Vacation processed: ${userName} used ${hoursToDeduct} hours, new balance: ${newBalance}`
-    );
   }
 
   /**
@@ -91,10 +86,6 @@ export class VacationService {
 
     const userName = this.determineUserFromEvent(event);
     if (!userName) {
-      console.warn(
-        'Could not determine user for vacation event deletion:',
-        event.id
-      );
       return;
     }
 
@@ -104,10 +95,6 @@ export class VacationService {
     const newBalance = currentBalance + hoursToRestore;
 
     await this.sqliteRepository.updateVacationBalance(userName, newBalance);
-
-    console.log(
-      `Vacation restored: ${userName} restored ${hoursToRestore} hours, new balance: ${newBalance}`
-    );
   }
 
   /**

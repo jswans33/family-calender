@@ -64,10 +64,14 @@ export interface ICalendarService {
   getThisWeeksEvents(): Promise<CalendarEvent[]>;
   getThisMonthsEvents(): Promise<CalendarEvent[]>;
   getEventsInRange(startDate: Date, endDate: Date): Promise<CalendarEvent[]>;
-  validateEvent(event: any): event is CalendarEvent;
+  validateEvent(event: unknown): event is CalendarEvent;
   forceSync?(): Promise<void>;
   updateEvent?(event: CalendarEvent): Promise<boolean>;
   createEvent?(event: CalendarEvent): Promise<boolean>;
   deleteEvent?(eventId: string): Promise<boolean>;
+  createEventInCalendar?(
+    event: CalendarEvent,
+    calendarName: string
+  ): Promise<boolean>;
   getCalendars?(): Promise<Array<{ name: string; count: number }>>;
 }

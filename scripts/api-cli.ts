@@ -1,5 +1,6 @@
 #!/usr/bin/env npx tsx
 import { Command } from 'commander';
+import { Buffer } from 'buffer';
 
 const program = new Command();
 const API_BASE = 'http://localhost:3001';
@@ -57,8 +58,7 @@ program
           );
           console.log(`   Error: ${result.message || result.error}`);
         }
-      } catch (error) {
-        console.error(`❌ ERROR creating in ${calendar}:`, error);
+      } catch {
       }
 
       console.log(''); // spacing
@@ -105,8 +105,7 @@ program
           `\n📊 Total events accessible via API: ${allEvents.length}`
         );
       }
-    } catch (error) {
-      console.error('❌ ERROR reading calendars:', error);
+    } catch {
     }
   });
 
@@ -154,8 +153,7 @@ program
         console.log(`❌ FAILED: Could not update event`);
         console.log(`   Error: ${result.message || result.error}`);
       }
-    } catch (error) {
-      console.error(`❌ ERROR updating event:`, error);
+    } catch {
     }
   });
 
@@ -190,8 +188,7 @@ program
         console.log(`❌ FAILED: Could not delete event`);
         console.log(`   Error: ${result.message || result.error}`);
       }
-    } catch (error) {
-      console.error(`❌ ERROR deleting event:`, error);
+    } catch {
     }
   });
 
@@ -234,7 +231,7 @@ program
         console.log(
           `${success ? '✅' : '❌'} CREATE ${calendar}: ${success ? 'SUCCESS' : 'FAILED'}`
         );
-      } catch (error) {
+      } catch {
         console.log(`❌ CREATE ${calendar}: ERROR`);
       }
     }
@@ -249,7 +246,7 @@ program
       calendars.forEach((cal: any) => {
         console.log(`✅ READ ${cal.name}: ${cal.count} events found`);
       });
-    } catch (error) {
+    } catch {
       console.log('❌ READ: ERROR');
     }
 
@@ -284,7 +281,7 @@ program
         console.log(
           `${success ? '✅' : '❌'} UPDATE ${calendar}: ${success ? 'SUCCESS' : 'FAILED'}`
         );
-      } catch (error) {
+      } catch {
         console.log(`❌ UPDATE ${calendar}: ERROR`);
       }
     }
@@ -311,7 +308,7 @@ program
         console.log(
           `${success ? '✅' : '❌'} DELETE ${calendar}: ${success ? 'SUCCESS' : 'FAILED'}`
         );
-      } catch (error) {
+      } catch {
         console.log(`❌ DELETE ${calendar}: ERROR`);
       }
     }

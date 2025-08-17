@@ -92,30 +92,23 @@ async function demoSpecificCalendarAccess() {
   // Demo 5: Show how to create events in specific calendars
   console.log('\\n5️⃣  HOW TO CREATE EVENTS IN SPECIFIC CALENDARS\\n');
 
-  const sampleEvent = {
-    id: `demo-${Date.now()}`,
-    title: 'Demo Event',
-    date: new Date().toISOString(),
-    time: '2:00 PM',
-    description: 'This is a demo event',
-  };
 
   console.log('📝 Code examples for creating events:');
   console.log('');
   console.log('// Create in HOME calendar:');
-  console.log('await repo.createEvent(sampleEvent, "/home/")');
+  console.log('await repo.createEvent(event, "/home/")');
   console.log('');
   console.log('// Create in WORK calendar:');
-  console.log('await repo.createEvent(sampleEvent, "/work/")');
+  console.log('await repo.createEvent(event, "/work/")');
   console.log('');
   console.log('// Create in SHARED calendar:');
   console.log(
-    'await repo.createEvent(sampleEvent, "/2D7581FA-3A83-42D8-B6F4-8BCD8186AA6E/")'
+    'await repo.createEvent(event, "/2D7581FA-3A83-42D8-B6F4-8BCD8186AA6E/")'
   );
   console.log('');
   console.log('// Create in MEALS calendar:');
   console.log(
-    'await repo.createEvent(sampleEvent, "/1fa1e4097e27af6d41607163c20c088e70cf8e9db9d71b1a62611ec364123914/")'
+    'await repo.createEvent(event, "/1fa1e4097e27af6d41607163c20c088e70cf8e9db9d71b1a62611ec364123914/")'
   );
 
   // Demo 6: Show how to get events with filename for deletion

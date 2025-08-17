@@ -6,6 +6,7 @@
  */
 
 import sqlite3 from 'sqlite3';
+import { process } from 'process';
 import path from 'path';
 
 const dbPath = path.join(process.cwd(), 'data', 'calendar.db');

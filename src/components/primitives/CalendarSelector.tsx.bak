@@ -32,16 +32,6 @@ const CalendarSelector: React.FC<CalendarSelectorProps> = ({
     setColorPickerOpen(calendarName);
   };
 
-  const handleColorButtonKeyDown = (
-    e: React.KeyboardEvent,
-    calendarName: string
-  ) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      setColorPickerOpen(calendarName);
-    }
-  };
-
   return (
     <>
       <div className="mb-4 flex flex-wrap gap-2">
@@ -105,7 +95,7 @@ const CalendarSelector: React.FC<CalendarSelectorProps> = ({
                 onKeyDown={e => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
-                    handleColorButtonKeyDown(e, calendar.name);
+                    handleColorButtonClick(e, calendar.name);
                   }
                 }}
                 className="absolute -top-1 -right-1 w-5 h-5 bg-white border border-gray-300 rounded-full shadow-sm opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"

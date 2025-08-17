@@ -1,0 +1,17 @@
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="color-picker-title"
+      onClick={e => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+      onKeyDown={e => {
+        if (e.key === 'Escape') {
+          onClose();
+        }
+      }}
+    >

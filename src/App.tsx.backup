@@ -46,7 +46,7 @@ const App: React.FC = () => {
         const fetchedCalendars = await calendarService.fetchCalendars();
         setCalendars(fetchedCalendars);
       } catch (error) {
-        // Failed to load calendars - service will handle fallback
+        console.error('Failed to load calendars:', error);
       }
       setIsLoadingCalendars(false);
     };
@@ -99,7 +99,7 @@ const App: React.FC = () => {
         alert('Failed to create event');
       }
     } catch (error) {
-      // Event creation failed - user notified
+      console.error('Error creating event:', error);
       alert('Error creating event');
     }
   };
@@ -138,7 +138,7 @@ const App: React.FC = () => {
         alert('Failed to delete event');
       }
     } catch (error) {
-      // Event deletion failed - user notified
+      console.error('Error deleting event:', error);
       alert('Error deleting event');
     }
   };
@@ -170,7 +170,7 @@ const App: React.FC = () => {
         alert('Failed to sync calendar');
       }
     } catch (error) {
-      // Sync failed - user notified
+      console.error('Error syncing calendar:', error);
       alert('Error syncing calendar');
     }
   };
@@ -201,10 +201,10 @@ const App: React.FC = () => {
           } as CalendarEvent);
         }
       } else {
-        // Update failed
+        console.error('Failed to update event');
       }
     } catch (error) {
-      // Update failed - no user notification needed
+      console.error('Error updating event:', error);
     }
   };
 
