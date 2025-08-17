@@ -27,7 +27,6 @@ interface ICalEventData {
   attach?: unknown;
 }
 
-
 export class CalDAVRepository {
   private credentials: CalDAVCredentials;
 
@@ -88,6 +87,10 @@ export class CalDAVRepository {
     });
   }
 
+  // CODE_SMELL: Rule #4 Complexity Budget - Method exceeds 30 lines with nested logic
+  // Fix: Split into extractMatches(), parseICalContent(), buildCalendarEvent()
+  // CODE_SMELL: Rule #5 No Clever Code - Duplicate parsing logic with CalDAVMultiCalendarRepository
+  // Fix: Extract shared ICalParser utility class
   parseCalendarEvents(xmlData: string): CalendarEvent[] {
     const events: CalendarEvent[] = [];
 
@@ -111,9 +114,7 @@ export class CalDAVRepository {
                 const startDate = event.start
                   ? new Date(event.start)
                   : new Date();
-                const endDate = event.end
-                  ? new Date(event.end)
-                  : null;
+                const endDate = event.end ? new Date(event.end) : null;
 
                 const calendarEvent: CalendarEvent = {
                   id: event.uid || k,
@@ -127,8 +128,7 @@ export class CalDAVRepository {
 
                 if (event.description)
                   calendarEvent.description = event.description;
-                if (event.location)
-                  calendarEvent.location = event.location;
+                if (event.location) calendarEvent.location = event.location;
 
                 const organizer = this.parseOrganizer(event.organizer);
                 if (organizer) calendarEvent.organizer = organizer;
@@ -136,13 +136,10 @@ export class CalDAVRepository {
                 const attendees = this.parseAttendees(event.attendee);
                 if (attendees) calendarEvent.attendees = attendees;
 
-                const categories = this.parseCategories(
-                  event.categories
-                );
+                const categories = this.parseCategories(event.categories);
                 if (categories) calendarEvent.categories = categories;
 
-                if (event.priority)
-                  calendarEvent.priority = event.priority;
+                if (event.priority) calendarEvent.priority = event.priority;
 
                 const status = this.parseStatus(event.status);
                 if (status) calendarEvent.status = status;
@@ -155,31 +152,23 @@ export class CalDAVRepository {
                 const duration = this.calculateDuration(startDate, endDate);
                 if (duration) calendarEvent.duration = duration;
 
-                if (event.rrule)
-                  calendarEvent.rrule = event.rrule.toString();
+                if (event.rrule) calendarEvent.rrule = event.rrule.toString();
                 if (event.created)
-                  calendarEvent.created = new Date(
-                    event.created
-                  ).toISOString();
+                  calendarEvent.created = new Date(event.created).toISOString();
                 if (event.lastmodified)
                   calendarEvent.lastModified = new Date(
                     event.lastmodified
                   ).toISOString();
-                if (event.sequence)
-                  calendarEvent.sequence = event.sequence;
+                if (event.sequence) calendarEvent.sequence = event.sequence;
                 if (event.url) calendarEvent.url = event.url;
 
                 const geo = this.parseGeo(event.geo);
                 if (geo) calendarEvent.geo = geo;
 
-                const transparency = this.parseTransparency(
-                  event.transp
-                );
+                const transparency = this.parseTransparency(event.transp);
                 if (transparency) calendarEvent.transparency = transparency;
 
-                const attachments = this.parseAttachments(
-                  event.attach
-                );
+                const attachments = this.parseAttachments(event.attach);
                 if (attachments) calendarEvent.attachments = attachments;
 
                 if (event.start && event.start.tz)
@@ -202,7 +191,14 @@ export class CalDAVRepository {
 
   private parseOrganizer(organizer: unknown): string | undefined {
     if (typeof organizer === 'string') return organizer;
-    if (organizer && typeof organizer === "object" && organizer !== null && "val" in organizer && typeof (organizer as Record<string, unknown>).val === "string") return (organizer as Record<string, unknown>).val as string;
+    if (
+      organizer &&
+      typeof organizer === 'object' &&
+      organizer !== null &&
+      'val' in organizer &&
+      typeof (organizer as Record<string, unknown>).val === 'string'
+    )
+      return (organizer as Record<string, unknown>).val as string;
     return undefined;
   }
 
@@ -210,13 +206,17 @@ export class CalDAVRepository {
     if (!attendee) return undefined;
     if (Array.isArray(attendee)) {
       return attendee
-        .map(a => (typeof a === 'string' ? a : (a as any)?.val || (a as any)?.toString() || ""))
+        .map(a =>
+          typeof a === 'string'
+            ? a
+            : (a as any)?.val || (a as any)?.toString() || ''
+        )
         .filter(Boolean);
     }
     const single =
       typeof attendee === 'string'
         ? attendee
-        : (attendee as any)?.val || (attendee as any)?.toString() || "";
+        : (attendee as any)?.val || (attendee as any)?.toString() || '';
     return single ? [single] : undefined;
   }
 
@@ -236,7 +236,7 @@ export class CalDAVRepository {
   ): 'CONFIRMED' | 'TENTATIVE' | 'CANCELLED' | undefined {
     if (!status) return undefined;
     const statusStr = (
-      typeof status === 'string' ? status : (status as any)?.toString() || ""
+      typeof status === 'string' ? status : (status as any)?.toString() || ''
     ).toUpperCase();
     if (['CONFIRMED', 'TENTATIVE', 'CANCELLED'].includes(statusStr)) {
       return statusStr as 'CONFIRMED' | 'TENTATIVE' | 'CANCELLED';
@@ -249,7 +249,9 @@ export class CalDAVRepository {
   ): 'PUBLIC' | 'PRIVATE' | 'CONFIDENTIAL' | undefined {
     if (!classField) return undefined;
     const classStr = (
-      typeof classField === 'string' ? classField : (classField as any)?.toString() || ""
+      typeof classField === 'string'
+        ? classField
+        : (classField as any)?.toString() || ''
     ).toUpperCase();
     if (['PUBLIC', 'PRIVATE', 'CONFIDENTIAL'].includes(classStr)) {
       return classStr as 'PUBLIC' | 'PRIVATE' | 'CONFIDENTIAL';
@@ -268,7 +270,10 @@ export class CalDAVRepository {
   private parseGeo(geo: unknown): { lat: number; lon: number } | undefined {
     if (!geo) return undefined;
     if ((geo as any)?.lat && (geo as any)?.lon)
-      return { lat: parseFloat((geo as any)?.lat), lon: parseFloat((geo as any)?.lon) };
+      return {
+        lat: parseFloat((geo as any)?.lat),
+        lon: parseFloat((geo as any)?.lon),
+      };
     if (typeof geo === 'string') {
       const parts = geo.split(',');
       if (parts.length === 2 && parts[0] && parts[1]) {
@@ -282,10 +287,12 @@ export class CalDAVRepository {
     return undefined;
   }
 
-  private parseTransparency(transp: unknown): 'OPAQUE' | 'TRANSPARENT' | undefined {
+  private parseTransparency(
+    transp: unknown
+  ): 'OPAQUE' | 'TRANSPARENT' | undefined {
     if (!transp) return undefined;
     const transpStr = (
-      typeof transp === 'string' ? transp : (transp as any)?.toString() || ""
+      typeof transp === 'string' ? transp : (transp as any)?.toString() || ''
     ).toUpperCase();
     if (['OPAQUE', 'TRANSPARENT'].includes(transpStr)) {
       return transpStr as 'OPAQUE' | 'TRANSPARENT';
@@ -297,11 +304,17 @@ export class CalDAVRepository {
     if (!attach) return undefined;
     if (Array.isArray(attach)) {
       return attach
-        .map(a => (typeof a === 'string' ? a : (a as any)?.val || (a as any)?.toString() || ""))
+        .map(a =>
+          typeof a === 'string'
+            ? a
+            : (a as any)?.val || (a as any)?.toString() || ''
+        )
         .filter(Boolean);
     }
     const single =
-      typeof attach === 'string' ? attach : (attach as any)?.val || (attach as any)?.toString() || "";
+      typeof attach === 'string'
+        ? attach
+        : (attach as any)?.val || (attach as any)?.toString() || '';
     return single ? [single] : undefined;
   }
 
@@ -415,13 +428,11 @@ export class CalDAVRepository {
         },
       };
 
-
       const req = https.request(options, res => {
         let data = '';
 
         res.on('data', chunk => (data += chunk));
         res.on('end', () => {
-
           if (
             res.statusCode === 200 ||
             res.statusCode === 204 ||
@@ -479,13 +490,11 @@ export class CalDAVRepository {
         },
       };
 
-
       const req = https.request(options, res => {
         let data = '';
 
         res.on('data', chunk => (data += chunk));
         res.on('end', () => {
-
           if (
             res.statusCode === 200 ||
             res.statusCode === 201 ||

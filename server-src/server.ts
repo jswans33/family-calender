@@ -53,6 +53,8 @@ app.get('/events/month', (req, res) =>
   calendarController.getThisMonthsEvents(req, res)
 );
 app.put('/events/:id', (req, res) => calendarController.updateEvent(req, res));
+// CODE_SMELL: Rule #1 One Thing Per File - Business logic in server.ts
+// Fix: Move vacation processing to CalendarController or middleware
 // Enhanced event deletion with vacation processing (modular)
 app.delete('/events/:id', async (req, res) => {
   try {
@@ -80,6 +82,8 @@ app.delete('/events/:id', async (req, res) => {
     await calendarController.deleteEvent(req, res);
   }
 });
+// CODE_SMELL: Rule #1 One Thing Per File - Business logic in server.ts
+// Fix: Move vacation processing to CalendarController or middleware
 // Enhanced event creation with vacation processing (modular)
 app.post('/events', async (req, res) => {
   try {

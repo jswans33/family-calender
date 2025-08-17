@@ -10,6 +10,8 @@ import { CalendarEvent } from '../types/Calendar.js';
  * - Pure business rules and validation
  * - Simple, testable functions
  */
+// CODE_SMELL: Rule #3 Simple Data Flow - Service directly accessing repository
+// Fix: Service should use another service layer, not repository directly
 export class VacationService {
   constructor(private sqliteRepository: SQLiteRepository) {}
 

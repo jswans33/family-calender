@@ -3,6 +3,8 @@ import { CalDAVRepository } from '../repositories/CalDAVRepository.js';
 import { CalDAVMultiCalendarRepository } from '../repositories/CalDAVMultiCalendarRepository.js';
 import { SQLiteRepository } from '../repositories/SQLiteRepository.js';
 
+// CODE_SMELL: Rule #4 Complexity Budget - Service has 19 public methods (exceeds 3-5 limit)
+// Fix: Split into CalendarSyncService, CalendarQueryService, and CalendarUpdateService
 export class DatabaseCalendarService implements ICalendarService {
   private calDAVRepository: CalDAVRepository;
   private multiCalendarRepository: CalDAVMultiCalendarRepository;
@@ -48,6 +50,8 @@ export class DatabaseCalendarService implements ICalendarService {
         calendar
       );
 
+      // CODE_SMELL: Rule #1 One Thing Per File - Service doing background sync scheduling
+      // Fix: Move background sync to dedicated SyncSchedulerService
       this.checkAndSync().catch(error => {
         console.error('Background sync failed:', error);
       });
@@ -69,6 +73,8 @@ export class DatabaseCalendarService implements ICalendarService {
     }
   }
 
+  // CODE_SMELL: Rule #4 Complexity Budget - Method exceeds 30 lines
+  // Fix: Split into syncDeletions(), fetchAndTransformEvents(), saveEvents(), cleanup()
   async forceSync(): Promise<void> {
     try {
       // First, sync deletions to CalDAV
@@ -420,6 +426,8 @@ export class DatabaseCalendarService implements ICalendarService {
     }
   }
 
+  // CODE_SMELL: Rule #5 No Clever Code - Hard-coded calendar paths in service
+  // Fix: Move to CalendarPathConfigService or configuration file
   private getCalendarPath(calendarName: string): string {
     const paths = {
       home: '/home/',

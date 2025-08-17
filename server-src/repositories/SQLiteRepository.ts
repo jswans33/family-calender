@@ -41,6 +41,8 @@ interface EventMetadata {
   custom_data?: Record<string, unknown>;
 }
 
+// CODE_SMELL: Rule #4 Complexity Budget - Repository has 15+ public methods (exceeds 3-5 limit)
+// Fix: Split into EventRepository, VacationRepository, and SyncRepository
 export class SQLiteRepository {
   private db!: sqlite3.Database;
   private initPromise: Promise<void>;
@@ -206,48 +208,40 @@ export class SQLiteRepository {
    * Save events with smart sync - filters out locally deleted events AND handles CalDAV deletions
    */
   async saveEventsWithSmartSync(events: CalendarEvent[]): Promise<void> {
-    return new Promise(async resolve => {
-      // Get current event IDs from CalDAV
-      const caldavEventIds = new Set(events.map(e => e.id));
+    // Get current event IDs from CalDAV
+    const caldavEventIds = new Set(events.map(e => e.id));
 
-      // Find events in local database that are missing from CalDAV
-      const localEvents = await this.getAllEventIds();
-      const missingFromCalDAV = localEvents.filter(
-        id => !caldavEventIds.has(id)
-      );
+    // Find events in local database that are missing from CalDAV
+    const localEvents = await this.getAllEventIds();
+    const missingFromCalDAV = localEvents.filter(id => !caldavEventIds.has(id));
 
-      // Track CalDAV deletions (iPhone deletions)
-      for (const eventId of missingFromCalDAV) {
-        const isAlreadyDeleted = await this.isEventDeleted(eventId);
-        if (!isAlreadyDeleted) {
-          await this.trackRemoteDeletion(eventId);
-        }
+    // Track CalDAV deletions (iPhone deletions)
+    for (const eventId of missingFromCalDAV) {
+      const isAlreadyDeleted = await this.isEventDeleted(eventId);
+      if (!isAlreadyDeleted) {
+        await this.trackRemoteDeletion(eventId);
       }
+    }
 
-      if (events.length === 0) {
-        resolve();
-        return;
+    if (events.length === 0) {
+      return;
+    }
+
+    // Filter out events that were deleted locally
+    const filteredEvents: CalendarEvent[] = [];
+    for (const event of events) {
+      const isDeleted = await this.isEventDeleted(event.id);
+      if (!isDeleted) {
+        filteredEvents.push(event);
       }
+    }
 
-      // Filter out events that were deleted locally
-      const filteredEvents: CalendarEvent[] = [];
-      for (const event of events) {
-        const isDeleted = await this.isEventDeleted(event.id);
-        if (!isDeleted) {
-          filteredEvents.push(event);
-        } else {
-        }
-      }
+    if (filteredEvents.length === 0) {
+      return;
+    }
 
-      if (filteredEvents.length === 0) {
-        resolve();
-        return;
-      }
-
-      // Save the filtered events with metadata preservation
-      await this.saveEvents(filteredEvents, true);
-      resolve();
-    });
+    // Save the filtered events with metadata preservation
+    await this.saveEvents(filteredEvents, true);
   }
 
   /**
@@ -306,6 +300,8 @@ export class SQLiteRepository {
     });
   }
 
+  // CODE_SMELL: Rule #4 Complexity Budget - Method exceeds 30 lines with complex logic
+  // Fix: Split into prepareSql(), buildParams(), executeTransaction()
   async saveEvents(
     events: CalendarEvent[],
     preserveMetadata: boolean = false

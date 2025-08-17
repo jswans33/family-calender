@@ -23,6 +23,8 @@ export class CalDAVConfig {
     };
   }
 
+  // CODE_SMELL: Rule #5 No Clever Code - Hard-coded credentials in source code
+  // Fix: Move to environment variables or secure credential store
   static getFallbackCredentials(): CalDAVCredentials {
     return {
       username: 'jswans33@gmail.com',

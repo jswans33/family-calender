@@ -51,10 +51,13 @@ interface ExportData {
   events: EventWithMetadata[];
 }
 
-
+// CODE_SMELL: Rule #4 Complexity Budget - Repository has 14+ public methods (exceeds 3-5 limit)
+// Fix: Split into CalDAVFetchRepository, CalDAVParserRepository, CalDAVOperationsRepository
 export class CalDAVMultiCalendarRepository {
   private credentials: CalDAVCredentials;
   private readonly basePath: string;
+  // CODE_SMELL: Rule #5 No Clever Code - Hard-coded calendar configuration in repository
+  // Fix: Move calendar configuration to CalendarConfigService
   private readonly calendars: CalendarInfo[] = [
     {
       name: 'shared',
@@ -92,7 +95,6 @@ export class CalDAVMultiCalendarRepository {
    * QUALITY CHECK: Discovers all available calendars and their event counts
    */
   async getAllCalendars(): Promise<CalendarInfo[]> {
-
     for (const calendar of this.calendars) {
       try {
         const xmlData = await this.fetchCalendarData(calendar.path);
@@ -104,11 +106,6 @@ export class CalDAVMultiCalendarRepository {
       }
     }
 
-    const totalEvents = this.calendars
-      .filter(cal => cal.count >= 0)
-      .reduce((sum, cal) => sum + cal.count, 0);
-
-
     return this.calendars;
   }
 
@@ -116,7 +113,6 @@ export class CalDAVMultiCalendarRepository {
    * QUALITY CHECK: Fetches all events from all calendars with metadata
    */
   async getAllEventsFromAllCalendars(): Promise<EventWithMetadata[]> {
-
     const allEvents: EventWithMetadata[] = [];
 
     for (const calendar of this.calendars) {
@@ -145,7 +141,6 @@ export class CalDAVMultiCalendarRepository {
       }
     }
 
-
     // QUALITY CHECK: Save all events to master file
     await this.saveAllEventsToFile(allEvents);
 
@@ -155,6 +150,8 @@ export class CalDAVMultiCalendarRepository {
   /**
    * QUALITY CHECK: Save events to local file for verification
    */
+  // CODE_SMELL: Rule #1 One Thing Per File - Repository doing file I/O for debugging
+  // Fix: Move to DebugExportService or remove from production code
   private async saveEventsToFile(
     calendarName: string,
     events: EventWithMetadata[]
@@ -230,20 +227,20 @@ export class CalDAVMultiCalendarRepository {
    * QUALITY CHECK: Generate summary report
    */
   private generateSummaryReport(data: ExportData): void {
-    // Check for missing metadata
-    const eventsWithMissingData = data.events.filter(
-      (e: EventWithMetadata) => !e.calendar_path || !e.calendar_name || !e.caldav_filename
+    // Check for missing metadata - analysis for quality check
+    data.events.filter(
+      (e: EventWithMetadata) =>
+        !e.calendar_path || !e.calendar_name || !e.caldav_filename
     );
 
-    // Check for duplicate IDs
+    // Check for duplicate IDs - analysis for quality check
     const eventIds = data.events.map((e: EventWithMetadata) => e.id);
-    const uniqueIds = new Set(eventIds);
+    new Set(eventIds);
 
-    // Check filename patterns
-    const filenamePatterns = data.events.map((e: EventWithMetadata) => e.caldav_filename);
-    const icsFiles = filenamePatterns.filter(
-      (f: string) => f && f.endsWith('.ics')
-    );
+    // Check filename patterns - analysis for quality check
+    data.events
+      .map((e: EventWithMetadata) => e.caldav_filename)
+      .filter((f: string) => f && f.endsWith('.ics'));
   }
 
   /**
@@ -309,6 +306,8 @@ export class CalDAVMultiCalendarRepository {
   /**
    * Parse calendar events with filename extraction
    */
+  // CODE_SMELL: Rule #4 Complexity Budget - Method exceeds 30 lines with nested logic
+  // Fix: Split into extractResponses(), parseResponse(), parseCalendarData()
   parseCalendarEventsWithFilenames(
     xmlData: string
   ): { event: CalendarEvent; filename: string }[] {
@@ -414,10 +413,10 @@ export class CalDAVMultiCalendarRepository {
   /**
    * Parse individual event from iCal data
    */
+  // CODE_SMELL: Rule #4 Complexity Budget - Method exceeds 30 lines with many responsibilities
+  // Fix: Split into parseBasicFields(), parseOptionalFields(), parseMetadata()
   private parseEventFromIcal(event: ICalEventData, k: string): CalendarEvent {
-    const startDate = event.start
-      ? new Date(event.start)
-      : new Date();
+    const startDate = event.start ? new Date(event.start) : new Date();
     const endDate = event.end ? new Date(event.end) : null;
 
     const calendarEvent: CalendarEvent = {
@@ -431,10 +430,8 @@ export class CalDAVMultiCalendarRepository {
     };
 
     // Add optional fields
-    if (event.description)
-      calendarEvent.description = event.description;
-    if (event.location)
-      calendarEvent.location = event.location;
+    if (event.description) calendarEvent.description = event.description;
+    if (event.location) calendarEvent.location = event.location;
     if (endDate) calendarEvent.dtend = endDate.toISOString();
 
     // Add all other metadata fields from original parser
@@ -447,8 +444,7 @@ export class CalDAVMultiCalendarRepository {
     const categories = this.parseCategories(event.categories);
     if (categories) calendarEvent.categories = categories;
 
-    if (event.priority)
-      calendarEvent.priority = event.priority;
+    if (event.priority) calendarEvent.priority = event.priority;
 
     const status = this.parseStatus(event.status);
     if (status) calendarEvent.status = status;
@@ -459,16 +455,12 @@ export class CalDAVMultiCalendarRepository {
     const duration = this.calculateDuration(startDate, endDate);
     if (duration) calendarEvent.duration = duration;
 
-    if (event.rrule)
-      calendarEvent.rrule = event.rrule.toString();
+    if (event.rrule) calendarEvent.rrule = event.rrule.toString();
     if (event.created)
       calendarEvent.created = new Date(event.created).toISOString();
     if (event.lastmodified)
-      calendarEvent.lastModified = new Date(
-        event.lastmodified
-      ).toISOString();
-    if (event.sequence)
-      calendarEvent.sequence = event.sequence;
+      calendarEvent.lastModified = new Date(event.lastmodified).toISOString();
+    if (event.sequence) calendarEvent.sequence = event.sequence;
     if (event.url) calendarEvent.url = event.url;
 
     const geo = this.parseGeo(event.geo);
@@ -480,8 +472,7 @@ export class CalDAVMultiCalendarRepository {
     const attachments = this.parseAttachments(event.attach);
     if (attachments) calendarEvent.attachments = attachments;
 
-    if (event.start && event.start.tz)
-      calendarEvent.timezone = event.start.tz;
+    if (event.start && event.start.tz) calendarEvent.timezone = event.start.tz;
 
     return calendarEvent;
   }
@@ -501,7 +492,6 @@ export class CalDAVMultiCalendarRepository {
       const iCalData = iCalendarGenerator.generateVCalendar(event);
       const filename = `${encodeURIComponent(event.id)}.ics`;
       const eventUrl = `${this.basePath}${calendar_path}${filename}`;
-
 
       const options = {
         hostname: this.credentials.hostname,
@@ -615,7 +605,6 @@ export class CalDAVMultiCalendarRepository {
       const encodedEventId = encodeURIComponent(event.id);
       const eventUrl = `${this.basePath}${calendar_path}${encodedEventId}.ics`;
 
-
       const options = {
         hostname: this.credentials.hostname,
         port: 443,
@@ -661,7 +650,14 @@ export class CalDAVMultiCalendarRepository {
   // Helper methods (keeping existing implementations)
   private parseOrganizer(organizer: unknown): string | undefined {
     if (typeof organizer === 'string') return organizer;
-    if (organizer && typeof organizer === "object" && organizer !== null && "val" in organizer && typeof (organizer as Record<string, unknown>).val === "string") return (organizer as Record<string, unknown>).val as string;
+    if (
+      organizer &&
+      typeof organizer === 'object' &&
+      organizer !== null &&
+      'val' in organizer &&
+      typeof (organizer as Record<string, unknown>).val === 'string'
+    )
+      return (organizer as Record<string, unknown>).val as string;
     return undefined;
   }
 
@@ -669,13 +665,17 @@ export class CalDAVMultiCalendarRepository {
     if (!attendee) return undefined;
     if (Array.isArray(attendee)) {
       return attendee
-        .map(a => (typeof a === 'string' ? a : (a as any)?.val || (a as any)?.toString() || ""))
+        .map(a =>
+          typeof a === 'string'
+            ? a
+            : (a as any)?.val || (a as any)?.toString() || ''
+        )
         .filter(Boolean);
     }
     const single =
       typeof attendee === 'string'
         ? attendee
-        : (attendee as any)?.val || (attendee as any)?.toString() || "";
+        : (attendee as any)?.val || (attendee as any)?.toString() || '';
     return single ? [single] : undefined;
   }
 
@@ -695,7 +695,7 @@ export class CalDAVMultiCalendarRepository {
   ): 'CONFIRMED' | 'TENTATIVE' | 'CANCELLED' | undefined {
     if (!status) return undefined;
     const statusStr = (
-      typeof status === 'string' ? status : (status as any)?.toString() || ""
+      typeof status === 'string' ? status : (status as any)?.toString() || ''
     ).toUpperCase();
     if (['CONFIRMED', 'TENTATIVE', 'CANCELLED'].includes(statusStr)) {
       return statusStr as 'CONFIRMED' | 'TENTATIVE' | 'CANCELLED';
@@ -708,7 +708,9 @@ export class CalDAVMultiCalendarRepository {
   ): 'PUBLIC' | 'PRIVATE' | 'CONFIDENTIAL' | undefined {
     if (!classField) return undefined;
     const classStr = (
-      typeof classField === 'string' ? classField : (classField as any)?.toString() || ""
+      typeof classField === 'string'
+        ? classField
+        : (classField as any)?.toString() || ''
     ).toUpperCase();
     if (['PUBLIC', 'PRIVATE', 'CONFIDENTIAL'].includes(classStr)) {
       return classStr as 'PUBLIC' | 'PRIVATE' | 'CONFIDENTIAL';
@@ -727,7 +729,10 @@ export class CalDAVMultiCalendarRepository {
   private parseGeo(geo: unknown): { lat: number; lon: number } | undefined {
     if (!geo) return undefined;
     if ((geo as any)?.lat && (geo as any)?.lon)
-      return { lat: parseFloat((geo as any)?.lat), lon: parseFloat((geo as any)?.lon) };
+      return {
+        lat: parseFloat((geo as any)?.lat),
+        lon: parseFloat((geo as any)?.lon),
+      };
     if (typeof geo === 'string') {
       const parts = geo.split(',');
       if (parts.length === 2 && parts[0] && parts[1]) {
@@ -741,10 +746,12 @@ export class CalDAVMultiCalendarRepository {
     return undefined;
   }
 
-  private parseTransparency(transp: unknown): 'OPAQUE' | 'TRANSPARENT' | undefined {
+  private parseTransparency(
+    transp: unknown
+  ): 'OPAQUE' | 'TRANSPARENT' | undefined {
     if (!transp) return undefined;
     const transpStr = (
-      typeof transp === 'string' ? transp : (transp as any)?.toString() || ""
+      typeof transp === 'string' ? transp : (transp as any)?.toString() || ''
     ).toUpperCase();
     if (['OPAQUE', 'TRANSPARENT'].includes(transpStr)) {
       return transpStr as 'OPAQUE' | 'TRANSPARENT';
@@ -756,11 +763,17 @@ export class CalDAVMultiCalendarRepository {
     if (!attach) return undefined;
     if (Array.isArray(attach)) {
       return attach
-        .map(a => (typeof a === 'string' ? a : (a as any)?.val || (a as any)?.toString() || ""))
+        .map(a =>
+          typeof a === 'string'
+            ? a
+            : (a as any)?.val || (a as any)?.toString() || ''
+        )
         .filter(Boolean);
     }
     const single =
-      typeof attach === 'string' ? attach : (attach as any)?.val || (attach as any)?.toString() || "";
+      typeof attach === 'string'
+        ? attach
+        : (attach as any)?.val || (attach as any)?.toString() || '';
     return single ? [single] : undefined;
   }
 

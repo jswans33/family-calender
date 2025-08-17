@@ -8,6 +8,8 @@ export class iCalendarGenerator {
   /**
    * Generates a complete VCALENDAR with VEVENT for CalDAV PUT operations
    */
+  // CODE_SMELL: Rule #4 Complexity Budget - Method exceeds 30 lines with string concatenation
+  // Fix: Split into generateHeader(), generateEventFields(), generateFooter()
   static generateVCalendar(event: CalendarEvent): string {
     const now =
       new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
@@ -51,7 +53,7 @@ END:VCALENDAR`
   private static formatDateTime(
     dateString: string,
     time?: string,
-    timezone?: string
+    _timezone?: string
   ): string {
     const date = new Date(dateString);
 

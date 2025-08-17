@@ -1,0 +1,17 @@
+  /**
+   * QUALITY CHECK: Generate summary report
+   */
+  private generateSummaryReport(data: ExportData): void {
+    // Check for missing metadata - analysis for quality check
+    data.events.filter(
+      (e: EventWithMetadata) => !e.calendar_path || !e.calendar_name || !e.caldav_filename
+    );
+
+    // Check for duplicate IDs - analysis for quality check
+    const eventIds = data.events.map((e: EventWithMetadata) => e.id);
+    new Set(eventIds);
+
+    // Check filename patterns - analysis for quality check  
+    data.events.map((e: EventWithMetadata) => e.caldav_filename)
+      .filter((f: string) => f && f.endsWith('.ics'));
+  }

@@ -1,6 +1,6 @@
+import { Buffer } from 'buffer';
 import { Request, Response } from 'express';
 import { ICalendarService } from '../types/Calendar.js';
-import { Buffer } from 'buffer';
 
 export class CalendarController {
   private calendarService: ICalendarService;
@@ -67,6 +67,8 @@ export class CalendarController {
 
   async updateEvent(req: Request, res: Response): Promise<void> {
     try {
+      // CODE_SMELL: Rule #1 One Thing Per File - Business logic in controller
+      // Fix: Create URLEncodingService.decodeEventId() for reuse across endpoints
       // Decode Base64-encoded event ID to handle special characters safely
       const encodedId = req.params.id;
       if (!encodedId) {
@@ -83,6 +85,8 @@ export class CalendarController {
       const eventId = Buffer.from(paddedBase64, 'base64').toString('utf-8');
       const eventData = req.body;
 
+      // CODE_SMELL: Rule #1 One Thing Per File - Validation logic in controller
+      // Fix: Move to ValidationService.validateEventUpdate(eventData, eventId)
       // Ensure the event ID matches the URL parameter
       if (eventData.id && eventData.id !== eventId) {
         res.status(400).json({
@@ -124,6 +128,8 @@ export class CalendarController {
 
   async deleteEvent(req: Request, res: Response): Promise<void> {
     try {
+      // CODE_SMELL: Rule #5 No Clever Code - Duplicate Base64 decoding logic
+      // Fix: Extract to URLEncodingService.decodeEventId(req.params.id)
       // Decode Base64-encoded event ID
       const encodedId = req.params.id;
       if (!encodedId) {
