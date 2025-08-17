@@ -2,6 +2,9 @@
   text-align: center;
   padding: 20px;
   font-family: Arial, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .loading {
@@ -13,8 +16,12 @@
 }
 
 .calendar {
-  max-width: 800px;
+  max-width: 1400px;
   margin: 0 auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
 }
 
 .calendar h2 {
@@ -171,5 +178,131 @@
   .calendar-header button {
     padding: 0.25rem;
     font-size: 0.8rem;
+  }
+}
+
+/* ===== RASPBERRY PI & DESKTOP OPTIMIZATIONS ===== */
+
+/* Raspberry Pi 1920x1080 Full HD */
+@media (min-width: 1800px) and (max-width: 1920px) {
+  .App {
+    padding: 15px;
+  }
+  
+  .calendar {
+    max-width: 95vw;
+    height: 95vh;
+  }
+  
+  .calendar-day {
+    min-height: 120px;
+    font-size: 14px;
+  }
+  
+  .day-header {
+    padding: 12px;
+    font-size: 16px;
+  }
+}
+
+/* Raspberry Pi 1680x1050 or 1440p displays */
+@media (min-width: 1400px) and (max-width: 1680px) {
+  .App {
+    padding: 12px;
+  }
+  
+  .calendar {
+    max-width: 98vw;
+    height: 92vh;
+  }
+  
+  .calendar-day {
+    min-height: 110px;
+    font-size: 13px;
+  }
+}
+
+/* Standard desktop 1024x768 or small displays */
+@media (min-width: 1024px) and (max-width: 1400px) {
+  .calendar {
+    max-width: 95vw;
+    height: 88vh;
+  }
+  
+  .calendar-day {
+    min-height: 100px;
+    font-size: 12px;
+  }
+}
+
+/* Ultra-wide displays (21:9 aspect ratio) */
+@media (min-width: 2560px) {
+  .App {
+    padding: 20px 10%;
+  }
+  
+  .calendar {
+    max-width: 1600px;
+    height: 90vh;
+  }
+  
+  .calendar-day {
+    min-height: 140px;
+    font-size: 16px;
+  }
+  
+  .day-header {
+    padding: 15px;
+    font-size: 18px;
+  }
+}
+
+/* Landscape orientation optimization */
+@media (orientation: landscape) and (max-height: 800px) {
+  .App {
+    padding: 8px;
+  }
+  
+  .calendar {
+    height: 95vh;
+  }
+  
+  .calendar-day {
+    min-height: 85px;
+  }
+  
+  /* Compact header for landscape */
+  .calendar-header {
+    margin-bottom: 0.5rem;
+  }
+  
+  .calendar-header h1 {
+    font-size: 1.5rem;
+  }
+}
+
+/* Portrait tablet optimization */
+@media (orientation: portrait) and (min-width: 768px) and (max-width: 1024px) {
+  .calendar-day {
+    min-height: 90px;
+  }
+  
+  .calendar {
+    max-width: 95vw;
+  }
+}
+
+/* High DPI displays (Retina, etc.) */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .calendar-day {
+    border-width: 0.5px;
+  }
+  
+  .event {
+    border-radius: 4px;
+  }
+  
+  .day-header {
+    font-weight: 600;
   }
 }
