@@ -2,6 +2,7 @@ import { CalendarEvent } from '../types/Calendar.js';
 import { CalDAVMultiCalendarRepository } from '../repositories/CalDAVMultiCalendarRepository.js';
 import { SQLiteCompositeRepository } from '../repositories/SQLiteCompositeRepository.js';
 import { formatInTimeZone } from 'date-fns-tz';
+import { debugLog } from '../config/debug.js';
 
 /**
  * Service responsible for creating, updating, and deleting calendar events
@@ -24,7 +25,7 @@ export class CalendarUpdateService {
     event: CalendarEvent,
     calendarName: string = 'shared'
   ): Promise<boolean> {
-    console.log(`🎯 CalendarUpdateService.createEvent called:`, {
+    debugLog('caldav', `🎯 CalendarUpdateService.createEvent called:`, {
       eventId: event.id,
       title: event.title,
       calendarName,
@@ -34,14 +35,14 @@ export class CalendarUpdateService {
     
     try {
       const calendarPath = this.getCalendarPath(calendarName);
-      console.log(`📂 Calendar path for ${calendarName}: ${calendarPath}`);
+      debugLog('caldav', `📂 Calendar path for ${calendarName}: ${calendarPath}`);
       
       // Create in CalDAV
       const created = await this.multiCalendarRepository.createEventInCalendar(
         event,
         calendarName
       );
-      console.log(`🔄 CalDAV create result: ${created}`);
+      debugLog('caldav', `🔄 CalDAV create result: ${created}`);
 
       if (created) {
         // Ensure date and time fields are populated from start if not present
@@ -67,7 +68,7 @@ export class CalendarUpdateService {
           calendar_path: calendarPath,
           calendar_name: calendarName,
         };
-        console.log(`💾 Saving to database with metadata`);
+        debugLog('database', `💾 Saving to database with metadata`);
         await this.sqliteRepository.saveEvents([eventWithMetadata]);
         return true;
       }

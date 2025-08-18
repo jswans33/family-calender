@@ -1,6 +1,7 @@
 import { CalendarEvent } from '../types/Calendar.js';
 import { iCalendarGenerator } from '../utils/iCalendarGenerator.js';
 import { CalDAVFetchRepository } from './CalDAVFetchRepository.js';
+import { debugLog } from '../config/debug.js';
 
 export class CalDAVOperationsRepository {
   private fetchRepository: CalDAVFetchRepository;
@@ -70,7 +71,7 @@ export class CalDAVOperationsRepository {
   }
 
   async createEventInCalendar(event: CalendarEvent, calendarName: string): Promise<boolean> {
-    console.log(`🔍 createEventInCalendar called with:`, {
+    debugLog('caldav', `🔍 createEventInCalendar called with:`, {
       eventId: event.id,
       title: event.title,
       calendarName,
@@ -82,7 +83,7 @@ export class CalDAVOperationsRepository {
     
     try {
       const icalContent = this.generateICalendarContent(event);
-      console.log(`📝 Generated iCal content (first 200 chars):`, icalContent.substring(0, 200));
+      debugLog('caldav', `📝 Generated iCal content (first 200 chars):`, icalContent.substring(0, 200));
       
       // Map calendar names to their actual paths
       const calendarPaths: Record<string, string> = {
@@ -94,10 +95,10 @@ export class CalDAVOperationsRepository {
       };
       const calendarId = calendarPaths[calendarName] || calendarPaths.shared;
       const eventPath = `${this.basePath}/${calendarId}/${event.id}.ics`;
-      console.log(`📍 Event path: ${eventPath}`);
+      debugLog('caldav', `📍 Event path: ${eventPath}`);
 
       const result = await this.fetchRepository.putEventData(icalContent, eventPath);
-      console.log(`📤 PUT result:`, { success: result.success, statusCode: result.statusCode });
+      debugLog('caldav', `📤 PUT result:`, { success: result.success, statusCode: result.statusCode });
       
       if (!result.success) {
         console.error(`❌ Failed to create event in ${calendarName}: Status ${result.statusCode}`, {
