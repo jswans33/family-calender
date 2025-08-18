@@ -198,7 +198,7 @@ export class SQLiteEventRepository extends SQLiteBaseRepository {
 
   private buildSaveEventsSQL(preserveMetadata: boolean): string {
     const baseColumns = `
-      id, title, date, time, description, location, organizer,
+      id, title, date, time, start, end, description, location, organizer,
       attendees, categories, priority, status, visibility, dtend,
       duration, rrule, created, last_modified, sequence, url,
       geo_lat, geo_lon, transparency, attachments, timezone, 
@@ -206,16 +206,18 @@ export class SQLiteEventRepository extends SQLiteBaseRepository {
       local_modified, synced_at, is_vacation
     `;
 
-    const baseValues = `?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?`;
+    const baseValues = `?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?`;
 
     if (preserveMetadata) {
       return `
         INSERT INTO events (${baseColumns}) 
-        VALUES (${baseValues.replace('CURRENT_TIMESTAMP', 'COALESCE((SELECT synced_at FROM events WHERE id = ?), CURRENT_TIMESTAMP)')})
+        VALUES (${baseValues})
         ON CONFLICT(id) DO UPDATE SET
           title = excluded.title,
           date = excluded.date,
           time = excluded.time,
+          start = excluded.start,
+          end = excluded.end,
           description = excluded.description,
           location = excluded.location,
           organizer = excluded.organizer,
@@ -293,6 +295,8 @@ export class SQLiteEventRepository extends SQLiteBaseRepository {
       event.title,
       event.date,
       event.time,
+      event.start || event.date,
+      event.end || event.dtend || event.date,
       event.description ?? null,
       event.location ?? null,
       event.organizer ?? null,
@@ -318,13 +322,9 @@ export class SQLiteEventRepository extends SQLiteBaseRepository {
       ((event as any).calendar_name as string) || null,
       ((event as any).sync_status as string) || 'synced',
       ((event as any).local_modified as string) || null,
-      'CURRENT_TIMESTAMP',
+      null, // synced_at will use DEFAULT CURRENT_TIMESTAMP
       event.isVacation ? 1 : 0
     ];
-
-    if (preserveMetadata) {
-      params.push(event.id); // For COALESCE query
-    }
 
     return params;
   }
