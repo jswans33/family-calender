@@ -70,19 +70,46 @@ export class CalDAVOperationsRepository {
   }
 
   async createEventInCalendar(event: CalendarEvent, calendarName: string): Promise<boolean> {
+    console.log(`🔍 createEventInCalendar called with:`, {
+      eventId: event.id,
+      title: event.title,
+      calendarName,
+      start: event.start,
+      end: event.end,
+      date: event.date,
+      time: event.time
+    });
+    
     try {
       const icalContent = this.generateICalendarContent(event);
-      const eventPath = `${this.basePath}/${calendarName}/${event.id}.ics`;
+      console.log(`📝 Generated iCal content (first 200 chars):`, icalContent.substring(0, 200));
+      
+      // Map calendar names to their actual paths
+      const calendarPaths: Record<string, string> = {
+        personal: 'home',  // Using 'home' path
+        work: 'work',      // Using 'work' path  
+        shared: '2D7581FA-3A83-42D8-B6F4-8BCD8186AA6E',  // This is the actual shared calendar
+        home: 'home',
+        meals: '1fa1e4097e27af6d41607163c20c088e70cf8e9db9d71b1a62611ec364123914'
+      };
+      const calendarId = calendarPaths[calendarName] || calendarPaths.shared;
+      const eventPath = `${this.basePath}/${calendarId}/${event.id}.ics`;
+      console.log(`📍 Event path: ${eventPath}`);
 
       const result = await this.fetchRepository.putEventData(icalContent, eventPath);
+      console.log(`📤 PUT result:`, { success: result.success, statusCode: result.statusCode });
       
       if (!result.success) {
-        console.error(`❌ Failed to create event in ${calendarName}: ${result.statusCode}`);
+        console.error(`❌ Failed to create event in ${calendarName}: Status ${result.statusCode}`, {
+          path: eventPath,
+          contentLength: icalContent.length
+        });
       }
       
       return result.success;
     } catch (error) {
       console.error(`❌ Error creating event in ${calendarName}:`, error);
+      console.error(`Stack trace:`, error instanceof Error ? error.stack : 'No stack');
       return false;
     }
   }
@@ -90,21 +117,25 @@ export class CalDAVOperationsRepository {
   private generateICalendarContent(event: CalendarEvent): string {
     const now =
       new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    const startDate =
-      new Date(event.date + (event.time ? `T${event.time}:00` : ''))
-        .toISOString()
-        .replace(/[-:]/g, '')
-        .split('.')[0] + 'Z';
-    const endDate = event.dtend
-      ? new Date(event.dtend).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-      : new Date(
-          new Date(
-            event.date + (event.time ? `T${event.time}:00` : '')
-          ).getTime() + 3600000
-        )
+    
+    // Use start/end fields if available, otherwise fall back to date/time
+    const startDate = event.start
+      ? new Date(event.start).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+      : new Date(event.date + (event.time ? `T${event.time}:00` : ''))
           .toISOString()
           .replace(/[-:]/g, '')
           .split('.')[0] + 'Z';
+    
+    const endDate = event.end
+      ? new Date(event.end).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+      : event.dtend
+        ? new Date(event.dtend).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+        : new Date(
+            new Date(event.start || event.date + (event.time ? `T${event.time}:00` : '')).getTime() + 3600000
+          )
+            .toISOString()
+            .replace(/[-:]/g, '')
+            .split('.')[0] + 'Z';
 
     return [
       'BEGIN:VCALENDAR',

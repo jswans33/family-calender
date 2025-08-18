@@ -1,5 +1,6 @@
 import ical from 'node-ical';
 import { CalendarEvent } from '../types/Calendar.js';
+import { formatInTimeZone } from 'date-fns-tz';
 
 interface ICalEventData {
   uid?: string;
@@ -164,14 +165,59 @@ export class CalDAVParserRepository {
     const endDate = event.end instanceof Date ? event.end :
                    event.end ? new Date(String(event.end)) : null;
 
+    // Get timezone from event if available
+    let eventTimezone = (event.start && typeof event.start === 'object' && 'tz' in event.start) 
+      ? (event.start as any).tz 
+      : 'Etc/UTC';
+
+    // Map common timezone formats to IANA timezone identifiers
+    const timezoneMap: Record<string, string> = {
+      'GMT-0600': 'America/Denver',
+      'GMT-0700': 'America/Denver', // MST
+      'GMT-0500': 'America/Chicago', // CST
+      'GMT-0400': 'America/New_York', // EST
+      'MST': 'America/Denver',
+      'MDT': 'America/Denver',
+      'CST': 'America/Chicago',
+      'CDT': 'America/Chicago',
+      'EST': 'America/New_York',
+      'EDT': 'America/New_York',
+      'PST': 'America/Los_Angeles',
+      'PDT': 'America/Los_Angeles'
+    };
+
+    // Convert GMT offset format to IANA timezone if needed
+    if (eventTimezone && eventTimezone.startsWith('GMT')) {
+      eventTimezone = timezoneMap[eventTimezone] || 'America/Denver';
+    }
+
+    // Format time in the event's timezone, not UTC
+    let timeString: string;
+    try {
+      if (eventTimezone && eventTimezone !== 'Etc/UTC' && !eventTimezone.startsWith('GMT')) {
+        // Convert to the event's timezone for display
+        timeString = formatInTimeZone(startDate, eventTimezone, 'HH:mm');
+      } else {
+        // For UTC events or unknown timezones, use UTC time
+        const hours = startDate.getUTCHours().toString().padStart(2, '0');
+        const minutes = startDate.getUTCMinutes().toString().padStart(2, '0');
+        timeString = `${hours}:${minutes}`;
+      }
+    } catch (error) {
+      // Fallback to UTC if timezone conversion fails
+      console.error(`Failed to convert timezone for ${eventTimezone}:`, error);
+      const hours = startDate.getUTCHours().toString().padStart(2, '0');
+      const minutes = startDate.getUTCMinutes().toString().padStart(2, '0');
+      timeString = `${hours}:${minutes}`;
+    }
+
     return {
       id: event.uid || eventKey,
       title: event.summary || 'No Title',
       date: startDate.toISOString(),
-      time: startDate.toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
+      time: timeString,
+      start: startDate.toISOString(),
+      end: endDate ? endDate.toISOString() : startDate.toISOString(),
       ...(endDate && { dtend: endDate.toISOString() }),
     };
   }
@@ -228,7 +274,30 @@ export class CalDAVParserRepository {
     if (attachments) metadata.attachments = attachments;
 
     if (event.start && typeof event.start === 'object' && 'tz' in event.start) {
-      metadata.timezone = (event.start as any).tz;
+      let tz = (event.start as any).tz;
+      
+      // Map common timezone formats to IANA timezone identifiers
+      const timezoneMap: Record<string, string> = {
+        'GMT-0600': 'America/Denver',
+        'GMT-0700': 'America/Denver',
+        'GMT-0500': 'America/Chicago',
+        'GMT-0400': 'America/New_York',
+        'MST': 'America/Denver',
+        'MDT': 'America/Denver',
+        'CST': 'America/Chicago',
+        'CDT': 'America/Chicago',
+        'EST': 'America/New_York',
+        'EDT': 'America/New_York',
+        'PST': 'America/Los_Angeles',
+        'PDT': 'America/Los_Angeles'
+      };
+      
+      // Convert GMT offset format to IANA timezone if needed
+      if (tz && tz.startsWith('GMT')) {
+        tz = timezoneMap[tz] || 'America/Denver';
+      }
+      
+      metadata.timezone = tz;
     }
 
     const startDate = event.start instanceof Date ? event.start : 

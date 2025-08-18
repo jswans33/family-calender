@@ -1,6 +1,7 @@
 import { CalendarEvent } from '../types/Calendar.js';
 import { CalDAVMultiCalendarRepository } from '../repositories/CalDAVMultiCalendarRepository.js';
 import { SQLiteCompositeRepository } from '../repositories/SQLiteCompositeRepository.js';
+import { formatInTimeZone } from 'date-fns-tz';
 
 /**
  * Service responsible for creating, updating, and deleting calendar events
@@ -23,28 +24,57 @@ export class CalendarUpdateService {
     event: CalendarEvent,
     calendarName: string = 'shared'
   ): Promise<boolean> {
+    console.log(`🎯 CalendarUpdateService.createEvent called:`, {
+      eventId: event.id,
+      title: event.title,
+      calendarName,
+      hasStart: !!event.start,
+      hasEnd: !!event.end
+    });
+    
     try {
       const calendarPath = this.getCalendarPath(calendarName);
+      console.log(`📂 Calendar path for ${calendarName}: ${calendarPath}`);
       
       // Create in CalDAV
       const created = await this.multiCalendarRepository.createEventInCalendar(
         event,
         calendarName
       );
+      console.log(`🔄 CalDAV create result: ${created}`);
 
       if (created) {
-        // Save to local database with metadata
+        // Ensure date and time fields are populated from start if not present
+        const startDate = event.start ? new Date(event.start) : new Date();
+        
+        // Determine timezone - default to America/Denver for user events
+        const timezone = event.timezone || 'America/Denver';
+        
+        // Format time in the event's timezone
+        let timeString: string;
+        try {
+          timeString = formatInTimeZone(startDate, timezone, 'HH:mm');
+        } catch {
+          // Fallback to UTC if timezone conversion fails
+          timeString = `${startDate.getUTCHours().toString().padStart(2, '0')}:${startDate.getUTCMinutes().toString().padStart(2, '0')}`;
+        }
+        
         const eventWithMetadata: any = {
           ...event,
+          date: event.date || startDate.toISOString(),
+          time: event.time || timeString,
+          timezone: timezone,
           calendar_path: calendarPath,
           calendar_name: calendarName,
         };
+        console.log(`💾 Saving to database with metadata`);
         await this.sqliteRepository.saveEvents([eventWithMetadata]);
         return true;
       }
       return false;
     } catch (error) {
-      console.error('Error creating event:', error);
+      console.error('❌ Error in CalendarUpdateService.createEvent:', error);
+      console.error('Stack:', error instanceof Error ? error.stack : 'No stack');
       return false;
     }
   }
