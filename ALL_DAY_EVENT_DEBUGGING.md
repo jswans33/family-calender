@@ -73,11 +73,47 @@ DTEND:20250829T010000Z    // End time gets calculated wrong
 
 ## Next Steps to Fix:
 1. ✅ Document the issue (this file)
-2. 🔄 Fix iCalendar generation to use proper DATE format for all-day events
-3. 🔄 Ensure no timezone conversion for all-day events
-4. 🔄 Test that CalDAV properly recognizes DATE format as all-day
-5. 🔄 Add comprehensive logging to track iCalendar generation
-6. 🔄 Add database preservation of original values
+2. ✅ Add comprehensive logging to track iCalendar generation
+3. ✅ Add database preservation of original values
+4. ✅ Research RFC 5545 and working implementations
+5. ✅ Set up Jest testing framework with ES modules
+6. 🔄 Write comprehensive unit tests for iCalendarGenerator (6/10 passing)
+7. 🔄 Fix missing generateVEvent method in iCalendarGenerator
+8. 🔄 Make all unit tests pass for RFC 5545 compliance
+9. 🔄 Fix iCalendar generation to use proper DATE format for all-day events
+10. 🔄 Ensure no timezone conversion for all-day events
+11. 🔄 Test that CalDAV properly recognizes DATE format as all-day
+
+## Unit Test Results (Current Status):
+✅ **6/10 tests passing:**
+- All-day detection logic works correctly
+- Date formatting works correctly for both all-day and timed events
+- Empty time detection ✅
+- PT24H0M duration detection ✅
+- "All Day" string detection ✅
+- Regular time NOT detected as all-day ✅
+- Date-only format (20250829) ✅
+- DateTime format with timezone ✅
+
+❌ **4/10 tests failing:**
+- Missing `generateVEvent` method - core issue
+- Cannot test full iCalendar output generation
+- Cannot validate DTSTART;VALUE=DATE format
+- Cannot test end date calculation
+
+## RFC 5545 Specification Requirements:
+- All-day events MUST use `DTSTART;VALUE=DATE:20250829`
+- DTEND MUST also use `VALUE=DATE` if present
+- End date is **exclusive** (next day): `DTEND;VALUE=DATE:20250830`
+- NO timezone conversion for DATE values
+- Example from working libraries:
+  ```
+  BEGIN:VEVENT
+  DTSTART;VALUE=DATE:20250829
+  DTEND;VALUE=DATE:20250830
+  SUMMARY:All Day Event
+  END:VEVENT
+  ```
 
 ## Test Cases Needed:
 - [ ] Create all-day event via modal

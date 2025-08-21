@@ -19,6 +19,19 @@ export class iCalendarGenerator {
   }
 
   /**
+   * Generates only the VEVENT section for testing and validation
+   */
+  static generateVEvent(event: CalendarEvent): string {
+    const lines = [
+      'BEGIN:VEVENT',
+      ...this.generateEventFields(event),
+      'END:VEVENT',
+    ];
+
+    return lines.filter(line => line.length > 0).join('\n');
+  }
+
+  /**
    * Generates VCALENDAR header section
    */
   private static generateHeader(): string[] {
@@ -52,10 +65,10 @@ export class iCalendarGenerator {
     });
     
     // Log the actual DTSTART/DTEND that will be generated
-    const dtstart = this.formatDateTime(event.date, event.time, event.timezone);
+    const dtstart = this.formatDateTime(event.date, isAllDay ? '' : event.time, event.timezone);
     const dtend = this.formatDateTime(
-      event.dtend || this.calculateEndTime(event.date, event.time),
-      isAllDay ? undefined : event.time ? this.calculateEndTimeString(event.time) : undefined,
+      event.dtend || this.calculateEndTime(event.date, event.time, event),
+      isAllDay ? '' : event.time ? this.calculateEndTimeString(event.time) : undefined,
       event.timezone
     );
     
@@ -72,11 +85,15 @@ export class iCalendarGenerator {
     const fields = [
       `UID:${event.id}`,
       `DTSTAMP:${now}`,
-      `DTSTART${isAllDay ? ';VALUE=DATE' : ''}:${this.formatDateTime(event.date, event.time, event.timezone)}`,
+      `DTSTART${isAllDay ? ';VALUE=DATE' : ''}:${this.formatDateTime(
+        event.date, 
+        isAllDay ? '' : event.time, 
+        event.timezone
+      )}`,
       `DTEND${isAllDay ? ';VALUE=DATE' : ''}:${this.formatDateTime(
-        event.dtend || this.calculateEndTime(event.date, event.time),
+        event.dtend || this.calculateEndTime(event.date, event.time, event),
         isAllDay
-          ? undefined
+          ? ''
           : event.time
             ? this.calculateEndTimeString(event.time)
             : undefined,
@@ -101,7 +118,7 @@ export class iCalendarGenerator {
   /**
    * Determines if event is all-day
    */
-  private static isAllDayEvent(event: CalendarEvent): boolean {
+  public static isAllDayEvent(event: CalendarEvent): boolean {
     return (
       event.time === 'All Day' ||
       event.time === 'all day' ||
@@ -141,7 +158,7 @@ export class iCalendarGenerator {
    * Formats date/time for iCalendar DTSTART/DTEND fields
    * Apple CalDAV requires UTC format with Z suffix and seconds included
    */
-  private static formatDateTime(
+  public static formatDateTime(
     dateString: string,
     time?: string,
     _timezone?: string
@@ -192,13 +209,18 @@ export class iCalendarGenerator {
   /**
    * Calculate end time - default to 1 hour after start
    */
-  private static calculateEndTime(date: string, time?: string): string {
+  private static calculateEndTime(date: string, time?: string, event?: CalendarEvent): string {
     const startDate = new Date(date);
-    if (!time || time === '' || time === 'All Day' || time === 'all day') {
+    
+    // Check if this is an all-day event based on the whole event context
+    const isAllDay = event ? this.isAllDayEvent(event) : 
+      (!time || time === '' || time === 'All Day' || time === 'all day');
+    
+    if (isAllDay) {
       // For all-day events, end is next day
       const endDate = new Date(startDate);
       endDate.setDate(endDate.getDate() + 1);
-      return endDate.toISOString();
+      return endDate.toISOString().split('T')[0]; // Return just the date part
     }
     // For timed events, default to 1 hour duration
     return date; // Same date, different time
