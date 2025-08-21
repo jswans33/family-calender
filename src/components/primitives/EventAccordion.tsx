@@ -62,6 +62,16 @@ const EventAccordion: React.FC<EventAccordionProps> = ({
     else if (daysDiff === -1) dateLabel = 'Yesterday';
     else dateLabel = CalendarService.parseLocal(datePart).toLocaleDateString();
 
+    // Debug specific events
+    if (event.title.includes('Morgan') || event.title.includes('Indian') || event.title.includes('Mac')) {
+      console.log('EventAccordion debug:', {
+        title: event.title,
+        time: event.time,
+        formattedTime: event.time ? CalendarService.formatTimeTo12h(event.time) : null,
+        willShowAsAllDay: !event.time
+      });
+    }
+    
     return {
       dateLabel,
       time: event.time

@@ -67,6 +67,17 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
       event.time === 'all day' ||
       event.time === '12:00 AM' ||
       !event.time;
+    
+    // Debug logging
+    if (event.title.includes('Morgan') || event.title.includes('Indian')) {
+      console.log('Event debug:', {
+        title: event.title,
+        time: event.time,
+        isAllDay,
+        date: event.date,
+        dtend: event.dtend,
+      });
+    }
 
     if (event.dtend) {
       const datePart = event.date.split('T')[0] || event.date;

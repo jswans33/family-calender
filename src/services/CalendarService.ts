@@ -151,22 +151,35 @@ class CalendarService {
    * @param time12h Time string from server (e.g., "10:00 AM", "2:30 PM")
    * @returns 24-hour formatted time string (e.g., "10:00", "14:30") or undefined
    */
-  private formatTimeTo24h(time12h?: string): string | undefined {
-    if (!time12h || time12h === 'All Day') return undefined;
+  private formatTimeTo24h(timeStr?: string): string | undefined {
+    if (!timeStr || timeStr === 'All Day' || timeStr === 'all day') return undefined;
 
     try {
-      // Handle format like "10:00 AM" or "2:30 PM"
-      const match = time12h.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
-      if (!match) return undefined;
+      // Check if already in 24-hour format (HH:MM)
+      const time24Match = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+      if (time24Match) {
+        const hours = parseInt(time24Match[1] || '0', 10);
+        const minutes = time24Match[2] || '00';
+        // Validate the time values
+        if (hours >= 0 && hours <= 23) {
+          return `${String(hours).padStart(2, '0')}:${minutes}`;
+        }
+      }
 
-      let hours = parseInt(match[1] || '0', 10);
-      const minutes = match[2] || '00';
-      const period = match[3]?.toUpperCase() || 'AM';
+      // Handle 12-hour format like "10:00 AM" or "2:30 PM"
+      const time12Match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+      if (time12Match) {
+        let hours = parseInt(time12Match[1] || '0', 10);
+        const minutes = time12Match[2] || '00';
+        const period = time12Match[3]?.toUpperCase() || 'AM';
 
-      if (period === 'PM' && hours !== 12) hours += 12;
-      if (period === 'AM' && hours === 12) hours = 0;
+        if (period === 'PM' && hours !== 12) hours += 12;
+        if (period === 'AM' && hours === 12) hours = 0;
 
-      return `${String(hours).padStart(2, '0')}:${minutes}`;
+        return `${String(hours).padStart(2, '0')}:${minutes}`;
+      }
+
+      return undefined;
     } catch {
       return undefined;
     }
