@@ -104,7 +104,13 @@ app.post('/events', async (req, res) => {
 app.get('/calendars', async (req, res) => {
   try {
     const calendars = await calendarService.getCalendars();
-    res.json(calendars);
+    // Add displayName to each calendar
+    const calendarsWithDisplayName = calendars.map(cal => ({
+      name: cal.name,
+      displayName: cal.name.charAt(0).toUpperCase() + cal.name.slice(1), // Capitalize first letter
+      count: cal.count
+    }));
+    res.json(calendarsWithDisplayName);
   } catch (error) {
     console.error('Error getting calendars:', error);
     res.status(500).json({ error: 'Failed to get calendars' });
@@ -140,6 +146,61 @@ app.post('/admin/sync', async (req, res) => {
     res.status(500).json({
       error: 'Sync failed',
       message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+// Update vacation balance endpoint
+app.put('/vacation-balance', async (req, res) => {
+  try {
+    const { userName, balanceHours } = req.body;
+    
+    if (!userName || balanceHours === undefined) {
+      return res.status(400).json({ error: 'userName and balanceHours are required' });
+    }
+    
+    await vacationDataService.updateVacationBalance(userName, balanceHours);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Failed to update vacation balance',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Get vacation events endpoint
+app.get('/vacation-events', async (_req, res) => {
+  try {
+    // Use the same method as the main /events endpoint
+    const events = await calendarService.getEventsWithMetadata();
+    
+    const vacationEvents = events
+      .filter(event => {
+        return event.isVacation === true && event.calendar_name === 'work';
+      })
+      .map(event => {
+        // Calculate hours based on if it's a work day
+        const date = new Date(event.date);
+        const dayOfWeek = date.getDay();
+        const isWorkDay = dayOfWeek !== 0 && dayOfWeek !== 6;
+        const hours = isWorkDay ? 8 : 0;
+        
+        return {
+          id: event.id,
+          title: event.title,
+          date: event.date,
+          hours: hours,
+          user: 'james' // For now, hardcoded. Could be enhanced later
+        };
+      })
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    
+    res.json(vacationEvents);
+  } catch (error) {
+    res.status(500).json({
+      error: 'Failed to fetch vacation events',
+      message: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });

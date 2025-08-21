@@ -49,10 +49,10 @@ export const DayCell: React.FC<DayCellProps> = ({
   const overflowCount = events.length - shownEvents.length;
 
   const cellClasses = [
-    // Base styles - adapt height based on view
+    // Base styles - adapt height based on view with more compact spacing
     'border border-gray-200 flex flex-col',
     view === 'month'
-      ? 'p-3 h-full'
+      ? 'p-1 sm:p-2 h-full min-h-[60px] sm:min-h-[80px] lg:min-h-[100px]'
       : view === 'week'
         ? 'p-2 min-h-[120px]'
         : 'p-4 min-h-[200px]',
@@ -78,7 +78,7 @@ export const DayCell: React.FC<DayCellProps> = ({
 
   const dayNumberClasses = [
     view === 'month'
-      ? 'text-sm font-medium mb-2'
+      ? 'text-xs sm:text-sm font-medium mb-1'
       : view === 'week'
         ? 'text-lg font-semibold mb-1'
         : 'text-xl font-bold mb-3',
@@ -105,7 +105,7 @@ export const DayCell: React.FC<DayCellProps> = ({
 
       {/* Events Container - positioned based on view type */}
       <div
-        className={`flex-1 space-y-1 overflow-hidden ${view === 'month' ? 'mt-12' : ''}`}
+        className={`flex-1 space-y-0.5 overflow-hidden`}
       >
         <EventList
           events={shownEvents}
@@ -116,7 +116,7 @@ export const DayCell: React.FC<DayCellProps> = ({
 
         {/* Overflow Indicator */}
         {overflowCount > 0 && (
-          <div className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded font-medium">
+          <div className="text-[10px] sm:text-xs bg-gray-200 text-gray-700 px-1 py-0.5 rounded font-medium">
             +{overflowCount} more
           </div>
         )}
@@ -144,7 +144,7 @@ const EventList: React.FC<{
         return (
           <div
             key={event.id}
-            className="text-xs px-2 py-1 rounded truncate transition-colors border-l-4 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
+            className="text-[10px] sm:text-xs px-1 sm:px-2 py-0.5 rounded truncate transition-colors border-l-2 sm:border-l-4 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
             style={{
               backgroundColor:
                 isPast && !isToday ? '#f3f4f6' : colorShades.lightBg,

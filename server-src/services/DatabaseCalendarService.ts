@@ -278,6 +278,8 @@ export class DatabaseCalendarService implements ICalendarService {
    * Delete an event from both local database and CalDAV
    */
   async deleteEvent(eventId: string): Promise<boolean> {
+    console.log('🗑️ DatabaseCalendarService.deleteEvent called:', { eventId });
+    
     try {
       // First, get the event details from database to extract calendar metadata
       const eventsWithMetadata =
@@ -285,28 +287,50 @@ export class DatabaseCalendarService implements ICalendarService {
       const eventToDelete = eventsWithMetadata.find(e => e.id === eventId);
 
       if (!eventToDelete) {
+        console.error(`❌ Event ${eventId} not found in database`);
         return false;
       }
+      
+      console.log('🗑️ Event to delete details:', {
+        id: eventToDelete.id,
+        title: eventToDelete.title,
+        calendar_name: eventToDelete.calendar_name,
+        calendar_path: eventToDelete.calendar_path,
+        caldav_filename: eventToDelete.caldav_filename,
+        isSharedCalendar: eventToDelete.calendar_name === 'shared',
+      });
 
       // Delete from local database first
+      console.log('🗑️ Deleting from local database...');
       const dbSuccess = await this.sqliteRepository.deleteEvent(eventId);
       if (!dbSuccess) {
+        console.error(`❌ Failed to delete event ${eventId} from database`);
         return false;
       }
+      console.log(`✅ Event ${eventId} deleted from database`);
 
       // Delete from CalDAV using correct calendar path and filename
       try {
         if (eventToDelete.calendar_path && eventToDelete.caldav_filename) {
+          console.log('🗑️ Deleting from CalDAV with:', {
+            eventId,
+            calendar_path: eventToDelete.calendar_path,
+            caldav_filename: eventToDelete.caldav_filename,
+          });
+          
           await this.multiCalendarRepository.deleteEvent(
             eventId,
             eventToDelete.calendar_path,
             eventToDelete.caldav_filename
           );
+          
+          console.log(`✅ Event ${eventId} deleted from CalDAV`);
         } else {
+          console.warn(`⚠️ Event ${eventId} missing CalDAV metadata, skipping CalDAV deletion`);
         }
       } catch (caldavError) {
         console.error(
-          `Failed to delete event ${eventId} from CalDAV:`,
+          `❌ Failed to delete event ${eventId} from CalDAV:`,
           caldavError
         );
         // Don't fail the whole operation if CalDAV delete fails

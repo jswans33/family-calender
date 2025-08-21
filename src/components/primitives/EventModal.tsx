@@ -40,6 +40,9 @@ export const EventModal: React.FC<EventModalProps> = ({
     Array<{ name: string; displayName: string; count: number }>
   >([]);
   const [formData, setFormData] = useState(() => {
+    // Debug logging
+    console.log('EventModal initializing with:', { existingEvent, initialData, isEditing });
+    
     // Calculate end date from dtend if available
     let endDate = existingEvent?.date || initialData?.date || '';
     if (existingEvent?.dtend) {
@@ -51,7 +54,7 @@ export const EventModal: React.FC<EventModalProps> = ({
       title: existingEvent?.title || '',
       description: existingEvent?.description || '',
       location: existingEvent?.location || '',
-      startDate: existingEvent?.date || initialData?.date || '',
+      startDate: existingEvent?.date ? existingEvent.date.split('T')[0] : (initialData?.date || ''),
       endDate,
       time: existingEvent?.time || initialData?.time || '',
       duration: existingEvent?.duration
@@ -64,7 +67,7 @@ export const EventModal: React.FC<EventModalProps> = ({
       categories: existingEvent?.categories?.join(', ') || '',
       calendar: existingEvent?.calendar_name || selectedCalendar,
       isVacation: existingEvent?.isVacation || false,
-      isAllDay: !existingEvent?.time || existingEvent?.time === '',
+      isAllDay: !existingEvent?.time || existingEvent?.time === '' || existingEvent?.duration === 'PT24H0M',
     };
   });
 
@@ -123,12 +126,19 @@ export const EventModal: React.FC<EventModalProps> = ({
       ...(formData.location.trim() && { location: formData.location.trim() }),
       ...(formData.url.trim() && { url: formData.url.trim() }),
       ...(dtend && { dtend }),
-      ...(formData.duration && { duration: `PT${formData.duration}M` }),
+      ...(formData.isAllDay 
+        ? { duration: 'PT24H0M' } 
+        : formData.duration && { duration: `PT${formData.duration}M` }),
       ...(formData.categories.trim() && {
         categories: formData.categories.split(',').map(c => c.trim()),
       }),
       status: 'CONFIRMED',
       isVacation: formData.isVacation,
+      // Preserve original user input
+      original_date: formData.startDate,
+      original_time: formData.isAllDay ? '' : formData.time || '',
+      original_duration: formData.isAllDay ? 'PT24H0M' : `PT${formData.duration}M`,
+      creation_source: 'user' as const,
       ...(isEditing && existingEvent
         ? {
             created: existingEvent.created || new Date().toISOString(),
@@ -391,11 +401,19 @@ export const EventModal: React.FC<EventModalProps> = ({
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
             >
-              {calendars.map(cal => (
-                <option key={cal.name} value={cal.name}>
-                  {cal.displayName} ({cal.count} events)
-                </option>
-              ))}
+              {calendars.length > 0 ? (
+                calendars.map(cal => (
+                  <option key={cal.name} value={cal.name}>
+                    {cal.displayName || cal.name.charAt(0).toUpperCase() + cal.name.slice(1)} ({cal.count} events)
+                  </option>
+                ))
+              ) : (
+                <>
+                  <option value="home">Home</option>
+                  <option value="work">Work</option>
+                  <option value="shared">Shared</option>
+                </>
+              )}
             </select>
           </div>
 

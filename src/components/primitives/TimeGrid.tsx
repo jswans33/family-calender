@@ -70,6 +70,10 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
       event.time === 'All Day' ||
       event.time === 'all day' ||
       event.time === '12:00 AM' ||
+      event.time === '00:00' ||
+      event.time === '0:00' ||
+      event.time === '' ||
+      event.duration === 'PT24H0M' ||
       !event.time;
 
     // Debug logging
@@ -149,12 +153,37 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
     return date.toDateString() === today.toDateString();
   };
 
+  // Separate all-day events from regular events
+  const allDayEventsByDate = new Map<string, CalendarEvent[]>();
+  events.forEach(event => {
+    const isAllDay = !event.time || 
+                    event.time === '' || 
+                    event.time === 'All Day' || 
+                    event.time === 'all day' ||
+                    event.time === '12:00 AM' ||
+                    event.time === '00:00' ||
+                    event.time === '0:00' ||
+                    event.duration === 'PT24H0M'; // Apple Calendar all-day format
+    if (isAllDay && !multiDayEvents.some(mde => mde.event.id === event.id)) {
+      const datePart = event.date.split('T')[0] || event.date;
+      const dateKey = formatDate(CalendarService.parseLocal(datePart));
+      if (!allDayEventsByDate.has(dateKey)) {
+        allDayEventsByDate.set(dateKey, []);
+      }
+      allDayEventsByDate.get(dateKey)!.push(event);
+    }
+  });
+
   return (
     <div className="flex h-full overflow-hidden">
       {/* Time Labels Column */}
       <div className="w-16 flex-shrink-0 border-r border-gray-200 bg-gray-50">
         <div className="h-16 border-b border-gray-200"></div>{' '}
         {/* Space for date header */}
+        {/* All-day events label */}
+        <div className="h-10 flex items-center justify-end pr-2 text-xs text-gray-600 border-b border-gray-200 bg-gray-100">
+          All day
+        </div>
         {timeSlots.map(slot => (
           <div
             key={slot.hour}
@@ -224,6 +253,7 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
           {dates.map((date, dateIndex) => {
             const dateKey = formatDate(date);
             const dayEvents = eventsByDate.get(dateKey) || [];
+            const dayAllDayEvents = allDayEventsByDate.get(dateKey) || [];
             const today = isToday(date);
             const dayOfWeek = date.getDay();
             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
@@ -247,6 +277,14 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
                   >
                     {date.getDate()}
                   </div>
+                </div>
+                
+                {/* All-day events section */}
+                <div className="h-10 border-b border-gray-200 bg-gray-50 p-1 overflow-hidden">
+                  <AllDayEventsBar
+                    events={dayAllDayEvents}
+                    onEventClick={onEventClick}
+                  />
                 </div>
 
                 {/* Time Slots */}
@@ -279,9 +317,16 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
                     />
                   ))}
 
-                  {/* Events Overlay */}
+                  {/* Events Overlay - only timed events */}
                   <TimeGridEvents
-                    events={dayEvents}
+                    events={dayEvents.filter(e => e.time && 
+                                             e.time !== '' && 
+                                             e.time !== 'All Day' && 
+                                             e.time !== 'all day' &&
+                                             e.time !== '12:00 AM' &&
+                                             e.time !== '00:00' &&
+                                             e.time !== '0:00' &&
+                                             e.duration !== 'PT24H0M')}
                     getTimePosition={getTimePosition}
                     slotHeight={slotHeight}
                     {...(onEventClick && { onEventClick })}
@@ -296,6 +341,57 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
   );
 };
 
+// Component for all-day events in the thin bar
+const AllDayEventsBar: React.FC<{
+  events: CalendarEvent[];
+  onEventClick?: (event: CalendarEvent) => void;
+}> = ({ events, onEventClick }) => {
+  const { getCalendarColor } = useColors();
+  
+  if (events.length === 0) return null;
+  
+  return (
+    <div className="flex gap-1 h-full">
+      {events.map(event => {
+        const calendarName = event.calendar_name || 'home';
+        const calendarColor = getCalendarColor(calendarName);
+        const colorShades = getColorShades(calendarColor);
+        
+        return (
+          <div
+            key={event.id}
+            className="px-1 text-[10px] rounded cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500 focus:ring-inset transition-colors border-l-2 flex items-center max-w-[120px]"
+            style={{
+              backgroundColor: colorShades.lightBg,
+              color: colorShades.textColor,
+              borderLeftColor: calendarColor,
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.backgroundColor = colorShades.hoverBg;
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.backgroundColor = colorShades.lightBg;
+            }}
+            onClick={() => onEventClick?.(event)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onEventClick?.(event);
+              }
+            }}
+            tabIndex={0}
+            role="button"
+            aria-label={`All day - ${event.title}${event.calendar_name ? ` (${event.calendar_name})` : ''}`}
+            title={event.title}
+          >
+            <div className="truncate font-medium">{event.title}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 // Separate component for events to use hooks
 const TimeGridEvents: React.FC<{
   events: CalendarEvent[];
@@ -305,16 +401,8 @@ const TimeGridEvents: React.FC<{
 }> = ({ events, getTimePosition, slotHeight, onEventClick }) => {
   const { getCalendarColor } = useColors();
 
-  // Separate all-day events from timed events (modular, clear separation)
-  const allDayEvents = events
-    .filter(
-      event => !event.time || event.time === '' || event.time === 'All Day'
-    )
-    .filter(event => !(event as any).isMultiDay); // Don't show multi-day events here
-
-  const timedEvents = events.filter(
-    event => event.time && event.time !== '' && event.time !== 'All Day'
-  );
+  // All events passed here should be timed events only
+  const timedEvents = events;
 
   // Group timed events by time to handle overlapping
   const eventsByTime = new Map<string, CalendarEvent[]>();
@@ -327,52 +415,9 @@ const TimeGridEvents: React.FC<{
   });
 
   return (
-    <>
-      {/* All-day events section at the top */}
-      {allDayEvents.length > 0 && (
-        <div className="absolute top-0 left-0 right-0 flex flex-wrap gap-1 p-1 bg-gray-50 border-b border-gray-200 z-20">
-          {allDayEvents.map(event => {
-            const calendarName = event.calendar_name || 'home';
-            const calendarColor = getCalendarColor(calendarName);
-            const colorShades = getColorShades(calendarColor);
-
-            return (
-              <div
-                key={event.id}
-                className="px-2 py-1 text-xs rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset transition-colors border-l-4"
-                style={{
-                  backgroundColor: colorShades.lightBg,
-                  color: colorShades.textColor,
-                  borderLeftColor: calendarColor,
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = colorShades.hoverBg;
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = colorShades.lightBg;
-                }}
-                onClick={() => onEventClick?.(event)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    onEventClick?.(event);
-                  }
-                }}
-                tabIndex={0}
-                role="button"
-                aria-label={`All day - ${event.title}${event.calendar_name ? ` (${event.calendar_name})` : ''}`}
-              >
-                <div className="font-medium truncate">{event.title}</div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Timed events in the grid */}
-      <div className="absolute inset-0">
-        {Array.from(eventsByTime.entries()).flatMap(([timeKey, timeEvents]) =>
-          timeEvents.map((event, indexInTimeSlot) => {
+    <div className="absolute inset-0">
+      {Array.from(eventsByTime.entries()).flatMap(([timeKey, timeEvents]) =>
+        timeEvents.map((event, indexInTimeSlot) => {
             const position = getTimePosition(event.time!);
             const calendarName = event.calendar_name || 'home';
             const calendarColor = getCalendarColor(calendarName);
@@ -474,7 +519,6 @@ const TimeGridEvents: React.FC<{
             );
           })
         )}
-      </div>
-    </>
+    </div>
   );
 };

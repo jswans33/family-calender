@@ -185,13 +185,50 @@ export class CalendarController {
 
   async createEvent(req: Request, res: Response): Promise<void> {
     try {
+      console.log('📨 CREATE EVENT REQUEST - Raw body:', JSON.stringify(req.body, null, 2));
       const eventData = req.body;
       ValidationService.validateEventData(eventData);
       const calendarName = eventData.calendar_name || 'shared'; // Default to shared calendar
+      console.log('📅 CREATE EVENT - After validation, calendar:', calendarName);
 
       // Generate ID if not provided
       if (!eventData.id) {
         eventData.id = `local-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      }
+      
+      // Preserve original values if not already set
+      if (!eventData.original_date) {
+        eventData.original_date = eventData.date;
+        eventData.original_time = eventData.time || '';
+        eventData.original_duration = eventData.duration || 'PT1H0M';
+        eventData.creation_source = eventData.creation_source || 'user';
+      }
+
+      // Convert date/time format to start/end if needed
+      if (!eventData.start && eventData.date) {
+        // Create start datetime from date and optional time
+        if (eventData.time) {
+          eventData.start = new Date(`${eventData.date}T${eventData.time}:00`).toISOString();
+        } else {
+          eventData.start = new Date(`${eventData.date}T00:00:00`).toISOString();
+        }
+        
+        // Create end datetime - use dtend if provided, otherwise 1 hour after start
+        if (eventData.dtend) {
+          eventData.end = eventData.dtend;
+        } else if (eventData.duration) {
+          // Parse duration if provided (e.g., "PT60M" = 60 minutes)
+          const durationMatch = eventData.duration.match(/PT(\d+)M/);
+          const minutes = durationMatch ? parseInt(durationMatch[1]) : 60;
+          const endDate = new Date(eventData.start);
+          endDate.setMinutes(endDate.getMinutes() + minutes);
+          eventData.end = endDate.toISOString();
+        } else {
+          // Default to 1 hour duration
+          const endDate = new Date(eventData.start);
+          endDate.setHours(endDate.getHours() + 1);
+          eventData.end = endDate.toISOString();
+        }
       }
 
       // Type check for DatabaseCalendarService
@@ -204,6 +241,17 @@ export class CalendarController {
         return;
       }
 
+      console.log('🗃️ EVENT DATA BEFORE CALDAV CREATE:', {
+        title: eventData.title,
+        date: eventData.date,
+        time: eventData.time,
+        duration: eventData.duration,
+        original_date: eventData.original_date,
+        original_time: eventData.original_time,
+        original_duration: eventData.original_duration,
+        creation_source: eventData.creation_source
+      });
+      
       const success = await this.calendarService.createEventInCalendar(
         eventData,
         calendarName

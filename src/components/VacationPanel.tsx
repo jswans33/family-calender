@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { VacationEventsModal } from './VacationEventsModal';
 
 interface VacationBalance {
   user_name: string;
@@ -20,10 +21,12 @@ export const VacationPanel: React.FC = () => {
   const [balances, setBalances] = useState<VacationBalance[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [showEventsModal, setShowEventsModal] = useState(false);
 
-  const fetchVacationBalances = async () => {
+  const fetchVacationData = async () => {
     try {
       setLoading(true);
+      
       const response = await fetch('http://localhost:3001/vacation-balances');
 
       if (!response.ok) {
@@ -32,8 +35,8 @@ export const VacationPanel: React.FC = () => {
         );
       }
 
-      const data = await response.json();
-      setBalances(data);
+      const balancesData = await response.json();
+      setBalances(balancesData);
       setError(null);
     } catch (err) {
       // Error handled - error state set for user
@@ -44,10 +47,10 @@ export const VacationPanel: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchVacationBalances();
+    fetchVacationData();
 
     // Refresh every 30 seconds for real-time updates
-    const interval = setInterval(fetchVacationBalances, 30000);
+    const interval = setInterval(fetchVacationData, 30000);
 
     return () => clearInterval(interval);
   }, []);
@@ -91,7 +94,7 @@ export const VacationPanel: React.FC = () => {
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-sm font-semibold text-gray-700">Vacation Hours</h3>
         <button
-          onClick={fetchVacationBalances}
+          onClick={fetchVacationData}
           className="text-gray-400 hover:text-gray-600 transition-colors"
           title="Refresh"
         >
@@ -136,6 +139,20 @@ export const VacationPanel: React.FC = () => {
       </div>
 
       {balances.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-gray-100">
+          <button
+            onClick={() => setShowEventsModal(true)}
+            className="w-full text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center justify-center gap-1"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            View Vacation Events
+          </button>
+        </div>
+      )}
+
+      {balances.length > 0 && (
         <div className="mt-2 pt-2 border-t border-gray-100">
           <div className="text-xs text-gray-400">
             Updated:{' '}
@@ -143,6 +160,11 @@ export const VacationPanel: React.FC = () => {
           </div>
         </div>
       )}
+
+      <VacationEventsModal 
+        isOpen={showEventsModal}
+        onClose={() => setShowEventsModal(false)}
+      />
     </div>
   );
 };

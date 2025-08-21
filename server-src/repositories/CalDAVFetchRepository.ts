@@ -106,6 +106,11 @@ export class CalDAVFetchRepository {
   async deleteEventData(
     eventPath: string
   ): Promise<{ success: boolean; statusCode?: number }> {
+    console.log('🌐 CalDAV DELETE Request:', {
+      path: eventPath,
+      hostname: this.credentials.hostname,
+    });
+    
     return new Promise((resolve, reject) => {
       const auth = Buffer.from(
         `${this.credentials.username}:${this.credentials.password}`
@@ -121,15 +126,38 @@ export class CalDAVFetchRepository {
           'User-Agent': 'Swanson-Light-Calendar/1.0',
         },
       };
+      
+      console.log('🌐 DELETE Request options:', {
+        hostname: options.hostname,
+        path: options.path,
+        method: options.method,
+      });
 
       const req = https.request(options, res => {
         let data = '';
         res.on('data', chunk => (data += chunk));
         res.on('end', () => {
+          console.log('🌐 CalDAV DELETE Response:', {
+            statusCode: res.statusCode,
+            statusMessage: res.statusMessage,
+            path: eventPath,
+            responseData: data ? data.substring(0, 200) : 'No response body',
+          });
+          
           const success =
             res.statusCode === 200 ||
             res.statusCode === 204 ||
-            res.statusCode === 404;
+            res.statusCode === 404; // 404 is considered success (already deleted)
+            
+          if (res.statusCode === 404) {
+            console.log('⚠️ Event already deleted from CalDAV (404 response)');
+          } else if (success) {
+            console.log(`✅ CalDAV DELETE successful: ${res.statusCode}`);
+          } else {
+            console.error(`❌ CalDAV DELETE failed: ${res.statusCode} - ${res.statusMessage}`);
+            console.error('Response body:', data);
+          }
+          
           if (res.statusCode !== undefined) {
             resolve({ success, statusCode: res.statusCode });
           } else {

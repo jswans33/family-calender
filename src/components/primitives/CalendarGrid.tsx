@@ -59,7 +59,7 @@ export const WeekdayHeader: React.FC<WeekdayHeaderProps> = ({
       {weekdays.map(day => (
         <div
           key={day}
-          className="bg-gray-100 flex items-center justify-center h-12 text-sm font-medium text-gray-700 uppercase tracking-wide"
+          className="bg-gray-100 flex items-center justify-center h-8 sm:h-10 text-xs sm:text-sm font-medium text-gray-700 uppercase tracking-wide"
           role="columnheader"
           aria-label={day}
         >

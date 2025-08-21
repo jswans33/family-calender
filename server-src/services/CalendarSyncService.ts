@@ -39,21 +39,58 @@ export class CalendarSyncService {
 
   async performSync(): Promise<void> {
     try {
+      console.log('🔄 SYNC START - Performing CalDAV sync...');
+      
       // Sync deletions first
       await this.syncDeletionsToCalDAV();
 
+      console.log('📥 SYNC - Fetching events from CalDAV...');
       // Fetch events from all calendars
       const allEvents =
         await this.multiCalendarRepository.getAllEventsFromAllCalendars();
+      
+      console.log(`📥 SYNC - Retrieved ${allEvents.length} events from CalDAV`);
 
-      // Transform events to include metadata
-      const eventsWithMetadata = allEvents.map(event => ({
-        ...event,
-        caldav_filename: event.caldav_filename,
-        calendar_path: event.calendar_path,
-        calendar_name: event.calendar_name,
-      }));
+      // Get existing events to preserve original data
+      console.log('🗃️ SYNC - Getting existing events to preserve original data...');
+      const existingEvents = await this.sqliteRepository.getEventsWithMetadata();
+      const existingEventsMap = new Map(existingEvents.map(e => [e.id, e]));
 
+      // Transform events to include metadata and preserve original data
+      const eventsWithMetadata = allEvents.map(event => {
+        const existing = existingEventsMap.get(event.id);
+        const enhanced = {
+          ...event,
+          caldav_filename: event.caldav_filename,
+          calendar_path: event.calendar_path,
+          calendar_name: event.calendar_name,
+          // Preserve original data if it exists
+          original_date: existing?.original_date || undefined,
+          original_time: existing?.original_time || undefined,
+          original_duration: existing?.original_duration || undefined,
+          creation_source: existing?.creation_source || 'caldav',
+          caldav_processed_at: new Date().toISOString()
+        };
+        
+        // Debug specific events
+        if (event.title?.includes('MD')) {
+          console.log('🔍 SYNC DEBUG - Processing MD event:', {
+            title: event.title,
+            id: event.id,
+            caldav_date: event.date,
+            caldav_time: event.time,
+            caldav_duration: event.duration,
+            original_date: enhanced.original_date,
+            original_time: enhanced.original_time,
+            original_duration: enhanced.original_duration,
+            creation_source: enhanced.creation_source
+          });
+        }
+        
+        return enhanced;
+      });
+
+      console.log('💾 SYNC - Saving events to database...');
       // Save to database
       await this.sqliteRepository.saveEventsWithSmartSync(eventsWithMetadata);
 

@@ -36,6 +36,13 @@ export interface CalendarEvent {
 
   // Vacation tracking
   isVacation?: boolean;
+
+  // Original creation data preservation
+  original_date?: string; // Original date as entered by user
+  original_time?: string; // Original time as entered by user  
+  original_duration?: string; // Original duration as set by user
+  creation_source?: 'user' | 'caldav' | 'sync'; // Where this event came from
+  caldav_processed_at?: string; // When CalDAV last processed this event
 }
 
 export type CalendarView = 'month' | 'week' | 'day';

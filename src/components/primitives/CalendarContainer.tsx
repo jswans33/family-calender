@@ -47,8 +47,10 @@ export const CalendarContent: React.FC<CalendarContentProps> = ({
   const contentClasses = [
     // Fill remaining space
     'flex-1 flex flex-col',
-    // Padding around the grid
-    'p-6',
+    // Reduced padding for better space utilization
+    'p-2 sm:p-3 lg:p-4',
+    // Ensure content doesn't overflow
+    'overflow-hidden',
     // Custom classes
     className,
   ]

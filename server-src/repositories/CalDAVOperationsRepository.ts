@@ -71,19 +71,53 @@ export class CalDAVOperationsRepository {
     calendar_path: string,
     filename: string
   ): Promise<boolean> {
+    console.log('🗑️ DELETE EVENT DEBUG:', {
+      eventId,
+      calendar_path,
+      filename,
+      basePath: this.basePath,
+    });
+    
     try {
       const eventPath = `${this.basePath}${calendar_path}${filename}`;
+      console.log(`🗑️ Attempting to delete from CalDAV path: ${eventPath}`);
+      
+      // Log the full URL that will be used
+      console.log('🗑️ Full deletion details:', {
+        basePath: this.basePath,
+        calendar_path,
+        filename,
+        fullPath: eventPath,
+        isSharedCalendar: calendar_path.includes('2D7581FA-3A83-42D8-B6F4-8BCD8186AA6E'),
+      });
+      
       const result = await this.fetchRepository.deleteEventData(eventPath);
+      
+      console.log('🗑️ CalDAV DELETE response:', {
+        success: result.success,
+        statusCode: result.statusCode,
+        eventId,
+        path: eventPath,
+      });
 
       if (!result.success) {
         console.error(
-          `❌ Failed to delete event ${eventId}: ${result.statusCode}`
+          `❌ Failed to delete event ${eventId} from CalDAV: Status ${result.statusCode}`,
+          {
+            path: eventPath,
+            calendar_path,
+            filename,
+            suggestion: 'Check if the event still exists in Apple Calendar',
+          }
         );
+      } else {
+        console.log(`✅ Successfully deleted event ${eventId} from CalDAV`);
       }
 
       return result.success;
     } catch (error) {
-      console.error(`Error deleting event ${eventId}:`, error);
+      console.error(`❌ Error deleting event ${eventId}:`, error);
+      console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack');
       return false;
     }
   }

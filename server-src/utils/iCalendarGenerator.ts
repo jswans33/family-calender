@@ -37,6 +37,37 @@ export class iCalendarGenerator {
     const now =
       new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
     const isAllDay = this.isAllDayEvent(event);
+    
+    console.log('📅 iCAL GENERATION DEBUG:', {
+      title: event.title,
+      date: event.date,
+      time: event.time,
+      duration: event.duration,
+      isAllDay: isAllDay,
+      timezone: event.timezone,
+      // Original values for comparison
+      original_date: event.original_date,
+      original_time: event.original_time,
+      original_duration: event.original_duration
+    });
+    
+    // Log the actual DTSTART/DTEND that will be generated
+    const dtstart = this.formatDateTime(event.date, event.time, event.timezone);
+    const dtend = this.formatDateTime(
+      event.dtend || this.calculateEndTime(event.date, event.time),
+      isAllDay ? undefined : event.time ? this.calculateEndTimeString(event.time) : undefined,
+      event.timezone
+    );
+    
+    console.log('📅 iCAL DTSTART/DTEND DEBUG:', {
+      isAllDay,
+      dtstart_format: isAllDay ? 'DATE' : 'DATETIME',
+      dtstart_value: dtstart,
+      dtend_format: isAllDay ? 'DATE' : 'DATETIME', 
+      dtend_value: dtend,
+      full_dtstart: `DTSTART${isAllDay ? ';VALUE=DATE' : ''}:${dtstart}`,
+      full_dtend: `DTEND${isAllDay ? ';VALUE=DATE' : ''}:${dtend}`
+    });
 
     const fields = [
       `UID:${event.id}`,
@@ -75,7 +106,8 @@ export class iCalendarGenerator {
       event.time === 'All Day' ||
       event.time === 'all day' ||
       !event.time ||
-      event.time === ''
+      event.time === '' ||
+      event.duration === 'PT24H0M'
     );
   }
 
@@ -116,7 +148,7 @@ export class iCalendarGenerator {
   ): string {
     const date = new Date(dateString);
 
-    if (!time || time === 'All Day' || time === 'all day') {
+    if (!time || time === '' || time === 'All Day' || time === 'all day') {
       // All-day event - use DATE format (YYYYMMDD)
       const datePart = date.toISOString().split('T')[0];
       if (!datePart) {
@@ -162,7 +194,7 @@ export class iCalendarGenerator {
    */
   private static calculateEndTime(date: string, time?: string): string {
     const startDate = new Date(date);
-    if (!time) {
+    if (!time || time === '' || time === 'All Day' || time === 'all day') {
       // For all-day events, end is next day
       const endDate = new Date(startDate);
       endDate.setDate(endDate.getDate() + 1);

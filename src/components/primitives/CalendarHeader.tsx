@@ -27,7 +27,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   className = '',
 }) => {
   const headerClasses = [
-    'bg-white border-b border-gray-200 px-6 py-4',
+    'bg-white border-b border-gray-200 px-3 sm:px-4 lg:px-6 py-2 sm:py-3',
     'flex items-center justify-between shadow-sm',
     className,
   ]
@@ -37,7 +37,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   return (
     <div className={headerClasses}>
       {/* Title */}
-      <h1 className="text-2xl font-semibold text-gray-900">{title}</h1>
+      <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-900">{title}</h1>
 
       {/* Navigation */}
       {showNavigation && (

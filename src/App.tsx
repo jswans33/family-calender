@@ -266,6 +266,66 @@ const App: React.FC = () => {
               Family Calendar
             </h1>
 
+            {/* Center Section - Calendar Selector and Search */}
+            <div className="flex items-center gap-4 flex-1 max-w-2xl mx-4">
+              {/* Calendar Selector */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">Calendar:</span>
+                <select
+                  value={selectedCalendar || ''}
+                  onChange={e => handleCalendarChange(e.target.value || null)}
+                  className="px-3 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={isLoadingCalendars}
+                >
+                  <option value="">All Calendars</option>
+                  {calendars.map(calendar => (
+                    <option key={calendar.name} value={calendar.name}>
+                      {calendar.name.charAt(0).toUpperCase() + calendar.name.slice(1)} ({calendar.count})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Search Bar */}
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  placeholder="Search events..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-1 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <svg
+                  className="absolute left-3 top-1.5 h-4 w-4 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1.5 h-4 w-4 text-gray-400 hover:text-gray-600"
+                  >
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            </div>
+
             <div className="flex items-center gap-6">
               {/* View Switcher */}
               <div className="flex items-center gap-2">
@@ -534,6 +594,7 @@ const App: React.FC = () => {
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
                 startOfWeek={0}
+                hideControls={true}
               />
             )}
           </div>
