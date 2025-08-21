@@ -92,7 +92,6 @@ async function demoSpecificCalendarAccess() {
   // Demo 5: Show how to create events in specific calendars
   console.log('\\n5️⃣  HOW TO CREATE EVENTS IN SPECIFIC CALENDARS\\n');
 
-
   console.log('📝 Code examples for creating events:');
   console.log('');
   console.log('// Create in HOME calendar:');

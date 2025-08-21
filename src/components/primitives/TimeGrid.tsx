@@ -156,14 +156,15 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
   // Separate all-day events from regular events
   const allDayEventsByDate = new Map<string, CalendarEvent[]>();
   events.forEach(event => {
-    const isAllDay = !event.time || 
-                    event.time === '' || 
-                    event.time === 'All Day' || 
-                    event.time === 'all day' ||
-                    event.time === '12:00 AM' ||
-                    event.time === '00:00' ||
-                    event.time === '0:00' ||
-                    event.duration === 'PT24H0M'; // Apple Calendar all-day format
+    const isAllDay =
+      !event.time ||
+      event.time === '' ||
+      event.time === 'All Day' ||
+      event.time === 'all day' ||
+      event.time === '12:00 AM' ||
+      event.time === '00:00' ||
+      event.time === '0:00' ||
+      event.duration === 'PT24H0M'; // Apple Calendar all-day format
     if (isAllDay && !multiDayEvents.some(mde => mde.event.id === event.id)) {
       const datePart = event.date.split('T')[0] || event.date;
       const dateKey = formatDate(CalendarService.parseLocal(datePart));
@@ -278,7 +279,7 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
                     {date.getDate()}
                   </div>
                 </div>
-                
+
                 {/* All-day events section */}
                 <div className="h-10 border-b border-gray-200 bg-gray-50 p-1 overflow-hidden">
                   <AllDayEventsBar
@@ -319,14 +320,17 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
 
                   {/* Events Overlay - only timed events */}
                   <TimeGridEvents
-                    events={dayEvents.filter(e => e.time && 
-                                             e.time !== '' && 
-                                             e.time !== 'All Day' && 
-                                             e.time !== 'all day' &&
-                                             e.time !== '12:00 AM' &&
-                                             e.time !== '00:00' &&
-                                             e.time !== '0:00' &&
-                                             e.duration !== 'PT24H0M')}
+                    events={dayEvents.filter(
+                      e =>
+                        e.time &&
+                        e.time !== '' &&
+                        e.time !== 'All Day' &&
+                        e.time !== 'all day' &&
+                        e.time !== '12:00 AM' &&
+                        e.time !== '00:00' &&
+                        e.time !== '0:00' &&
+                        e.duration !== 'PT24H0M'
+                    )}
                     getTimePosition={getTimePosition}
                     slotHeight={slotHeight}
                     {...(onEventClick && { onEventClick })}
@@ -347,16 +351,16 @@ const AllDayEventsBar: React.FC<{
   onEventClick?: (event: CalendarEvent) => void;
 }> = ({ events, onEventClick }) => {
   const { getCalendarColor } = useColors();
-  
+
   if (events.length === 0) return null;
-  
+
   return (
     <div className="flex gap-1 h-full">
       {events.map(event => {
         const calendarName = event.calendar_name || 'home';
         const calendarColor = getCalendarColor(calendarName);
         const colorShades = getColorShades(calendarColor);
-        
+
         return (
           <div
             key={event.id}
@@ -418,107 +422,107 @@ const TimeGridEvents: React.FC<{
     <div className="absolute inset-0">
       {Array.from(eventsByTime.entries()).flatMap(([timeKey, timeEvents]) =>
         timeEvents.map((event, indexInTimeSlot) => {
-            const position = getTimePosition(event.time!);
-            const calendarName = event.calendar_name || 'home';
-            const calendarColor = getCalendarColor(calendarName);
-            const colorShades = getColorShades(calendarColor);
+          const position = getTimePosition(event.time!);
+          const calendarName = event.calendar_name || 'home';
+          const calendarColor = getCalendarColor(calendarName);
+          const colorShades = getColorShades(calendarColor);
 
-            // Calculate event duration in hours
-            let eventDuration = 1; // Default 1 hour
-            if (event.duration) {
-              // Parse duration like "PT8H0M" or "PT1H0M"
-              const durationMatch = event.duration.match(/PT(\d+)H/);
-              if (durationMatch && durationMatch[1]) {
-                eventDuration = parseInt(durationMatch[1], 10);
-              }
-            } else if (event.end && event.start) {
-              // Calculate from start and end times
-              const startTime = new Date(event.start);
-              const endTime = new Date(event.end);
-              eventDuration =
-                (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
-            } else if (event.dtend && event.date && event.time) {
-              // Calculate from date/time and dtend
-              const startTime = new Date(
-                `${event.date.split('T')[0]}T${event.time}:00`
-              );
-              const endTime = new Date(event.dtend);
-              eventDuration =
-                (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+          // Calculate event duration in hours
+          let eventDuration = 1; // Default 1 hour
+          if (event.duration) {
+            // Parse duration like "PT8H0M" or "PT1H0M"
+            const durationMatch = event.duration.match(/PT(\d+)H/);
+            if (durationMatch && durationMatch[1]) {
+              eventDuration = parseInt(durationMatch[1], 10);
             }
-
-            // Calculate horizontal positioning for overlapping events
-            const totalEventsAtTime = timeEvents.length;
-            const eventWidth =
-              totalEventsAtTime > 1
-                ? `${95 / totalEventsAtTime}%`
-                : 'calc(100% - 8px)';
-            const leftOffset =
-              totalEventsAtTime > 1
-                ? `${(indexInTimeSlot * 95) / totalEventsAtTime}%`
-                : '4px';
-
-            // Calculate dynamic top position and height based on duration
-            const topPosition = slotHeight
-              ? `calc(${position} * ${slotHeight} + 4px)`
-              : `${position * TIME_GRID_CONFIG.HOUR_HEIGHT + 4}px`;
-
-            const eventHeight = slotHeight
-              ? `calc(${eventDuration} * ${slotHeight} - 8px)`
-              : `${eventDuration * TIME_GRID_CONFIG.HOUR_HEIGHT - 8}px`;
-
-            return (
-              <div
-                key={event.id}
-                className="absolute px-2 py-1 text-xs rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset transition-colors border-l-4 overflow-hidden"
-                style={{
-                  backgroundColor: colorShades.lightBg,
-                  color: colorShades.textColor,
-                  borderLeftColor: calendarColor,
-                  top: topPosition,
-                  height: eventHeight,
-                  left: leftOffset,
-                  width: eventWidth,
-                  zIndex: 10 + indexInTimeSlot,
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = colorShades.hoverBg;
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = colorShades.lightBg;
-                }}
-                onClick={() => onEventClick?.(event)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    onEventClick?.(event);
-                  }
-                }}
-                tabIndex={0}
-                role="button"
-                aria-label={`${event.time || 'All day'} - ${event.title}${event.calendar_name ? ` (${event.calendar_name})` : ''}`}
-              >
-                <div className="flex flex-col">
-                  <div className="font-bold text-xs">
-                    {event.time || 'All day'}
-                    {event.end &&
-                      ` - ${new Date(event.end).toLocaleTimeString('en-US', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: false,
-                      })}`}
-                  </div>
-                  <div className="font-medium truncate">{event.title}</div>
-                  {event.duration && (
-                    <div className="text-xs opacity-75">
-                      Duration: {event.duration}
-                    </div>
-                  )}
-                </div>
-              </div>
+          } else if (event.end && event.start) {
+            // Calculate from start and end times
+            const startTime = new Date(event.start);
+            const endTime = new Date(event.end);
+            eventDuration =
+              (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+          } else if (event.dtend && event.date && event.time) {
+            // Calculate from date/time and dtend
+            const startTime = new Date(
+              `${event.date.split('T')[0]}T${event.time}:00`
             );
-          })
-        )}
+            const endTime = new Date(event.dtend);
+            eventDuration =
+              (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+          }
+
+          // Calculate horizontal positioning for overlapping events
+          const totalEventsAtTime = timeEvents.length;
+          const eventWidth =
+            totalEventsAtTime > 1
+              ? `${95 / totalEventsAtTime}%`
+              : 'calc(100% - 8px)';
+          const leftOffset =
+            totalEventsAtTime > 1
+              ? `${(indexInTimeSlot * 95) / totalEventsAtTime}%`
+              : '4px';
+
+          // Calculate dynamic top position and height based on duration
+          const topPosition = slotHeight
+            ? `calc(${position} * ${slotHeight} + 4px)`
+            : `${position * TIME_GRID_CONFIG.HOUR_HEIGHT + 4}px`;
+
+          const eventHeight = slotHeight
+            ? `calc(${eventDuration} * ${slotHeight} - 8px)`
+            : `${eventDuration * TIME_GRID_CONFIG.HOUR_HEIGHT - 8}px`;
+
+          return (
+            <div
+              key={event.id}
+              className="absolute px-2 py-1 text-xs rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset transition-colors border-l-4 overflow-hidden"
+              style={{
+                backgroundColor: colorShades.lightBg,
+                color: colorShades.textColor,
+                borderLeftColor: calendarColor,
+                top: topPosition,
+                height: eventHeight,
+                left: leftOffset,
+                width: eventWidth,
+                zIndex: 10 + indexInTimeSlot,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = colorShades.hoverBg;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = colorShades.lightBg;
+              }}
+              onClick={() => onEventClick?.(event)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onEventClick?.(event);
+                }
+              }}
+              tabIndex={0}
+              role="button"
+              aria-label={`${event.time || 'All day'} - ${event.title}${event.calendar_name ? ` (${event.calendar_name})` : ''}`}
+            >
+              <div className="flex flex-col">
+                <div className="font-bold text-xs">
+                  {event.time || 'All day'}
+                  {event.end &&
+                    ` - ${new Date(event.end).toLocaleTimeString('en-US', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: false,
+                    })}`}
+                </div>
+                <div className="font-medium truncate">{event.title}</div>
+                {event.duration && (
+                  <div className="text-xs opacity-75">
+                    Duration: {event.duration}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })
+      )}
     </div>
   );
 };

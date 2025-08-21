@@ -279,7 +279,7 @@ export class DatabaseCalendarService implements ICalendarService {
    */
   async deleteEvent(eventId: string): Promise<boolean> {
     console.log('🗑️ DatabaseCalendarService.deleteEvent called:', { eventId });
-    
+
     try {
       // First, get the event details from database to extract calendar metadata
       const eventsWithMetadata =
@@ -290,7 +290,7 @@ export class DatabaseCalendarService implements ICalendarService {
         console.error(`❌ Event ${eventId} not found in database`);
         return false;
       }
-      
+
       console.log('🗑️ Event to delete details:', {
         id: eventToDelete.id,
         title: eventToDelete.title,
@@ -317,16 +317,18 @@ export class DatabaseCalendarService implements ICalendarService {
             calendar_path: eventToDelete.calendar_path,
             caldav_filename: eventToDelete.caldav_filename,
           });
-          
+
           await this.multiCalendarRepository.deleteEvent(
             eventId,
             eventToDelete.calendar_path,
             eventToDelete.caldav_filename
           );
-          
+
           console.log(`✅ Event ${eventId} deleted from CalDAV`);
         } else {
-          console.warn(`⚠️ Event ${eventId} missing CalDAV metadata, skipping CalDAV deletion`);
+          console.warn(
+            `⚠️ Event ${eventId} missing CalDAV metadata, skipping CalDAV deletion`
+          );
         }
       } catch (caldavError) {
         console.error(

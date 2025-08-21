@@ -1,3 +1,4 @@
+/* eslint-env jest */
 import { iCalendarGenerator } from '../iCalendarGenerator.js';
 import { CalendarEvent } from '../../types/Calendar.js';
 
@@ -12,16 +13,16 @@ describe('iCalendarGenerator', () => {
         start: '',
         end: '',
         duration: 'PT24H0M',
-        status: 'CONFIRMED'
+        status: 'CONFIRMED',
       };
 
       const ical = iCalendarGenerator.generateVEvent(event);
-      
+
       // Should use VALUE=DATE format for all-day events
       expect(ical).toContain('DTSTART;VALUE=DATE:20250829');
       expect(ical).toContain('DTEND;VALUE=DATE:20250830'); // Next day for all-day
       expect(ical).toContain('SUMMARY:All Day Test');
-      
+
       // Should NOT contain time components in DTSTART/DTEND for all-day events
       expect(ical).not.toContain('T00');
       expect(ical).not.toContain('T06');
@@ -39,11 +40,11 @@ describe('iCalendarGenerator', () => {
         start: '',
         end: '',
         duration: 'PT24H0M', // 24 hours = all-day
-        status: 'CONFIRMED'
+        status: 'CONFIRMED',
       };
 
       const ical = iCalendarGenerator.generateVEvent(event);
-      
+
       expect(ical).toContain('DTSTART;VALUE=DATE:20250829');
       expect(ical).toContain('DTEND;VALUE=DATE:20250830');
     });
@@ -58,11 +59,11 @@ describe('iCalendarGenerator', () => {
         end: '',
         dtend: '2025-08-31', // 3-day event
         duration: 'PT24H0M',
-        status: 'CONFIRMED'
+        status: 'CONFIRMED',
       };
 
       const ical = iCalendarGenerator.generateVEvent(event);
-      
+
       expect(ical).toContain('DTSTART;VALUE=DATE:20250829');
       expect(ical).toContain('DTEND;VALUE=DATE:20250831');
     });
@@ -79,11 +80,11 @@ describe('iCalendarGenerator', () => {
         end: '',
         duration: 'PT1H0M',
         status: 'CONFIRMED',
-        timezone: 'America/Denver'
+        timezone: 'America/Denver',
       };
 
       const ical = iCalendarGenerator.generateVEvent(event);
-      
+
       // Should use DATETIME format for timed events
       expect(ical).toContain('DTSTART:');
       expect(ical).not.toContain('VALUE=DATE');
@@ -102,7 +103,7 @@ describe('iCalendarGenerator', () => {
         time: '',
         start: '',
         end: '',
-        status: 'CONFIRMED'
+        status: 'CONFIRMED',
       };
 
       const isAllDay = iCalendarGenerator.isAllDayEvent(event);
@@ -118,7 +119,7 @@ describe('iCalendarGenerator', () => {
         start: '',
         end: '',
         duration: 'PT24H0M',
-        status: 'CONFIRMED'
+        status: 'CONFIRMED',
       };
 
       const isAllDay = iCalendarGenerator.isAllDayEvent(event);
@@ -133,7 +134,7 @@ describe('iCalendarGenerator', () => {
         time: 'All Day',
         start: '',
         end: '',
-        status: 'CONFIRMED'
+        status: 'CONFIRMED',
       };
 
       const isAllDay = iCalendarGenerator.isAllDayEvent(event);
@@ -149,7 +150,7 @@ describe('iCalendarGenerator', () => {
         start: '',
         end: '',
         duration: 'PT1H0M',
-        status: 'CONFIRMED'
+        status: 'CONFIRMED',
       };
 
       const isAllDay = iCalendarGenerator.isAllDayEvent(event);
@@ -166,7 +167,10 @@ describe('iCalendarGenerator', () => {
     });
 
     test('should format datetime correctly for timed events', () => {
-      const formatted = iCalendarGenerator.formatDateTime('2025-08-29', '14:30');
+      const formatted = iCalendarGenerator.formatDateTime(
+        '2025-08-29',
+        '14:30'
+      );
       expect(formatted).toContain('T');
       expect(formatted).toContain('Z');
       expect(formatted).toMatch(/^\d{8}T\d{6}Z$/); // Format: YYYYMMDDTHHMMSSZ

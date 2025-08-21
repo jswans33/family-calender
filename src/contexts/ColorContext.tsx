@@ -28,7 +28,7 @@ export const ColorProvider: React.FC<{
       try {
         const parsed = JSON.parse(savedColors);
         setColors({ ...DEFAULT_COLORS, ...parsed });
-      } catch (error) {
+      } catch {
         // Invalid saved colors - using defaults
       }
     }

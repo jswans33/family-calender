@@ -18,7 +18,7 @@ if (!fs.existsSync(dbDir)) {
 }
 
 // Connect to database
-const db = new (sqlite3.verbose()).Database(dbPath, (err) => {
+const db = new (sqlite3.verbose().Database)(dbPath, err => {
   if (err) {
     console.error('❌ Failed to connect to database:', err);
     process.exit(1);
@@ -33,8 +33,8 @@ const migrations = [
     check: `SELECT COUNT(*) as count FROM pragma_table_info('events') WHERE name='start'`,
     up: [
       `ALTER TABLE events ADD COLUMN start TEXT`,
-      `ALTER TABLE events ADD COLUMN end TEXT`
-    ]
+      `ALTER TABLE events ADD COLUMN end TEXT`,
+    ],
   },
   {
     name: 'Add CalDAV metadata columns',
@@ -42,15 +42,13 @@ const migrations = [
     up: [
       `ALTER TABLE events ADD COLUMN caldav_filename TEXT`,
       `ALTER TABLE events ADD COLUMN calendar_path TEXT`,
-      `ALTER TABLE events ADD COLUMN calendar_name TEXT`
-    ]
+      `ALTER TABLE events ADD COLUMN calendar_name TEXT`,
+    ],
   },
   {
     name: 'Add vacation column',
     check: `SELECT COUNT(*) as count FROM pragma_table_info('events') WHERE name='is_vacation'`,
-    up: [
-      `ALTER TABLE events ADD COLUMN is_vacation BOOLEAN DEFAULT 0`
-    ]
+    up: [`ALTER TABLE events ADD COLUMN is_vacation BOOLEAN DEFAULT 0`],
   },
   {
     name: 'Create vacation_balances table',
@@ -60,8 +58,8 @@ const migrations = [
         user_name TEXT PRIMARY KEY,
         balance_hours REAL DEFAULT 0,
         last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
-      )`
-    ]
+      )`,
+    ],
   },
   {
     name: 'Create deleted_events table',
@@ -71,15 +69,15 @@ const migrations = [
         id TEXT PRIMARY KEY,
         deleted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         synced_to_caldav BOOLEAN DEFAULT 0
-      )`
-    ]
-  }
+      )`,
+    ],
+  },
 ];
 
 // Run migrations
 async function runMigrations() {
   console.log('🔄 Running database migrations...\n');
-  
+
   for (const migration of migrations) {
     await new Promise((resolve, reject) => {
       // Check if migration is needed
@@ -89,27 +87,32 @@ async function runMigrations() {
           if (migration.check.includes('sqlite_master')) {
             row = { count: 0 };
           } else {
-            console.error(`❌ Error checking migration "${migration.name}":`, err);
+            console.error(
+              `❌ Error checking migration "${migration.name}":`,
+              err
+            );
             reject(err);
             return;
           }
         }
-        
+
         if (row && row.count === 0) {
           console.log(`📦 Running migration: ${migration.name}`);
-          
+
           // Run each SQL statement in the migration
-          const statements = Array.isArray(migration.up) ? migration.up : [migration.up];
+          const statements = Array.isArray(migration.up)
+            ? migration.up
+            : [migration.up];
           let completed = 0;
-          
+
           statements.forEach(sql => {
-            db.run(sql, (err) => {
+            db.run(sql, err => {
               if (err && !err.message.includes('duplicate column name')) {
                 console.error(`   ❌ Failed: ${err.message}`);
               } else {
                 console.log(`   ✅ Applied: ${sql.substring(0, 50)}...`);
               }
-              
+
               completed++;
               if (completed === statements.length) {
                 resolve();
@@ -117,13 +120,15 @@ async function runMigrations() {
             });
           });
         } else {
-          console.log(`⏭️  Skipping migration: ${migration.name} (already applied)`);
+          console.log(
+            `⏭️  Skipping migration: ${migration.name} (already applied)`
+          );
           resolve();
         }
       });
     });
   }
-  
+
   console.log('\n✅ All migrations completed successfully!');
   db.close();
 }

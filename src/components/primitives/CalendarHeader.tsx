@@ -37,7 +37,9 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   return (
     <div className={headerClasses}>
       {/* Title */}
-      <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-900">{title}</h1>
+      <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-900">
+        {title}
+      </h1>
 
       {/* Navigation */}
       {showNavigation && (

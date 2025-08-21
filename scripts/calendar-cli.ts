@@ -104,8 +104,7 @@ program
           console.log(
             `✅ SUCCESS: Event "${title}" saved to local database with ID: ${event.id}`
           );
-        } catch {
-        }
+        } catch {}
       } else {
         // Use same HTTP API endpoint as frontend
         try {
@@ -135,8 +134,7 @@ program
           console.error(`❌ ERROR: Failed to reach server:`, fetchError);
         }
       }
-    } catch {
-    }
+    } catch {}
   });
 
 // CREATE command
@@ -174,8 +172,7 @@ program
             `❌ FAILED: Could not create event in ${calendar} calendar`
           );
         }
-      } catch {
-      }
+      } catch {}
 
       console.log(''); // spacing
     }
@@ -215,8 +212,7 @@ program
           `\n📊 Total events across all calendars: ${allEvents.length}`
         );
       }
-    } catch {
-    }
+    } catch {}
   });
 
 // UPDATE command
@@ -258,8 +254,7 @@ program
       } else {
         console.log(`❌ FAILED: Could not update event in ${options.calendar}`);
       }
-    } catch {
-    }
+    } catch {}
   });
 
 // DELETE command
@@ -304,8 +299,7 @@ program
       } else {
         console.log(`❌ FAILED: Delete returned status ${response.status}`);
       }
-    } catch {
-    }
+    } catch {}
   });
 
 // FULL TEST command
@@ -435,8 +429,7 @@ program
         console.log(`   Path: ${cal.path}`);
         console.log('');
       });
-    } catch {
-    }
+    } catch {}
   });
 
 program.parse();

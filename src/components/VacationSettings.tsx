@@ -35,7 +35,7 @@ export const VacationSettings: React.FC<VacationSettingsProps> = ({
       const response = await fetch('http://localhost:3001/vacation-balances');
       const data = await response.json();
       setBalances(data);
-      
+
       // Initialize form data with current values
       const initialData: { [key: string]: string } = {};
       data.forEach((balance: VacationBalance) => {
@@ -70,14 +70,16 @@ export const VacationSettings: React.FC<VacationSettingsProps> = ({
           throw new Error(`Failed to update balance for ${userName}`);
         }
       }
-      
+
       setSuccess(true);
       setTimeout(() => {
         onClose();
         window.location.reload(); // Refresh to show new balances
       }, 1500);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update balances');
+      setError(
+        err instanceof Error ? err.message : 'Failed to update balances'
+      );
     } finally {
       setLoading(false);
     }
@@ -91,7 +93,9 @@ export const VacationSettings: React.FC<VacationSettingsProps> = ({
 
   const calculateNextAccrual = () => {
     const today = new Date();
-    const daysUntilPayday = Math.ceil((NEXT_PAYDAY.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const daysUntilPayday = Math.ceil(
+      (NEXT_PAYDAY.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+    );
     return daysUntilPayday;
   };
 
@@ -101,19 +105,33 @@ export const VacationSettings: React.FC<VacationSettingsProps> = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 w-full max-w-md">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-gray-800">Vacation Settings</h2>
+          <h2 className="text-xl font-semibold text-gray-800">
+            Vacation Settings
+          </h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
 
         <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-          <h3 className="text-sm font-semibold text-blue-900 mb-2">Accrual Information</h3>
+          <h3 className="text-sm font-semibold text-blue-900 mb-2">
+            Accrual Information
+          </h3>
           <div className="space-y-1 text-xs text-blue-800">
             <div>Annual: 3 weeks (120 hours)</div>
             <div>Per Pay Period: {ACCRUAL_RATE} hours (every 2 weeks)</div>
@@ -144,10 +162,12 @@ export const VacationSettings: React.FC<VacationSettingsProps> = ({
                   type="number"
                   step="0.01"
                   value={formData[balance.user_name] || ''}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    [balance.user_name]: e.target.value
-                  })}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      [balance.user_name]: e.target.value,
+                    })
+                  }
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />

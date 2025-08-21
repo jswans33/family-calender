@@ -30,6 +30,7 @@ The Swanson Light Calendar application uses a robust database synchronization an
 ## Database Schema
 
 ### Events Table
+
 ```sql
 CREATE TABLE events (
   id TEXT PRIMARY KEY,
@@ -70,6 +71,7 @@ CREATE TABLE events (
 ```
 
 ### Deleted Events Table
+
 ```sql
 CREATE TABLE deleted_events (
   id TEXT PRIMARY KEY,
@@ -79,6 +81,7 @@ CREATE TABLE deleted_events (
 ```
 
 ### Vacation Balances Table
+
 ```sql
 CREATE TABLE vacation_balances (
   user_name TEXT PRIMARY KEY,
@@ -90,20 +93,24 @@ CREATE TABLE vacation_balances (
 ## Migration System
 
 ### Purpose
+
 The migration system ensures database schema consistency across different environments (development, Raspberry Pi deployment).
 
 ### Migration Script (`scripts/migrate-database.js`)
+
 - Runs automatically when the database schema needs updates
 - Checks for missing columns/tables before applying changes
 - Idempotent - safe to run multiple times
 - Maintains backward compatibility
 
 ### Migration Process
+
 1. **Check Phase**: Queries database schema to determine what needs updating
 2. **Apply Phase**: Runs ALTER TABLE or CREATE TABLE statements as needed
 3. **Verify Phase**: Confirms migrations were successful
 
 ### Current Migrations
+
 1. **Add start and end columns**: Required fields for event time ranges
 2. **Add CalDAV metadata columns**: Tracks CalDAV-specific information
 3. **Add vacation column**: Supports vacation tracking feature
@@ -113,6 +120,7 @@ The migration system ensures database schema consistency across different enviro
 ## Sync Process
 
 ### Sync Flow
+
 1. **Fetch from CalDAV** (all three calendars: personal, work, shared)
 2. **Transform Events** (parse iCalendar format to internal format)
 3. **Detect Changes**
@@ -123,6 +131,7 @@ The migration system ensures database schema consistency across different enviro
 5. **Clean Up** old events and sync tracking data
 
 ### Sync Endpoints
+
 - `POST /admin/sync` - Triggers full synchronization
 - `GET /api/events` - Retrieves events (triggers sync if needed)
 - `POST /api/events` - Creates new event (syncs to CalDAV)
@@ -130,6 +139,7 @@ The migration system ensures database schema consistency across different enviro
 - `DELETE /api/events/:id` - Deletes event (syncs deletion to CalDAV)
 
 ### Conflict Resolution
+
 - CalDAV is treated as the source of truth
 - Local changes are pushed to CalDAV
 - CalDAV changes override local changes during sync
@@ -138,65 +148,72 @@ The migration system ensures database schema consistency across different enviro
 ## SQL Parameter Mapping
 
 ### Column-to-Parameter Mapping
+
 The system maintains strict 1:1 mapping between:
+
 - Database columns (33 total)
 - SQL placeholders (? marks)
 - JavaScript parameters
 
 ### Parameter Order
+
 ```javascript
 [
-  event.id,                           // 1
-  event.title,                        // 2
-  event.date,                         // 3
-  event.time,                         // 4
-  event.start || event.date,          // 5
-  event.end || event.dtend || date,   // 6
-  event.description,                  // 7
-  event.location,                     // 8
-  event.organizer,                    // 9
-  JSON.stringify(event.attendees),    // 10
-  JSON.stringify(event.categories),   // 11
-  event.priority,                     // 12
-  event.status,                       // 13
-  event.visibility,                   // 14
-  event.dtend,                        // 15
-  event.duration,                     // 16
-  event.rrule,                        // 17
-  event.created,                      // 18
-  event.lastModified,                 // 19
-  event.sequence,                     // 20
-  event.url,                          // 21
-  event.geo?.lat,                     // 22
-  event.geo?.lon,                     // 23
-  event.transparency,                 // 24
-  JSON.stringify(event.attachments),  // 25
-  event.timezone,                     // 26
-  caldav_filename,                    // 27
-  calendar_path,                      // 28
-  calendar_name,                      // 29
-  sync_status,                        // 30
-  local_modified,                     // 31
+  event.id, // 1
+  event.title, // 2
+  event.date, // 3
+  event.time, // 4
+  event.start || event.date, // 5
+  event.end || event.dtend || date, // 6
+  event.description, // 7
+  event.location, // 8
+  event.organizer, // 9
+  JSON.stringify(event.attendees), // 10
+  JSON.stringify(event.categories), // 11
+  event.priority, // 12
+  event.status, // 13
+  event.visibility, // 14
+  event.dtend, // 15
+  event.duration, // 16
+  event.rrule, // 17
+  event.created, // 18
+  event.lastModified, // 19
+  event.sequence, // 20
+  event.url, // 21
+  event.geo?.lat, // 22
+  event.geo?.lon, // 23
+  event.transparency, // 24
+  JSON.stringify(event.attachments), // 25
+  event.timezone, // 26
+  caldav_filename, // 27
+  calendar_path, // 28
+  calendar_name, // 29
+  sync_status, // 30
+  local_modified, // 31
   null, // synced_at uses DEFAULT     // 32
-  event.isVacation ? 1 : 0            // 33
-]
+  event.isVacation ? 1 : 0, // 33
+];
 ```
 
 ## Deployment
 
 ### Local Development
+
 1. Database is created automatically in `./data/calendar.db`
 2. Migrations run on first startup
 3. Sync happens on server start and API calls
 
 ### Raspberry Pi Deployment
+
 1. Pull latest code: `git pull`
 2. Run migrations: `node scripts/migrate-database.js`
 3. Build: `npm run build:server`
 4. Start: `bash start-calendar.sh`
 
 ### Environment Variables
+
 Required in `.env`:
+
 ```
 CALDAV_USERNAME=your_email@gmail.com
 CALDAV_PASSWORD=your_app_specific_password
@@ -224,6 +241,7 @@ CALDAV_PASSWORD=your_app_specific_password
    - Check strict mode settings match between environments
 
 ### Debug Commands
+
 ```bash
 # Check database schema
 sqlite3 data/calendar.db ".schema events"

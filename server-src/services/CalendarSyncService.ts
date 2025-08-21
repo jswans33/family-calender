@@ -40,7 +40,7 @@ export class CalendarSyncService {
   async performSync(): Promise<void> {
     try {
       console.log('🔄 SYNC START - Performing CalDAV sync...');
-      
+
       // Sync deletions first
       await this.syncDeletionsToCalDAV();
 
@@ -48,12 +48,15 @@ export class CalendarSyncService {
       // Fetch events from all calendars
       const allEvents =
         await this.multiCalendarRepository.getAllEventsFromAllCalendars();
-      
+
       console.log(`📥 SYNC - Retrieved ${allEvents.length} events from CalDAV`);
 
       // Get existing events to preserve original data
-      console.log('🗃️ SYNC - Getting existing events to preserve original data...');
-      const existingEvents = await this.sqliteRepository.getEventsWithMetadata();
+      console.log(
+        '🗃️ SYNC - Getting existing events to preserve original data...'
+      );
+      const existingEvents =
+        await this.sqliteRepository.getEventsWithMetadata();
       const existingEventsMap = new Map(existingEvents.map(e => [e.id, e]));
 
       // Transform events to include metadata and preserve original data
@@ -69,9 +72,9 @@ export class CalendarSyncService {
           original_time: existing?.original_time || undefined,
           original_duration: existing?.original_duration || undefined,
           creation_source: existing?.creation_source || 'caldav',
-          caldav_processed_at: new Date().toISOString()
+          caldav_processed_at: new Date().toISOString(),
         };
-        
+
         // Debug specific events
         if (event.title?.includes('MD')) {
           console.log('🔍 SYNC DEBUG - Processing MD event:', {
@@ -83,10 +86,10 @@ export class CalendarSyncService {
             original_date: enhanced.original_date,
             original_time: enhanced.original_time,
             original_duration: enhanced.original_duration,
-            creation_source: enhanced.creation_source
+            creation_source: enhanced.creation_source,
           });
         }
-        
+
         return enhanced;
       });
 

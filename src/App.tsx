@@ -270,7 +270,9 @@ const App: React.FC = () => {
             <div className="flex items-center gap-4 flex-1 max-w-2xl mx-4">
               {/* Calendar Selector */}
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-700">Calendar:</span>
+                <span className="text-sm font-medium text-gray-700">
+                  Calendar:
+                </span>
                 <select
                   value={selectedCalendar || ''}
                   onChange={e => handleCalendarChange(e.target.value || null)}
@@ -280,7 +282,9 @@ const App: React.FC = () => {
                   <option value="">All Calendars</option>
                   {calendars.map(calendar => (
                     <option key={calendar.name} value={calendar.name}>
-                      {calendar.name.charAt(0).toUpperCase() + calendar.name.slice(1)} ({calendar.count})
+                      {calendar.name.charAt(0).toUpperCase() +
+                        calendar.name.slice(1)}{' '}
+                      ({calendar.count})
                     </option>
                   ))}
                 </select>

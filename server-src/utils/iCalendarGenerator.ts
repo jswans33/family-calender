@@ -50,7 +50,7 @@ export class iCalendarGenerator {
     const now =
       new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
     const isAllDay = this.isAllDayEvent(event);
-    
+
     console.log('📅 iCAL GENERATION DEBUG:', {
       title: event.title,
       date: event.date,
@@ -61,33 +61,41 @@ export class iCalendarGenerator {
       // Original values for comparison
       original_date: event.original_date,
       original_time: event.original_time,
-      original_duration: event.original_duration
+      original_duration: event.original_duration,
     });
-    
+
     // Log the actual DTSTART/DTEND that will be generated
-    const dtstart = this.formatDateTime(event.date, isAllDay ? '' : event.time, event.timezone);
-    const dtend = this.formatDateTime(
-      event.dtend || this.calculateEndTime(event.date, event.time, event),
-      isAllDay ? '' : event.time ? this.calculateEndTimeString(event.time) : undefined,
+    const dtstart = this.formatDateTime(
+      event.date,
+      isAllDay ? '' : event.time,
       event.timezone
     );
-    
+    const dtend = this.formatDateTime(
+      event.dtend || this.calculateEndTime(event.date, event.time, event),
+      isAllDay
+        ? ''
+        : event.time
+          ? this.calculateEndTimeString(event.time)
+          : undefined,
+      event.timezone
+    );
+
     console.log('📅 iCAL DTSTART/DTEND DEBUG:', {
       isAllDay,
       dtstart_format: isAllDay ? 'DATE' : 'DATETIME',
       dtstart_value: dtstart,
-      dtend_format: isAllDay ? 'DATE' : 'DATETIME', 
+      dtend_format: isAllDay ? 'DATE' : 'DATETIME',
       dtend_value: dtend,
       full_dtstart: `DTSTART${isAllDay ? ';VALUE=DATE' : ''}:${dtstart}`,
-      full_dtend: `DTEND${isAllDay ? ';VALUE=DATE' : ''}:${dtend}`
+      full_dtend: `DTEND${isAllDay ? ';VALUE=DATE' : ''}:${dtend}`,
     });
 
     const fields = [
       `UID:${event.id}`,
       `DTSTAMP:${now}`,
       `DTSTART${isAllDay ? ';VALUE=DATE' : ''}:${this.formatDateTime(
-        event.date, 
-        isAllDay ? '' : event.time, 
+        event.date,
+        isAllDay ? '' : event.time,
         event.timezone
       )}`,
       `DTEND${isAllDay ? ';VALUE=DATE' : ''}:${this.formatDateTime(
@@ -209,18 +217,23 @@ export class iCalendarGenerator {
   /**
    * Calculate end time - default to 1 hour after start
    */
-  private static calculateEndTime(date: string, time?: string, event?: CalendarEvent): string {
+  private static calculateEndTime(
+    date: string,
+    time?: string,
+    event?: CalendarEvent
+  ): string {
     const startDate = new Date(date);
-    
+
     // Check if this is an all-day event based on the whole event context
-    const isAllDay = event ? this.isAllDayEvent(event) : 
-      (!time || time === '' || time === 'All Day' || time === 'all day');
-    
+    const isAllDay = event
+      ? this.isAllDayEvent(event)
+      : !time || time === '' || time === 'All Day' || time === 'all day';
+
     if (isAllDay) {
       // For all-day events, end is next day
       const endDate = new Date(startDate);
       endDate.setDate(endDate.getDate() + 1);
-      return endDate.toISOString().split('T')[0]; // Return just the date part
+      return endDate.toISOString().split('T')[0]!; // Return just the date part
     }
     // For timed events, default to 1 hour duration
     return date; // Same date, different time

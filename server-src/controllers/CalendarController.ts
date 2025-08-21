@@ -185,17 +185,23 @@ export class CalendarController {
 
   async createEvent(req: Request, res: Response): Promise<void> {
     try {
-      console.log('📨 CREATE EVENT REQUEST - Raw body:', JSON.stringify(req.body, null, 2));
+      console.log(
+        '📨 CREATE EVENT REQUEST - Raw body:',
+        JSON.stringify(req.body, null, 2)
+      );
       const eventData = req.body;
       ValidationService.validateEventData(eventData);
       const calendarName = eventData.calendar_name || 'shared'; // Default to shared calendar
-      console.log('📅 CREATE EVENT - After validation, calendar:', calendarName);
+      console.log(
+        '📅 CREATE EVENT - After validation, calendar:',
+        calendarName
+      );
 
       // Generate ID if not provided
       if (!eventData.id) {
         eventData.id = `local-${Date.now()}-${Math.random().toString(36).substring(7)}`;
       }
-      
+
       // Preserve original values if not already set
       if (!eventData.original_date) {
         eventData.original_date = eventData.date;
@@ -208,11 +214,15 @@ export class CalendarController {
       if (!eventData.start && eventData.date) {
         // Create start datetime from date and optional time
         if (eventData.time) {
-          eventData.start = new Date(`${eventData.date}T${eventData.time}:00`).toISOString();
+          eventData.start = new Date(
+            `${eventData.date}T${eventData.time}:00`
+          ).toISOString();
         } else {
-          eventData.start = new Date(`${eventData.date}T00:00:00`).toISOString();
+          eventData.start = new Date(
+            `${eventData.date}T00:00:00`
+          ).toISOString();
         }
-        
+
         // Create end datetime - use dtend if provided, otherwise 1 hour after start
         if (eventData.dtend) {
           eventData.end = eventData.dtend;
@@ -249,9 +259,9 @@ export class CalendarController {
         original_date: eventData.original_date,
         original_time: eventData.original_time,
         original_duration: eventData.original_duration,
-        creation_source: eventData.creation_source
+        creation_source: eventData.creation_source,
       });
-      
+
       const success = await this.calendarService.createEventInCalendar(
         eventData,
         calendarName

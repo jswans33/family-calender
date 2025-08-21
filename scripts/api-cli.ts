@@ -58,8 +58,7 @@ program
           );
           console.log(`   Error: ${result.message || result.error}`);
         }
-      } catch {
-      }
+      } catch {}
 
       console.log(''); // spacing
     }
@@ -105,8 +104,7 @@ program
           `\n📊 Total events accessible via API: ${allEvents.length}`
         );
       }
-    } catch {
-    }
+    } catch {}
   });
 
 // UPDATE command
@@ -153,8 +151,7 @@ program
         console.log(`❌ FAILED: Could not update event`);
         console.log(`   Error: ${result.message || result.error}`);
       }
-    } catch {
-    }
+    } catch {}
   });
 
 // DELETE command
@@ -188,8 +185,7 @@ program
         console.log(`❌ FAILED: Could not delete event`);
         console.log(`   Error: ${result.message || result.error}`);
       }
-    } catch {
-    }
+    } catch {}
   });
 
 // FULL TEST command

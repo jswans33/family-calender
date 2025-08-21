@@ -1,3 +1,4 @@
+/* eslint-env jest */
 // Jest setup file for server-side tests
 // Add any global test setup here
 

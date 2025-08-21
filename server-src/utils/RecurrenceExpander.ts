@@ -19,20 +19,24 @@ export class RecurrenceExpander {
     defaultEndDate.setMonth(defaultEndDate.getMonth() + 3); // 3 months ahead by default
     const expansionEnd = endDate || defaultEndDate;
 
-    console.log(`📅 Expanding recurring events from ${startDate.toISOString()} to ${expansionEnd.toISOString()}`);
+    console.log(
+      `📅 Expanding recurring events from ${startDate.toISOString()} to ${expansionEnd.toISOString()}`
+    );
 
     for (const event of events) {
       if (event.rrule) {
         try {
           // Parse the RRULE string
           const rrule = this.parseRRule(event.rrule, event.date);
-          
+
           if (rrule) {
             // Generate occurrences within the date range
             const occurrences = rrule.between(startDate, expansionEnd, true);
-            
-            console.log(`📅 Event "${event.title}" has ${occurrences.length} occurrences in range`);
-            
+
+            console.log(
+              `📅 Event "${event.title}" has ${occurrences.length} occurrences in range`
+            );
+
             // Create an event for each occurrence
             occurrences.forEach((occurrence, index) => {
               const expandedEvent = {
@@ -46,10 +50,10 @@ export class RecurrenceExpander {
                 originalEventId: event.id,
                 recurrenceDate: occurrence.toISOString(),
               } as CalendarEvent;
-              
+
               expandedEvents.push(expandedEvent);
             });
-            
+
             // Don't include the original event if it's outside the range
             const originalDate = new Date(event.date);
             if (originalDate >= startDate && originalDate <= expansionEnd) {
@@ -60,7 +64,10 @@ export class RecurrenceExpander {
             expandedEvents.push(event);
           }
         } catch (error) {
-          console.error(`Failed to expand recurring event "${event.title}":`, error);
+          console.error(
+            `Failed to expand recurring event "${event.title}":`,
+            error
+          );
           // Include the original event if expansion fails
           expandedEvents.push(event);
         }
@@ -70,14 +77,19 @@ export class RecurrenceExpander {
       }
     }
 
-    console.log(`📅 Expanded ${events.length} events to ${expandedEvents.length} total events`);
+    console.log(
+      `📅 Expanded ${events.length} events to ${expandedEvents.length} total events`
+    );
     return expandedEvents;
   }
 
   /**
    * Parse RRULE string into RRule object
    */
-  private static parseRRule(rruleString: string, eventDate?: string): RRule | null {
+  private static parseRRule(
+    rruleString: string,
+    eventDate?: string
+  ): RRule | null {
     try {
       // Handle different RRULE formats
       if (rruleString.includes('DTSTART')) {
@@ -97,7 +109,7 @@ export class RecurrenceExpander {
         const parsed = rrulestr(fullRRule);
         return parsed instanceof RRule ? parsed : null;
       }
-      
+
       return null;
     } catch (error) {
       console.error('Failed to parse RRULE:', rruleString, error);
@@ -115,7 +127,10 @@ export class RecurrenceExpander {
   /**
    * Check if an event should be visible based on its recurrence
    */
-  static isEventVisible(event: CalendarEvent, referenceDate: Date = new Date()): boolean {
+  static isEventVisible(
+    event: CalendarEvent,
+    referenceDate: Date = new Date()
+  ): boolean {
     if (!event.rrule) {
       // Non-recurring event - check if it's in the future
       return new Date(event.date) >= referenceDate;
@@ -127,7 +142,11 @@ export class RecurrenceExpander {
         // Check if there's a future occurrence
         const futureDate = new Date();
         futureDate.setMonth(futureDate.getMonth() + 3);
-        const futureOccurrences = rrule.between(referenceDate, futureDate, true);
+        const futureOccurrences = rrule.between(
+          referenceDate,
+          futureDate,
+          true
+        );
         return futureOccurrences.length > 0;
       }
     } catch (error) {

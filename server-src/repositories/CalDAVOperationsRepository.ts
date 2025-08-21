@@ -77,22 +77,24 @@ export class CalDAVOperationsRepository {
       filename,
       basePath: this.basePath,
     });
-    
+
     try {
       const eventPath = `${this.basePath}${calendar_path}${filename}`;
       console.log(`🗑️ Attempting to delete from CalDAV path: ${eventPath}`);
-      
+
       // Log the full URL that will be used
       console.log('🗑️ Full deletion details:', {
         basePath: this.basePath,
         calendar_path,
         filename,
         fullPath: eventPath,
-        isSharedCalendar: calendar_path.includes('2D7581FA-3A83-42D8-B6F4-8BCD8186AA6E'),
+        isSharedCalendar: calendar_path.includes(
+          '2D7581FA-3A83-42D8-B6F4-8BCD8186AA6E'
+        ),
       });
-      
+
       const result = await this.fetchRepository.deleteEventData(eventPath);
-      
+
       console.log('🗑️ CalDAV DELETE response:', {
         success: result.success,
         statusCode: result.statusCode,
@@ -117,7 +119,10 @@ export class CalDAVOperationsRepository {
       return result.success;
     } catch (error) {
       console.error(`❌ Error deleting event ${eventId}:`, error);
-      console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack');
+      console.error(
+        'Stack trace:',
+        error instanceof Error ? error.stack : 'No stack'
+      );
       return false;
     }
   }

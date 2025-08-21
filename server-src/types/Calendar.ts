@@ -26,10 +26,10 @@ export interface CalendarEvent {
   timezone?: string;
   isVacation?: boolean;
   calendar_name?: string;
-  
+
   // Original creation data preservation
   original_date?: string | undefined; // Original date as entered by user
-  original_time?: string | undefined; // Original time as entered by user  
+  original_time?: string | undefined; // Original time as entered by user
   original_duration?: string | undefined; // Original duration as set by user
   creation_source?: 'user' | 'caldav' | 'sync' | undefined; // Where this event came from
   caldav_processed_at?: string | undefined; // When CalDAV last processed this event
