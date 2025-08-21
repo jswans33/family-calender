@@ -26,10 +26,13 @@ export class CalDAVMultiCalendarRepository {
   constructor(credentials: CalDAVCredentials) {
     this.configService = new CalendarConfigService();
     const basePath = this.configService.getBasePath();
-    
+
     this.fetchRepository = new CalDAVFetchRepository(credentials, basePath);
     this.parserRepository = new CalDAVParserRepository();
-    this.operationsRepository = new CalDAVOperationsRepository(this.fetchRepository, basePath);
+    this.operationsRepository = new CalDAVOperationsRepository(
+      this.fetchRepository,
+      basePath
+    );
   }
 
   /**
@@ -37,10 +40,12 @@ export class CalDAVMultiCalendarRepository {
    */
   async getAllCalendars(): Promise<CalendarInfo[]> {
     const calendars = this.configService.getCalendars();
-    
+
     for (const calendar of calendars) {
       try {
-        const xmlData = await this.fetchRepository.fetchCalendarData(calendar.path);
+        const xmlData = await this.fetchRepository.fetchCalendarData(
+          calendar.path
+        );
         const events = this.parserRepository.parseCalendarEvents(xmlData);
         calendar.count = events.length;
       } catch (error) {
@@ -61,8 +66,11 @@ export class CalDAVMultiCalendarRepository {
 
     for (const calendar of calendars) {
       try {
-        const xmlData = await this.fetchRepository.fetchCalendarData(calendar.path);
-        const eventsWithFilenames = this.parserRepository.parseCalendarEventsWithFilenames(xmlData);
+        const xmlData = await this.fetchRepository.fetchCalendarData(
+          calendar.path
+        );
+        const eventsWithFilenames =
+          this.parserRepository.parseCalendarEventsWithFilenames(xmlData);
 
         const eventsWithMetadata: EventWithMetadata[] = eventsWithFilenames.map(
           item => ({
@@ -93,7 +101,11 @@ export class CalDAVMultiCalendarRepository {
     startDate?: Date,
     endDate?: Date
   ): Promise<string> {
-    return this.fetchRepository.fetchCalendarData(calendar_path, startDate, endDate);
+    return this.fetchRepository.fetchCalendarData(
+      calendar_path,
+      startDate,
+      endDate
+    );
   }
 
   /**
@@ -130,7 +142,11 @@ export class CalDAVMultiCalendarRepository {
     calendar_path: string,
     filename: string
   ): Promise<boolean> {
-    return this.operationsRepository.deleteEvent(eventId, calendar_path, filename);
+    return this.operationsRepository.deleteEvent(
+      eventId,
+      calendar_path,
+      filename
+    );
   }
 
   /**
@@ -177,6 +193,10 @@ export class CalDAVMultiCalendarRepository {
     filename: string,
     calendar_path: string
   ): Promise<boolean> {
-    return this.operationsRepository.deleteEvent(filename, calendar_path, filename);
+    return this.operationsRepository.deleteEvent(
+      filename,
+      calendar_path,
+      filename
+    );
   }
 }

@@ -42,7 +42,10 @@ const calendarService = new CalendarFacadeService(
 );
 const vacationDataService = new VacationDataService(sqliteRepository);
 const vacationService = new VacationService(vacationDataService);
-const calendarController = new CalendarController(calendarService, vacationService);
+const calendarController = new CalendarController(
+  calendarService,
+  vacationService
+);
 
 // Routes
 app.get('/events', (req, res) => calendarController.getEvents(req, res));
@@ -56,7 +59,9 @@ app.get('/events/month', (req, res) =>
   calendarController.getThisMonthsEvents(req, res)
 );
 app.put('/events/:id', (req, res) => calendarController.updateEvent(req, res));
-app.delete('/events/:id', (req, res) => calendarController.deleteEvent(req, res));
+app.delete('/events/:id', (req, res) =>
+  calendarController.deleteEvent(req, res)
+);
 // CODE_SMELL: Rule #1 One Thing Per File - Business logic in server.ts
 // Fix: Move vacation processing to CalendarController or middleware
 // Enhanced event creation with vacation processing (modular)

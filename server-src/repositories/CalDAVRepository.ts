@@ -3,7 +3,6 @@ import { CalendarEvent, CalDAVCredentials } from '../types/Calendar.js';
 import { iCalendarGenerator } from '../utils/iCalendarGenerator.js';
 import { CalDAVParser } from '../utils/CalDAVParser.js';
 
-
 export class CalDAVRepository {
   private credentials: CalDAVCredentials;
 
@@ -73,7 +72,7 @@ export class CalDAVRepository {
 
     try {
       const icalContents = CalDAVParser.extractICalContent(xmlData);
-      
+
       icalContents.forEach(icalContent => {
         const parsedEvents = CalDAVParser.parseICalContent(icalContent);
         events.push(...parsedEvents);
@@ -84,7 +83,6 @@ export class CalDAVRepository {
 
     return events;
   }
-
 
   private buildTimeRangeFilter(startDate?: Date, endDate?: Date): string {
     if (!startDate && !endDate) return '';

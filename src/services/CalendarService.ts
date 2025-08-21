@@ -152,7 +152,8 @@ class CalendarService {
    * @returns 24-hour formatted time string (e.g., "10:00", "14:30") or undefined
    */
   private formatTimeTo24h(timeStr?: string): string | undefined {
-    if (!timeStr || timeStr === 'All Day' || timeStr === 'all day') return undefined;
+    if (!timeStr || timeStr === 'All Day' || timeStr === 'all day')
+      return undefined;
 
     try {
       // Check if already in 24-hour format (HH:MM)

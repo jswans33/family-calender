@@ -48,7 +48,6 @@ interface DatabaseEventRow {
  * Handles CalDAV sync tracking and deleted events
  */
 export class SQLiteSyncRepository extends SQLiteBaseRepository {
-
   /**
    * Get all event IDs from the events table
    */
@@ -285,8 +284,13 @@ export class SQLiteSyncRepository extends SQLiteBaseRepository {
     if (row.attendees) event.attendees = JSON.parse(row.attendees);
     if (row.categories) event.categories = JSON.parse(row.categories);
     if (row.priority) event.priority = row.priority;
-    if (row.status) event.status = row.status as 'CONFIRMED' | 'TENTATIVE' | 'CANCELLED';
-    if (row.visibility) event.visibility = row.visibility as 'PUBLIC' | 'PRIVATE' | 'CONFIDENTIAL';
+    if (row.status)
+      event.status = row.status as 'CONFIRMED' | 'TENTATIVE' | 'CANCELLED';
+    if (row.visibility)
+      event.visibility = row.visibility as
+        | 'PUBLIC'
+        | 'PRIVATE'
+        | 'CONFIDENTIAL';
     if (row.dtend) event.dtend = row.dtend;
     if (row.duration) event.duration = row.duration;
     if (row.rrule) event.rrule = row.rrule;
@@ -296,7 +300,8 @@ export class SQLiteSyncRepository extends SQLiteBaseRepository {
     if (row.url) event.url = row.url;
     if (row.geo_lat && row.geo_lon)
       event.geo = { lat: row.geo_lat, lon: row.geo_lon };
-    if (row.transparency) event.transparency = row.transparency as 'OPAQUE' | 'TRANSPARENT';
+    if (row.transparency)
+      event.transparency = row.transparency as 'OPAQUE' | 'TRANSPARENT';
     if (row.attachments) event.attachments = JSON.parse(row.attachments);
     if (row.timezone) event.timezone = row.timezone;
     if (row.is_vacation !== undefined)

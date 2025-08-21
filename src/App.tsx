@@ -6,6 +6,8 @@ import { EventModal } from './components/primitives/EventModal';
 import { ColorProvider } from './contexts/ColorContext';
 import EventAccordion from './components/primitives/EventAccordion';
 import VacationPanel from './components/VacationPanel';
+import { EventDebugPanel } from './components/EventDebugPanel';
+import { DateUtils } from './utils/dateUtils';
 import './App.css';
 
 const App: React.FC = () => {
@@ -25,6 +27,8 @@ const App: React.FC = () => {
   );
   // Current calendar view
   const [currentView, setCurrentView] = useState<CalendarView>('month');
+  // Debug mode
+  const [showDebug, setShowDebug] = useState(false);
   // Selected date for day view
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   // Event creation modal state
@@ -215,12 +219,9 @@ const App: React.FC = () => {
   };
 
   // Filter upcoming events and group by calendar - moved before early return to avoid hook order issues
-  const today = new Date();
-  const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD format
-
   const upcomingEventGroups = useMemo(() => {
     const upcomingEvents = events
-      .filter(event => event.date >= (todayStr || ''))
+      .filter(event => DateUtils.isFutureOrToday(event.date || event.start))
       .sort((a, b) => {
         // Sort by date first, then by time
         if (a.date !== b.date) {
@@ -248,7 +249,7 @@ const App: React.FC = () => {
       calendarName,
       events: events.slice(0, 6), // Limit to 6 events per calendar
     }));
-  }, [events, todayStr]);
+  }, [events]);
 
   // Show loading spinner while events are being fetched
   if (loading) {
@@ -257,9 +258,9 @@ const App: React.FC = () => {
 
   return (
     <ColorProvider>
-      <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="bg-white border-b border-gray-200 px-6 py-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-gray-900">
               Family Calendar
@@ -303,15 +304,25 @@ const App: React.FC = () => {
                 >
                   🔄 Sync
                 </button>
+                <button
+                  onClick={() => setShowDebug(!showDebug)}
+                  className={`px-3 py-1 text-sm rounded transition-colors ${
+                    showDebug
+                      ? 'bg-orange-600 text-white hover:bg-orange-700'
+                      : 'bg-gray-600 text-white hover:bg-gray-700'
+                  }`}
+                >
+                  🐛 Debug
+                </button>
               </div>
             </div>
           </div>
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex">
+        <div className="flex-1 flex overflow-hidden">
           {/* Left Panel - Event Details & Vacation */}
-          <div className="w-1/4 bg-white border-r border-gray-200 p-4 flex flex-col">
+          <div className="w-48 bg-white border-r border-gray-200 p-4 flex flex-col overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">
                 Event Details
@@ -500,30 +511,35 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          {/* Center Panel - Calendar */}
-          <div className="flex-1 p-4">
-            <Calendar
-              events={events}
-              calendars={calendars}
-              selectedCalendar={selectedCalendar}
-              onCalendarChange={handleCalendarChange}
-              isLoadingCalendars={isLoadingCalendars}
-              view={currentView}
-              selectedDate={selectedDate}
-              onEventClick={setSelectedEvent}
-              onDayClick={dateStr => {
-                // Set the selected date and switch to day view
-                setSelectedDate(dateStr);
-                setCurrentView('day');
-              }}
-              onTimeSlotClick={handleTimeSlotClick}
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-            />
+          {/* Center Panel - Calendar or Debug */}
+          <div className="flex-1 p-4 flex flex-col overflow-hidden">
+            {showDebug ? (
+              <EventDebugPanel />
+            ) : (
+              <Calendar
+                events={events}
+                calendars={calendars}
+                selectedCalendar={selectedCalendar}
+                onCalendarChange={handleCalendarChange}
+                isLoadingCalendars={isLoadingCalendars}
+                view={currentView}
+                selectedDate={selectedDate}
+                onEventClick={setSelectedEvent}
+                onDayClick={dateStr => {
+                  // Set the selected date and switch to day view
+                  setSelectedDate(dateStr);
+                  setCurrentView('day');
+                }}
+                onTimeSlotClick={handleTimeSlotClick}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                startOfWeek={0}
+              />
+            )}
           </div>
 
           {/* Right Panel - Upcoming Events Accordion */}
-          <div className="w-1/4 bg-white border-l border-gray-200 p-4 overflow-y-auto">
+          <div className="w-48 bg-white border-l border-gray-200 p-4 overflow-y-auto">
             <EventAccordion
               eventGroups={upcomingEventGroups}
               selectedEvent={selectedEvent}

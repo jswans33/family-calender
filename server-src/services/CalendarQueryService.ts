@@ -71,7 +71,10 @@ export class CalendarQueryService {
         id: 'fallback-1',
         title: 'No events available',
         date: now.toISOString(),
-        time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        time: now.toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
         start: now.toISOString(),
         end: hourLater.toISOString(),
         description: 'Unable to fetch events. Please check your connection.',

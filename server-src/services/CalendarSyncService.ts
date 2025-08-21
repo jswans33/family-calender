@@ -77,7 +77,8 @@ export class CalendarSyncService {
 
   private async syncDeletionsToCalDAV(): Promise<void> {
     // Get list of deleted event IDs
-    const deletedEventIds = await this.sqliteRepository.getDeletedEventsToSync();
+    const deletedEventIds =
+      await this.sqliteRepository.getDeletedEventsToSync();
     if (deletedEventIds.length === 0) return;
 
     // Get full event data with metadata for deletion
@@ -94,7 +95,10 @@ export class CalendarSyncService {
           // Track that this deletion has been synced
           await this.sqliteRepository.trackRemoteDeletion(event.id);
         } catch (error) {
-          console.error(`Failed to sync deletion for event ${event.id}:`, error);
+          console.error(
+            `Failed to sync deletion for event ${event.id}:`,
+            error
+          );
         }
       }
     }

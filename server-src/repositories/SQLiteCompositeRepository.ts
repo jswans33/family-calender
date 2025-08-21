@@ -27,20 +27,30 @@ export class SQLiteCompositeRepository {
     await Promise.all([
       this.eventRepo.ready(),
       this.vacationRepo.ready(),
-      this.syncRepo.ready()
+      this.syncRepo.ready(),
     ]);
   }
 
   // Event repository methods
-  async saveEvents(events: CalendarEvent[], preserveMetadata: boolean = false): Promise<void> {
+  async saveEvents(
+    events: CalendarEvent[],
+    preserveMetadata: boolean = false
+  ): Promise<void> {
     return this.eventRepo.saveEvents(events, preserveMetadata);
   }
 
-  async getEvents(startDate?: Date, endDate?: Date, calendar?: string): Promise<CalendarEvent[]> {
+  async getEvents(
+    startDate?: Date,
+    endDate?: Date,
+    calendar?: string
+  ): Promise<CalendarEvent[]> {
     return this.eventRepo.getEvents(startDate, endDate, calendar);
   }
 
-  async updateEventMetadata(eventId: string, metadata: EventMetadata): Promise<void> {
+  async updateEventMetadata(
+    eventId: string,
+    metadata: EventMetadata
+  ): Promise<void> {
     return this.eventRepo.updateEventMetadata(eventId, metadata);
   }
 
@@ -49,13 +59,21 @@ export class SQLiteCompositeRepository {
   }
 
   async getEventsWithMetadata(calendar?: string): Promise<
-    Array<CalendarEvent & { calendar_path?: string; calendar_name?: string; caldav_filename?: string; }>
+    Array<
+      CalendarEvent & {
+        calendar_path?: string;
+        calendar_name?: string;
+        caldav_filename?: string;
+      }
+    >
   > {
     return this.eventRepo.getEventsWithMetadata(calendar);
   }
 
   // Vacation repository methods
-  async getVacationBalances(): Promise<Array<{ user_name: string; balance_hours: number; last_updated: string }>> {
+  async getVacationBalances(): Promise<
+    Array<{ user_name: string; balance_hours: number; last_updated: string }>
+  > {
     return this.vacationRepo.getVacationBalances();
   }
 
@@ -63,7 +81,10 @@ export class SQLiteCompositeRepository {
     return this.vacationRepo.getVacationBalance(userName);
   }
 
-  async updateVacationBalance(userName: string, newBalance: number): Promise<void> {
+  async updateVacationBalance(
+    userName: string,
+    newBalance: number
+  ): Promise<void> {
     return this.vacationRepo.updateVacationBalance(userName, newBalance);
   }
 

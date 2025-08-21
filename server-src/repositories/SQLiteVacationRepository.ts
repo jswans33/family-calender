@@ -11,7 +11,6 @@ interface VacationBalanceRow {
  * Handles vacation tracking data access
  */
 export class SQLiteVacationRepository extends SQLiteBaseRepository {
-
   /**
    * Get vacation balances for all users
    */

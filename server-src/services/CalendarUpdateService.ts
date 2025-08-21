@@ -30,13 +30,16 @@ export class CalendarUpdateService {
       title: event.title,
       calendarName,
       hasStart: !!event.start,
-      hasEnd: !!event.end
+      hasEnd: !!event.end,
     });
-    
+
     try {
       const calendarPath = this.getCalendarPath(calendarName);
-      debugLog('caldav', `📂 Calendar path for ${calendarName}: ${calendarPath}`);
-      
+      debugLog(
+        'caldav',
+        `📂 Calendar path for ${calendarName}: ${calendarPath}`
+      );
+
       // Create in CalDAV
       const created = await this.multiCalendarRepository.createEventInCalendar(
         event,
@@ -47,19 +50,30 @@ export class CalendarUpdateService {
       if (created) {
         // Ensure date and time fields are populated from start if not present
         const startDate = event.start ? new Date(event.start) : new Date();
-        
+
         // Determine timezone - default to America/Denver for user events
         const timezone = event.timezone || 'America/Denver';
-        
-        // Format time in the event's timezone
+
+        // Format time in the event's LOCAL timezone (not UTC)
         let timeString: string;
-        try {
-          timeString = formatInTimeZone(startDate, timezone, 'HH:mm');
-        } catch {
-          // Fallback to UTC if timezone conversion fails
-          timeString = `${startDate.getUTCHours().toString().padStart(2, '0')}:${startDate.getUTCMinutes().toString().padStart(2, '0')}`;
+        if (event.time && !event.time.includes('T')) {
+          // If time is already provided as HH:MM, keep it as-is
+          timeString = event.time;
+        } else {
+          try {
+            // Convert UTC time to local timezone
+            timeString = formatInTimeZone(startDate, timezone, 'HH:mm');
+            debugLog(
+              'caldav',
+              `⏰ Converted UTC ${startDate.toISOString()} to ${timezone} time: ${timeString}`
+            );
+          } catch (err) {
+            // Fallback - but this is likely wrong!
+            console.error(`Failed to convert time to ${timezone}:`, err);
+            timeString = `${startDate.getUTCHours().toString().padStart(2, '0')}:${startDate.getUTCMinutes().toString().padStart(2, '0')}`;
+          }
         }
-        
+
         const eventWithMetadata: any = {
           ...event,
           date: event.date || startDate.toISOString(),
@@ -75,7 +89,10 @@ export class CalendarUpdateService {
       return false;
     } catch (error) {
       console.error('❌ Error in CalendarUpdateService.createEvent:', error);
-      console.error('Stack:', error instanceof Error ? error.stack : 'No stack');
+      console.error(
+        'Stack:',
+        error instanceof Error ? error.stack : 'No stack'
+      );
       return false;
     }
   }
@@ -83,7 +100,8 @@ export class CalendarUpdateService {
   async updateEvent(event: CalendarEvent): Promise<boolean> {
     try {
       // Get existing event metadata
-      const existingEvents = await this.sqliteRepository.getEventsWithMetadata();
+      const existingEvents =
+        await this.sqliteRepository.getEventsWithMetadata();
       const existingEvent = existingEvents.find(e => e.id === event.id);
 
       if (!existingEvent?.caldav_filename || !existingEvent?.calendar_path) {
@@ -104,7 +122,7 @@ export class CalendarUpdateService {
           ...event,
           caldav_filename: existingEvent.caldav_filename,
           calendar_path: existingEvent.calendar_path,
-          calendar_name: existingEvent.calendar_name
+          calendar_name: existingEvent.calendar_name,
         };
         await this.sqliteRepository.saveEvents([eventWithMetadata]);
         return true;

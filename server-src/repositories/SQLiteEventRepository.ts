@@ -50,7 +50,6 @@ interface EventMetadata {
  * Handles CRUD operations for calendar events
  */
 export class SQLiteEventRepository extends SQLiteBaseRepository {
-  
   /**
    * Save events to database with metadata preservation option
    */
@@ -73,7 +72,11 @@ export class SQLiteEventRepository extends SQLiteBaseRepository {
     calendar?: string
   ): Promise<CalendarEvent[]> {
     return new Promise((resolve, reject) => {
-      const { query, params } = this.buildEventsQuery(startDate, endDate, calendar);
+      const { query, params } = this.buildEventsQuery(
+        startDate,
+        endDate,
+        calendar
+      );
 
       this.db.all(query, params, (err, rows: DatabaseEventRow[]) => {
         if (err) {
@@ -94,8 +97,11 @@ export class SQLiteEventRepository extends SQLiteBaseRepository {
     metadata: EventMetadata
   ): Promise<void> {
     return new Promise((resolve, reject) => {
-      const { updateParts, params } = this.buildMetadataUpdate(metadata, eventId);
-      
+      const { updateParts, params } = this.buildMetadataUpdate(
+        metadata,
+        eventId
+      );
+
       if (updateParts.length === 0) {
         resolve();
         return;
@@ -184,11 +190,11 @@ export class SQLiteEventRepository extends SQLiteBaseRepository {
             calendar_name?: string;
             caldav_filename?: string;
           } = { ...event };
-          
+
           if (row.calendar_path) result.calendar_path = row.calendar_path;
           if (row.calendar_name) result.calendar_name = row.calendar_name;
           if (row.caldav_filename) result.caldav_filename = row.caldav_filename;
-          
+
           return result;
         });
         resolve(events);
@@ -289,7 +295,10 @@ export class SQLiteEventRepository extends SQLiteBaseRepository {
     });
   }
 
-  private buildEventParams(event: CalendarEvent, preserveMetadata: boolean): (string | number | null)[] {
+  private buildEventParams(
+    event: CalendarEvent,
+    preserveMetadata: boolean
+  ): (string | number | null)[] {
     const params = [
       event.id,
       event.title,
@@ -323,7 +332,7 @@ export class SQLiteEventRepository extends SQLiteBaseRepository {
       ((event as any).sync_status as string) || 'synced',
       ((event as any).local_modified as string) || null,
       null, // synced_at will use DEFAULT CURRENT_TIMESTAMP
-      event.isVacation ? 1 : 0
+      event.isVacation ? 1 : 0,
     ];
 
     return params;
@@ -420,8 +429,13 @@ export class SQLiteEventRepository extends SQLiteBaseRepository {
     if (row.attendees) event.attendees = JSON.parse(row.attendees);
     if (row.categories) event.categories = JSON.parse(row.categories);
     if (row.priority) event.priority = row.priority;
-    if (row.status) event.status = row.status as 'CONFIRMED' | 'TENTATIVE' | 'CANCELLED';
-    if (row.visibility) event.visibility = row.visibility as 'PUBLIC' | 'PRIVATE' | 'CONFIDENTIAL';
+    if (row.status)
+      event.status = row.status as 'CONFIRMED' | 'TENTATIVE' | 'CANCELLED';
+    if (row.visibility)
+      event.visibility = row.visibility as
+        | 'PUBLIC'
+        | 'PRIVATE'
+        | 'CONFIDENTIAL';
     if (row.dtend) event.dtend = row.dtend;
     if (row.duration) event.duration = row.duration;
     if (row.rrule) event.rrule = row.rrule;
@@ -431,7 +445,8 @@ export class SQLiteEventRepository extends SQLiteBaseRepository {
     if (row.url) event.url = row.url;
     if (row.geo_lat && row.geo_lon)
       event.geo = { lat: row.geo_lat, lon: row.geo_lon };
-    if (row.transparency) event.transparency = row.transparency as 'OPAQUE' | 'TRANSPARENT';
+    if (row.transparency)
+      event.transparency = row.transparency as 'OPAQUE' | 'TRANSPARENT';
     if (row.attachments) event.attachments = JSON.parse(row.attachments);
     if (row.timezone) event.timezone = row.timezone;
     if (row.is_vacation !== undefined)

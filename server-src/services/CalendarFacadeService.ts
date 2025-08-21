@@ -37,7 +37,9 @@ export class CalendarFacadeService implements ICalendarService {
     this.initializeSync(sqliteRepository);
   }
 
-  private async initializeSync(sqliteRepository: SQLiteCompositeRepository): Promise<void> {
+  private async initializeSync(
+    sqliteRepository: SQLiteCompositeRepository
+  ): Promise<void> {
     try {
       if (sqliteRepository.ready) {
         await sqliteRepository.ready();

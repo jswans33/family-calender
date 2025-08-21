@@ -78,11 +78,15 @@ export abstract class SQLiteBaseRepository {
       )
     `;
 
-      this.executeTableCreation([
-        createEventsTableSQL,
-        createDeletedTableSQL,
-        createVacationBalancesTableSQL
-      ], resolve, reject);
+      this.executeTableCreation(
+        [
+          createEventsTableSQL,
+          createDeletedTableSQL,
+          createVacationBalancesTableSQL,
+        ],
+        resolve,
+        reject
+      );
     });
   }
 
@@ -118,7 +122,7 @@ export abstract class SQLiteBaseRepository {
   private createIndexes(): void {
     const indexes = [
       `CREATE INDEX IF NOT EXISTS idx_events_date ON events(date)`,
-      `CREATE INDEX IF NOT EXISTS idx_events_sync ON events(synced_at)`
+      `CREATE INDEX IF NOT EXISTS idx_events_sync ON events(synced_at)`,
     ];
 
     indexes.forEach(indexSQL => {
@@ -131,7 +135,7 @@ export abstract class SQLiteBaseRepository {
   private initializeDefaultData(): void {
     const defaultUsers = [
       ['james', 40.0],
-      ['morgan', 40.0]
+      ['morgan', 40.0],
     ];
 
     defaultUsers.forEach(([userName, balance]) => {
@@ -140,7 +144,10 @@ export abstract class SQLiteBaseRepository {
         [userName, balance],
         err => {
           if (err) {
-            console.error(`Failed to initialize ${userName} vacation balance:`, err);
+            console.error(
+              `Failed to initialize ${userName} vacation balance:`,
+              err
+            );
           }
         }
       );

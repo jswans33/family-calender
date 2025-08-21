@@ -17,7 +17,10 @@ export class VacationDataService {
     }
   }
 
-  async updateVacationBalance(userName: string, balance: number): Promise<void> {
+  async updateVacationBalance(
+    userName: string,
+    balance: number
+  ): Promise<void> {
     try {
       await this.sqliteRepository.updateVacationBalance(userName, balance);
     } catch (error) {

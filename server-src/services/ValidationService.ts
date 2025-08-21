@@ -8,8 +8,7 @@ export class ValidationService {
     const base64Id = encodedId.replace(/[-_]/g, match => {
       return { '-': '+', _: '/' }[match] || match;
     });
-    const paddedBase64 =
-      base64Id + '='.repeat((4 - (base64Id.length % 4)) % 4);
+    const paddedBase64 = base64Id + '='.repeat((4 - (base64Id.length % 4)) % 4);
     return Buffer.from(paddedBase64, 'base64').toString('utf-8');
   }
 

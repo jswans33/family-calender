@@ -12,12 +12,10 @@ export class iCalendarGenerator {
     const lines = [
       ...this.generateHeader(),
       ...this.generateEventFields(event),
-      ...this.generateFooter()
+      ...this.generateFooter(),
     ];
-    
-    return lines
-      .filter(line => line.length > 0)
-      .join('\n');
+
+    return lines.filter(line => line.length > 0).join('\n');
   }
 
   /**
@@ -28,7 +26,7 @@ export class iCalendarGenerator {
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
       'PRODID:-//Swanson Light Calendar//EN',
-      'BEGIN:VEVENT'
+      'BEGIN:VEVENT',
     ];
   }
 
@@ -36,24 +34,29 @@ export class iCalendarGenerator {
    * Generates VEVENT fields for the calendar event
    */
   private static generateEventFields(event: CalendarEvent): string[] {
-    const now = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const now =
+      new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
     const isAllDay = this.isAllDayEvent(event);
-    
+
     const fields = [
       `UID:${event.id}`,
       `DTSTAMP:${now}`,
       `DTSTART${isAllDay ? ';VALUE=DATE' : ''}:${this.formatDateTime(event.date, event.time, event.timezone)}`,
       `DTEND${isAllDay ? ';VALUE=DATE' : ''}:${this.formatDateTime(
         event.dtend || this.calculateEndTime(event.date, event.time),
-        isAllDay ? undefined : event.time ? this.calculateEndTimeString(event.time) : undefined,
+        isAllDay
+          ? undefined
+          : event.time
+            ? this.calculateEndTimeString(event.time)
+            : undefined,
         event.timezone
       )}`,
-      `SUMMARY:${this.escapeText(event.title)}`
+      `SUMMARY:${this.escapeText(event.title)}`,
     ];
 
     this.addOptionalFields(fields, event);
     fields.push(`LAST-MODIFIED:${now}`);
-    
+
     return fields;
   }
 
@@ -61,38 +64,45 @@ export class iCalendarGenerator {
    * Generates VCALENDAR footer section
    */
   private static generateFooter(): string[] {
-    return [
-      'END:VEVENT',
-      'END:VCALENDAR'
-    ];
+    return ['END:VEVENT', 'END:VCALENDAR'];
   }
 
   /**
    * Determines if event is all-day
    */
   private static isAllDayEvent(event: CalendarEvent): boolean {
-    return event.time === 'All Day' ||
-           event.time === 'all day' ||
-           !event.time ||
-           event.time === '';
+    return (
+      event.time === 'All Day' ||
+      event.time === 'all day' ||
+      !event.time ||
+      event.time === ''
+    );
   }
 
   /**
    * Adds optional fields to the event fields array
    */
-  private static addOptionalFields(fields: string[], event: CalendarEvent): void {
-    if (event.description) fields.push(`DESCRIPTION:${this.escapeText(event.description)}`);
-    if (event.location) fields.push(`LOCATION:${this.escapeText(event.location)}`);
+  private static addOptionalFields(
+    fields: string[],
+    event: CalendarEvent
+  ): void {
+    if (event.description)
+      fields.push(`DESCRIPTION:${this.escapeText(event.description)}`);
+    if (event.location)
+      fields.push(`LOCATION:${this.escapeText(event.location)}`);
     if (event.organizer) fields.push(`ORGANIZER:${event.organizer}`);
-    if (event.attendees) fields.push(...event.attendees.map(a => `ATTENDEE:${a}`));
-    if (event.categories) fields.push(`CATEGORIES:${event.categories.join(',')}`);
+    if (event.attendees)
+      fields.push(...event.attendees.map(a => `ATTENDEE:${a}`));
+    if (event.categories)
+      fields.push(`CATEGORIES:${event.categories.join(',')}`);
     if (event.status) fields.push(`STATUS:${event.status}`);
     if (event.priority) fields.push(`PRIORITY:${event.priority}`);
     if (event.url) fields.push(`URL:${event.url}`);
     if (event.transparency) fields.push(`TRANSP:${event.transparency}`);
     if (event.sequence) fields.push(`SEQUENCE:${event.sequence}`);
     else fields.push('SEQUENCE:0');
-    if (event.created) fields.push(`CREATED:${this.formatDateTime(event.created)}`);
+    if (event.created)
+      fields.push(`CREATED:${this.formatDateTime(event.created)}`);
   }
 
   /**

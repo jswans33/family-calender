@@ -82,7 +82,10 @@ export class CalDAVFetchRepository {
         let data = '';
         res.on('data', chunk => (data += chunk));
         res.on('end', () => {
-          const success = res.statusCode === 200 || res.statusCode === 201 || res.statusCode === 204;
+          const success =
+            res.statusCode === 200 ||
+            res.statusCode === 201 ||
+            res.statusCode === 204;
           if (res.statusCode !== undefined) {
             resolve({ success, statusCode: res.statusCode });
           } else {
@@ -100,7 +103,9 @@ export class CalDAVFetchRepository {
     });
   }
 
-  async deleteEventData(eventPath: string): Promise<{ success: boolean; statusCode?: number }> {
+  async deleteEventData(
+    eventPath: string
+  ): Promise<{ success: boolean; statusCode?: number }> {
     return new Promise((resolve, reject) => {
       const auth = Buffer.from(
         `${this.credentials.username}:${this.credentials.password}`
@@ -121,7 +126,10 @@ export class CalDAVFetchRepository {
         let data = '';
         res.on('data', chunk => (data += chunk));
         res.on('end', () => {
-          const success = res.statusCode === 200 || res.statusCode === 204 || res.statusCode === 404;
+          const success =
+            res.statusCode === 200 ||
+            res.statusCode === 204 ||
+            res.statusCode === 404;
           if (res.statusCode !== undefined) {
             resolve({ success, statusCode: res.statusCode });
           } else {

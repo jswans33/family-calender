@@ -7,7 +7,10 @@ export class CalendarController {
   private calendarService: ICalendarService;
   private vacationService: VacationService | null;
 
-  constructor(calendarService: ICalendarService, vacationService?: VacationService) {
+  constructor(
+    calendarService: ICalendarService,
+    vacationService?: VacationService
+  ) {
     this.calendarService = calendarService;
     this.vacationService = vacationService || null;
   }
@@ -154,7 +157,9 @@ export class CalendarController {
         // Process vacation restoration if applicable
         if (this.vacationService && eventToDelete?.isVacation) {
           try {
-            await this.vacationService.processVacationEventDeletion(eventToDelete);
+            await this.vacationService.processVacationEventDeletion(
+              eventToDelete
+            );
           } catch (vacationError) {
             console.error(
               'Vacation restoration failed (event still deleted):',

@@ -48,6 +48,10 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
     });
   }
 
+  // Calculate dynamic slot height based on container
+  // We have 18 time slots (6 AM to 11 PM) plus header
+  const slotHeight = `calc((100vh - 200px) / ${timeSlots.length})`;
+
   // Helper function to format date
   const formatDate = (date: Date): string => {
     if (isNaN(date.getTime())) {
@@ -67,7 +71,7 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
       event.time === 'all day' ||
       event.time === '12:00 AM' ||
       !event.time;
-    
+
     // Debug logging
     if (event.title.includes('Morgan') || event.title.includes('Indian')) {
       console.log('Event debug:', {
@@ -154,7 +158,8 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
         {timeSlots.map(slot => (
           <div
             key={slot.hour}
-            className="h-16 flex items-start justify-end pr-2 pt-1 text-xs text-gray-600 border-b border-gray-100"
+            className="flex items-start justify-end pr-2 pt-1 text-xs text-gray-600 border-b border-gray-100"
+            style={{ height: slotHeight, minHeight: '3rem' }}
           >
             {slot.label}
           </div>
@@ -249,7 +254,7 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
                   {timeSlots.map((slot, slotIndex) => (
                     <div
                       key={slot.hour}
-                      className={`h-16 border-b relative cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset ${
+                      className={`border-b relative cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset ${
                         // Highlight 7am-7pm business hours
                         slot.hour >= 7 && slot.hour <= 19
                           ? isWeekend
@@ -259,6 +264,7 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
                             ? 'border-purple-100 bg-purple-10 hover:bg-purple-50'
                             : 'border-gray-100 bg-gray-25 hover:bg-gray-50'
                       }`}
+                      style={{ height: slotHeight, minHeight: '3rem' }}
                       onClick={() => onTimeSlotClick?.(dateKey, slot.time24)}
                       onKeyDown={e => {
                         if (e.key === 'Enter' || e.key === ' ') {
@@ -277,6 +283,7 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
                   <TimeGridEvents
                     events={dayEvents}
                     getTimePosition={getTimePosition}
+                    slotHeight={slotHeight}
                     {...(onEventClick && { onEventClick })}
                   />
                 </div>
@@ -293,17 +300,20 @@ export const TimeGrid: React.FC<TimeGridProps> = ({
 const TimeGridEvents: React.FC<{
   events: CalendarEvent[];
   getTimePosition: (timeStr: string) => number;
+  slotHeight?: string;
   onEventClick?: (event: CalendarEvent) => void;
-}> = ({ events, getTimePosition, onEventClick }) => {
+}> = ({ events, getTimePosition, slotHeight, onEventClick }) => {
   const { getCalendarColor } = useColors();
 
   // Separate all-day events from timed events (modular, clear separation)
-  const allDayEvents = events.filter(event => 
-    !event.time || event.time === '' || event.time === 'All Day'
-  ).filter(event => !(event as any).isMultiDay); // Don't show multi-day events here
-  
-  const timedEvents = events.filter(event => 
-    event.time && event.time !== '' && event.time !== 'All Day'
+  const allDayEvents = events
+    .filter(
+      event => !event.time || event.time === '' || event.time === 'All Day'
+    )
+    .filter(event => !(event as any).isMultiDay); // Don't show multi-day events here
+
+  const timedEvents = events.filter(
+    event => event.time && event.time !== '' && event.time !== 'All Day'
   );
 
   // Group timed events by time to handle overlapping
@@ -325,7 +335,7 @@ const TimeGridEvents: React.FC<{
             const calendarName = event.calendar_name || 'home';
             const calendarColor = getCalendarColor(calendarName);
             const colorShades = getColorShades(calendarColor);
-            
+
             return (
               <div
                 key={event.id}
@@ -352,15 +362,13 @@ const TimeGridEvents: React.FC<{
                 role="button"
                 aria-label={`All day - ${event.title}${event.calendar_name ? ` (${event.calendar_name})` : ''}`}
               >
-                <div className="font-medium truncate">
-                  {event.title}
-                </div>
+                <div className="font-medium truncate">{event.title}</div>
               </div>
             );
           })}
         </div>
       )}
-      
+
       {/* Timed events in the grid */}
       <div className="absolute inset-0">
         {Array.from(eventsByTime.entries()).flatMap(([timeKey, timeEvents]) =>
@@ -369,6 +377,30 @@ const TimeGridEvents: React.FC<{
             const calendarName = event.calendar_name || 'home';
             const calendarColor = getCalendarColor(calendarName);
             const colorShades = getColorShades(calendarColor);
+
+            // Calculate event duration in hours
+            let eventDuration = 1; // Default 1 hour
+            if (event.duration) {
+              // Parse duration like "PT8H0M" or "PT1H0M"
+              const durationMatch = event.duration.match(/PT(\d+)H/);
+              if (durationMatch && durationMatch[1]) {
+                eventDuration = parseInt(durationMatch[1], 10);
+              }
+            } else if (event.end && event.start) {
+              // Calculate from start and end times
+              const startTime = new Date(event.start);
+              const endTime = new Date(event.end);
+              eventDuration =
+                (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+            } else if (event.dtend && event.date && event.time) {
+              // Calculate from date/time and dtend
+              const startTime = new Date(
+                `${event.date.split('T')[0]}T${event.time}:00`
+              );
+              const endTime = new Date(event.dtend);
+              eventDuration =
+                (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+            }
 
             // Calculate horizontal positioning for overlapping events
             const totalEventsAtTime = timeEvents.length;
@@ -381,39 +413,62 @@ const TimeGridEvents: React.FC<{
                 ? `${(indexInTimeSlot * 95) / totalEventsAtTime}%`
                 : '4px';
 
+            // Calculate dynamic top position and height based on duration
+            const topPosition = slotHeight
+              ? `calc(${position} * ${slotHeight} + 4px)`
+              : `${position * TIME_GRID_CONFIG.HOUR_HEIGHT + 4}px`;
+
+            const eventHeight = slotHeight
+              ? `calc(${eventDuration} * ${slotHeight} - 8px)`
+              : `${eventDuration * TIME_GRID_CONFIG.HOUR_HEIGHT - 8}px`;
+
             return (
               <div
                 key={event.id}
-                className="absolute px-2 py-1 text-xs rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset transition-colors border-l-4 h-12"
+                className="absolute px-2 py-1 text-xs rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset transition-colors border-l-4 overflow-hidden"
                 style={{
                   backgroundColor: colorShades.lightBg,
                   color: colorShades.textColor,
                   borderLeftColor: calendarColor,
-                  top: `${position * TIME_GRID_CONFIG.HOUR_HEIGHT + 4}px`,
+                  top: topPosition,
+                  height: eventHeight,
                   left: leftOffset,
                   width: eventWidth,
                   zIndex: 10 + indexInTimeSlot,
                 }}
-              onMouseEnter={e => {
-                e.currentTarget.style.backgroundColor = colorShades.hoverBg;
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.backgroundColor = colorShades.lightBg;
-              }}
-              onClick={() => onEventClick?.(event)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  onEventClick?.(event);
-                }
-              }}
-              tabIndex={0}
-              role="button"
-              aria-label={`${event.time || 'All day'} - ${event.title}${event.calendar_name ? ` (${event.calendar_name})` : ''}`}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = colorShades.hoverBg;
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = colorShades.lightBg;
+                }}
+                onClick={() => onEventClick?.(event)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onEventClick?.(event);
+                  }
+                }}
+                tabIndex={0}
+                role="button"
+                aria-label={`${event.time || 'All day'} - ${event.title}${event.calendar_name ? ` (${event.calendar_name})` : ''}`}
               >
-                <div className="font-medium truncate">
-                  {event.time && <span className="text-xs">{event.time} </span>}
-                  {event.title}
+                <div className="flex flex-col">
+                  <div className="font-bold text-xs">
+                    {event.time || 'All day'}
+                    {event.end &&
+                      ` - ${new Date(event.end).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false,
+                      })}`}
+                  </div>
+                  <div className="font-medium truncate">{event.title}</div>
+                  {event.duration && (
+                    <div className="text-xs opacity-75">
+                      Duration: {event.duration}
+                    </div>
+                  )}
                 </div>
               </div>
             );

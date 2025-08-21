@@ -73,7 +73,10 @@ export class CalDAVParser {
   /**
    * Build CalendarEvent from parsed iCal data
    */
-  static buildCalendarEvent(event: ICalEventData, fallbackId: string): CalendarEvent {
+  static buildCalendarEvent(
+    event: ICalEventData,
+    fallbackId: string
+  ): CalendarEvent {
     const startDate = this.parseDate(event.start) || new Date();
     const endDate = this.parseDate(event.end);
 
@@ -91,10 +94,10 @@ export class CalDAVParser {
 
     // Add basic optional fields
     this.addBasicFields(calendarEvent, event, endDate);
-    
+
     // Add metadata fields
     this.addMetadataFields(calendarEvent, event);
-    
+
     // Add timezone if available
     const timezone = this.extractTimezone(event.start);
     if (timezone) {
@@ -116,7 +119,10 @@ export class CalDAVParser {
     if (event.location) calendarEvent.location = event.location;
     if (endDate) {
       calendarEvent.dtend = endDate.toISOString();
-      const duration = this.calculateDuration(new Date(calendarEvent.date), endDate);
+      const duration = this.calculateDuration(
+        new Date(calendarEvent.date),
+        endDate
+      );
       if (duration) calendarEvent.duration = duration;
     }
   }
@@ -124,7 +130,10 @@ export class CalDAVParser {
   /**
    * Add metadata fields to calendar event
    */
-  private static addMetadataFields(calendarEvent: CalendarEvent, event: ICalEventData): void {
+  private static addMetadataFields(
+    calendarEvent: CalendarEvent,
+    event: ICalEventData
+  ): void {
     const organizer = this.parseOrganizer(event.organizer);
     if (organizer) calendarEvent.organizer = organizer;
 
@@ -142,14 +151,16 @@ export class CalDAVParser {
     const visibility = this.parseClass(event.class);
     if (visibility) calendarEvent.visibility = visibility;
 
-    if (event.rrule && event.rrule.toString) calendarEvent.rrule = event.rrule.toString();
+    if (event.rrule && event.rrule.toString)
+      calendarEvent.rrule = event.rrule.toString();
     if (event.created) {
       const createdDate = this.parseDate(event.created);
       if (createdDate) calendarEvent.created = createdDate.toISOString();
     }
     if (event.lastmodified) {
       const lastModifiedDate = this.parseDate(event.lastmodified);
-      if (lastModifiedDate) calendarEvent.lastModified = lastModifiedDate.toISOString();
+      if (lastModifiedDate)
+        calendarEvent.lastModified = lastModifiedDate.toISOString();
     }
     if (event.sequence) calendarEvent.sequence = event.sequence;
     if (event.url) calendarEvent.url = event.url;
@@ -186,7 +197,7 @@ export class CalDAVParser {
    */
   static parseAttendees(attendee: unknown): string[] | undefined {
     if (!attendee) return undefined;
-    
+
     if (Array.isArray(attendee)) {
       return attendee
         .map(a =>
@@ -196,10 +207,11 @@ export class CalDAVParser {
         )
         .filter(Boolean);
     }
-    
-    const single = typeof attendee === 'string'
-      ? attendee
-      : (attendee as any)?.val || (attendee as any)?.toString() || '';
+
+    const single =
+      typeof attendee === 'string'
+        ? attendee
+        : (attendee as any)?.val || (attendee as any)?.toString() || '';
     return single ? [single] : undefined;
   }
 
@@ -221,7 +233,9 @@ export class CalDAVParser {
   /**
    * Parse status field
    */
-  static parseStatus(status: unknown): 'CONFIRMED' | 'TENTATIVE' | 'CANCELLED' | undefined {
+  static parseStatus(
+    status: unknown
+  ): 'CONFIRMED' | 'TENTATIVE' | 'CANCELLED' | undefined {
     if (!status) return undefined;
     const statusStr = (
       typeof status === 'string' ? status : (status as any)?.toString() || ''
@@ -235,7 +249,9 @@ export class CalDAVParser {
   /**
    * Parse class field (visibility)
    */
-  static parseClass(classField: unknown): 'PUBLIC' | 'PRIVATE' | 'CONFIDENTIAL' | undefined {
+  static parseClass(
+    classField: unknown
+  ): 'PUBLIC' | 'PRIVATE' | 'CONFIDENTIAL' | undefined {
     if (!classField) return undefined;
     const classStr = (
       typeof classField === 'string'
@@ -264,14 +280,14 @@ export class CalDAVParser {
    */
   static parseGeo(geo: unknown): { lat: number; lon: number } | undefined {
     if (!geo) return undefined;
-    
+
     if ((geo as any)?.lat && (geo as any)?.lon) {
       return {
         lat: parseFloat((geo as any)?.lat),
         lon: parseFloat((geo as any)?.lon),
       };
     }
-    
+
     if (typeof geo === 'string') {
       const parts = geo.split(',');
       if (parts.length === 2 && parts[0] && parts[1]) {
@@ -288,7 +304,9 @@ export class CalDAVParser {
   /**
    * Parse transparency field
    */
-  static parseTransparency(transp: unknown): 'OPAQUE' | 'TRANSPARENT' | undefined {
+  static parseTransparency(
+    transp: unknown
+  ): 'OPAQUE' | 'TRANSPARENT' | undefined {
     if (!transp) return undefined;
     const transpStr = (
       typeof transp === 'string' ? transp : (transp as any)?.toString() || ''
@@ -304,7 +322,7 @@ export class CalDAVParser {
    */
   static parseAttachments(attach: unknown): string[] | undefined {
     if (!attach) return undefined;
-    
+
     if (Array.isArray(attach)) {
       return attach
         .map(a =>
@@ -314,23 +332,26 @@ export class CalDAVParser {
         )
         .filter(Boolean);
     }
-    
-    const single = typeof attach === 'string'
-      ? attach
-      : (attach as any)?.val || (attach as any)?.toString() || '';
+
+    const single =
+      typeof attach === 'string'
+        ? attach
+        : (attach as any)?.val || (attach as any)?.toString() || '';
     return single ? [single] : undefined;
   }
 
   /**
    * Parse date from various iCal date formats
    */
-  static parseDate(dateValue: Date | { toISOString?: () => string; tz?: string } | undefined): Date | null {
+  static parseDate(
+    dateValue: Date | { toISOString?: () => string; tz?: string } | undefined
+  ): Date | null {
     if (!dateValue) return null;
-    
+
     if (dateValue instanceof Date) {
       return dateValue;
     }
-    
+
     if (typeof dateValue === 'object' && dateValue.toISOString) {
       try {
         const isoString = dateValue.toISOString();
@@ -339,7 +360,7 @@ export class CalDAVParser {
         return null;
       }
     }
-    
+
     try {
       return new Date(dateValue as any);
     } catch {
@@ -350,13 +371,15 @@ export class CalDAVParser {
   /**
    * Extract timezone from date value
    */
-  static extractTimezone(dateValue: Date | { toISOString?: () => string; tz?: string } | undefined): string | undefined {
+  static extractTimezone(
+    dateValue: Date | { toISOString?: () => string; tz?: string } | undefined
+  ): string | undefined {
     if (!dateValue || dateValue instanceof Date) return undefined;
-    
+
     if (typeof dateValue === 'object' && 'tz' in dateValue) {
       return dateValue.tz;
     }
-    
+
     return undefined;
   }
 }

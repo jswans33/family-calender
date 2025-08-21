@@ -3,6 +3,8 @@ export interface CalendarEvent {
   title: string;
   date: string; // 'YYYY-MM-DD'
   time?: string; // 'HH:mm' 24h format
+  start?: string; // ISO 8601 datetime
+  end?: string; // ISO 8601 datetime
 
   // Rich CalDAV data
   description?: string;

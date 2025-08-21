@@ -59,11 +59,11 @@ export class CalDAVParserRepository {
       try {
         const filename = this.extractFilenameFromResponse(response);
         const icalContent = this.extractICalFromResponse(response);
-        
+
         if (icalContent) {
           const parsedCal = ical.parseICS(icalContent);
           const events = this.extractEventsFromParsedCal(parsedCal);
-          
+
           events.forEach(event => {
             results.push({
               event,
@@ -113,7 +113,7 @@ export class CalDAVParserRepository {
 
   private extractFilenameFromResponse(responseBlock: string): string {
     const hrefMatch = responseBlock.match(/<href[^>]*>(.*?)<\/href>/i);
-    
+
     if (hrefMatch && hrefMatch[1]) {
       const href = hrefMatch[1];
       const filenamePart = href.split('/').pop();
@@ -121,7 +121,7 @@ export class CalDAVParserRepository {
         return filenamePart;
       }
     }
-    
+
     return '';
   }
 
@@ -129,7 +129,7 @@ export class CalDAVParserRepository {
     const calendarDataMatch = responseBlock.match(
       /<calendar-data[^>]*><!\[CDATA\[([\s\S]*?)\]\]><\/calendar-data>/i
     );
-    
+
     return calendarDataMatch ? calendarDataMatch[1] || null : null;
   }
 
@@ -147,7 +147,7 @@ export class CalDAVParserRepository {
 
   private extractEventsFromParsedCal(parsedCal: any): CalendarEvent[] {
     const events: CalendarEvent[] = [];
-    
+
     for (const k in parsedCal) {
       const event = parsedCal[k];
       if (event && event.type === 'VEVENT') {
@@ -155,20 +155,32 @@ export class CalDAVParserRepository {
         events.push(calendarEvent);
       }
     }
-    
+
     return events;
   }
 
-  private parseBasicEventFields(event: ICalEventData, eventKey: string): Partial<CalendarEvent> {
-    const startDate = event.start instanceof Date ? event.start : 
-                     event.start ? new Date(String(event.start)) : new Date();
-    const endDate = event.end instanceof Date ? event.end :
-                   event.end ? new Date(String(event.end)) : null;
+  private parseBasicEventFields(
+    event: ICalEventData,
+    eventKey: string
+  ): Partial<CalendarEvent> {
+    const startDate =
+      event.start instanceof Date
+        ? event.start
+        : event.start
+          ? new Date(String(event.start))
+          : new Date();
+    const endDate =
+      event.end instanceof Date
+        ? event.end
+        : event.end
+          ? new Date(String(event.end))
+          : null;
 
     // Get timezone from event if available
-    let eventTimezone = (event.start && typeof event.start === 'object' && 'tz' in event.start) 
-      ? (event.start as any).tz 
-      : 'Etc/UTC';
+    let eventTimezone =
+      event.start && typeof event.start === 'object' && 'tz' in event.start
+        ? (event.start as any).tz
+        : 'Etc/UTC';
 
     // Map common timezone formats to IANA timezone identifiers
     const timezoneMap: Record<string, string> = {
@@ -176,14 +188,14 @@ export class CalDAVParserRepository {
       'GMT-0700': 'America/Denver', // MST
       'GMT-0500': 'America/Chicago', // CST
       'GMT-0400': 'America/New_York', // EST
-      'MST': 'America/Denver',
-      'MDT': 'America/Denver',
-      'CST': 'America/Chicago',
-      'CDT': 'America/Chicago',
-      'EST': 'America/New_York',
-      'EDT': 'America/New_York',
-      'PST': 'America/Los_Angeles',
-      'PDT': 'America/Los_Angeles'
+      MST: 'America/Denver',
+      MDT: 'America/Denver',
+      CST: 'America/Chicago',
+      CDT: 'America/Chicago',
+      EST: 'America/New_York',
+      EDT: 'America/New_York',
+      PST: 'America/Los_Angeles',
+      PDT: 'America/Los_Angeles',
     };
 
     // Convert GMT offset format to IANA timezone if needed
@@ -194,7 +206,11 @@ export class CalDAVParserRepository {
     // Format time in the event's timezone, not UTC
     let timeString: string;
     try {
-      if (eventTimezone && eventTimezone !== 'Etc/UTC' && !eventTimezone.startsWith('GMT')) {
+      if (
+        eventTimezone &&
+        eventTimezone !== 'Etc/UTC' &&
+        !eventTimezone.startsWith('GMT')
+      ) {
         // Convert to the event's timezone for display
         timeString = formatInTimeZone(startDate, eventTimezone, 'HH:mm');
       } else {
@@ -222,21 +238,23 @@ export class CalDAVParserRepository {
     };
   }
 
-  private parseOptionalEventFields(event: ICalEventData): Partial<CalendarEvent> {
+  private parseOptionalEventFields(
+    event: ICalEventData
+  ): Partial<CalendarEvent> {
     const fields: Partial<CalendarEvent> = {};
-    
+
     if (event.description) fields.description = event.description;
     if (event.location) fields.location = event.location;
     if (event.priority) fields.priority = event.priority;
     if (event.sequence) fields.sequence = event.sequence;
     if (event.url) fields.url = event.url;
-    
+
     return fields;
   }
 
   private parseEventMetadata(event: ICalEventData): Partial<CalendarEvent> {
     const metadata: Partial<CalendarEvent> = {};
-    
+
     const organizer = this.parseOrganizer(event.organizer);
     if (organizer) metadata.organizer = organizer;
 
@@ -252,15 +270,27 @@ export class CalDAVParserRepository {
     const visibility = this.parseClass(event.class);
     if (visibility) metadata.visibility = visibility;
 
-    if (event.rrule && typeof event.rrule === 'object' && event.rrule !== null && 'toString' in event.rrule && typeof event.rrule.toString === 'function') {
+    if (
+      event.rrule &&
+      typeof event.rrule === 'object' &&
+      event.rrule !== null &&
+      'toString' in event.rrule &&
+      typeof event.rrule.toString === 'function'
+    ) {
       metadata.rrule = event.rrule.toString();
     }
     if (event.created) {
-      const createdDate = event.created instanceof Date ? event.created : new Date(String(event.created));
+      const createdDate =
+        event.created instanceof Date
+          ? event.created
+          : new Date(String(event.created));
       metadata.created = createdDate.toISOString();
     }
     if (event.lastmodified) {
-      const modifiedDate = event.lastmodified instanceof Date ? event.lastmodified : new Date(String(event.lastmodified));
+      const modifiedDate =
+        event.lastmodified instanceof Date
+          ? event.lastmodified
+          : new Date(String(event.lastmodified));
       metadata.lastModified = modifiedDate.toISOString();
     }
 
@@ -275,35 +305,43 @@ export class CalDAVParserRepository {
 
     if (event.start && typeof event.start === 'object' && 'tz' in event.start) {
       let tz = (event.start as any).tz;
-      
+
       // Map common timezone formats to IANA timezone identifiers
       const timezoneMap: Record<string, string> = {
         'GMT-0600': 'America/Denver',
         'GMT-0700': 'America/Denver',
         'GMT-0500': 'America/Chicago',
         'GMT-0400': 'America/New_York',
-        'MST': 'America/Denver',
-        'MDT': 'America/Denver',
-        'CST': 'America/Chicago',
-        'CDT': 'America/Chicago',
-        'EST': 'America/New_York',
-        'EDT': 'America/New_York',
-        'PST': 'America/Los_Angeles',
-        'PDT': 'America/Los_Angeles'
+        MST: 'America/Denver',
+        MDT: 'America/Denver',
+        CST: 'America/Chicago',
+        CDT: 'America/Chicago',
+        EST: 'America/New_York',
+        EDT: 'America/New_York',
+        PST: 'America/Los_Angeles',
+        PDT: 'America/Los_Angeles',
       };
-      
+
       // Convert GMT offset format to IANA timezone if needed
       if (tz && tz.startsWith('GMT')) {
         tz = timezoneMap[tz] || 'America/Denver';
       }
-      
+
       metadata.timezone = tz;
     }
 
-    const startDate = event.start instanceof Date ? event.start : 
-                     event.start ? new Date(String(event.start)) : new Date();
-    const endDate = event.end instanceof Date ? event.end :
-                   event.end ? new Date(String(event.end)) : null;
+    const startDate =
+      event.start instanceof Date
+        ? event.start
+        : event.start
+          ? new Date(String(event.start))
+          : new Date();
+    const endDate =
+      event.end instanceof Date
+        ? event.end
+        : event.end
+          ? new Date(String(event.end))
+          : null;
     const duration = this.calculateDuration(startDate, endDate);
     if (duration) metadata.duration = duration;
 
